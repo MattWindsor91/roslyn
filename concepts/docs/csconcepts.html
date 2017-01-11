@@ -10,10 +10,11 @@
 h1, h2, h3 {
 	font-weight: 400;
 	margin-bottom: 0;
+        margin-top:0;
 }
-.remark-slide-content h1 { font-size: 3em; }
-.remark-slide-content h2 { font-size: 2em; }
-.remark-slide-content h3 { font-size: 1.6em; }
+.remark-slide-content h1 { font-size: 1.6em; }
+.remark-slide-content h2 { font-size: 1.6em; }
+.remark-slide-content h3 { font-size: 1em; }
 .footnote {
 	position: absolute;
 	bottom: 3em;
@@ -66,6 +67,12 @@ code {
 	padding: 0.5em;
 }
 
+/*
+img[alt=x86] { height: 100px;}
+img[alt=perf] { height: 100px;}
+img[alt=staticinterfaces] { height: 100px;}
+img[alt=comparison] { height: 100px;}
+*/
 		</style>
 	</head>
 	<body>
@@ -85,7 +92,7 @@ code {
 
 --
 
-### **How annoying!** 
+## **How annoying!** 
 
 ---
 
@@ -122,9 +129,10 @@ We add type classes to C# using a cheap coding trick that is
 * essentially free (zero VM modifications required)
 * modular
 
-For C#, we call a type class a *concept* and an instance an *instance*.
 
 The same technique works interoperably for F# etc.
+
+For C#, we call a type class a *concept* and an instance an *instance*.
 
 (In F#, a type class is called *trait* and an instance *witness*).
 
@@ -133,9 +141,7 @@ The same technique works interoperably for F# etc.
 and *Trait F#* 
 are implemented as open source prototypes.
 
-https://github.com/CaptainHayashi/roslyn/blob/master/concepts/docs/concepts.md)
-
-
+https://github.com/MattWindsor91/roslyn/blob/master/README.md
 
 
 ---
@@ -191,7 +197,7 @@ define *Generics*: object-oriented lingo for *F-bounded parametric polymorphism*
 
 ---
 
-## Java/JVM enerics
+## Java/JVM Generics
 
 Java generics are a fiction of the compiler's imagination.
 
@@ -213,16 +219,16 @@ List<int>       // illegal, instantiation not pointer sized
 sizeof(List<Int>) == sizeof(List<Bool)) == sizeof(List<String>) 
 ```
 
-(Hack is similar)
 ---
 
-## C#/F#/CLI Generics
+## C#/F#/.NET Generics
 
-In C#, Generics are built into the runtime (through dedicated bytecodes & type information).
+In C#, Generics are built into the vm (dedicated bytecodes & 
+type metadata).
 
 Compiled by "passing types at runtime".
 
-*Type Passing* means the CLI VM knows about type parameters and their instantiations at runtime.
+*Type Passing* means the virtual machine knows about type parameters and their instantiations at runtime.
 
 The runtime is free to choose different sized representations for different types, even when used as type arguments.
 
@@ -335,34 +341,39 @@ The ordinary type parameter `EqA` is:
 
 ---
 
-## Zooming in
+## Types as Dictionaries
 
-Look closely:
-
-C#
-```csharp
-static class Overloads {
-  public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
-    default(EqA).Equal(a, b);
-}
+Haskell's dictionary translation compiles == to a function with a implicit *dictionary* argument
+  
+```Haskell
+    (==) :: (Eq a) => a -> a -> Bool  -- note the added constraint!
+    == (d::Eq A) (a::a) (b::a) = d.== a b  
+    --  ^ d is an implicit dictionary parameter providing d.==
 ```
 
-Where is the *value* parameter for the "dictionary" that GHC would insert?
+Look closely at the C# encoding of Haskell's (==)
+```csharp
+  public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
+    default(EqA).Equal(a, b);
+```
+
+Where is the *value* parameter for the "dictionary" `d` that Haskell would insert?
 
 --
 
-We don't need one!
+We don't need to pass dictionary values - just dictionary *types*!
 
 In C#, primitive `default(T)` has type `T` and returns a default value.
 
-Using `default(T)`, we can create dictionary values on demand, when required for method calls.
+Using `default(T)`, we can always create a dictionary value from the corresponding dictionary type! 
 
-Doing so explicitly is gross, so in Concept C#, we allow unqualified calls to methods on
-"dictionary" type parameters that are in scope.
-
-(The `struct` constraints ensure dictionary values are never 'null'; no call can fail.)
+(The `struct` constraint ensures dictionary value are non-`null`; no call can fail.)
 
 ---
+
+## ... Types as Dictionaries
+
+Calling 'default(T)' is gross (esp. when 'T' is large)!
 
 Instead of the C#:
 
@@ -371,15 +382,21 @@ public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
   default(EqA).Equal(a, b);
 ```
 
-in Concept C#, we instead write:
+Concept C# allows methods with 'implicit' type parameters introducing static methods:
+
 ```csharp
 public static bool Equal<A,implicit EqA>(A a,A b) where EqA:Eq<A> =>
   Equal(a, b); 
 ```
 
-The `implicit` keyword declares a dictionary type parameter whose methods are available sans qualification,
-and whose instantions are inferred from the accessible
-concept/instance hierarchy.
+and instead of `default(EqA).Equal(a, b)` we can just write  `Equal(a,b)`.
+
+
+The `implicit` keyword declares a dictionary type parameter whose:
+  * methods are available sans qualification;
+  * instantiations are inferred from the user's concept/instance hierarchy.
+
+(NB `EqA.Equal(a, b)` is ok too).
 
 ---
 
@@ -411,8 +428,8 @@ In Concept C#, we use the instance keyword instead:
   }
 ```
 
-Altough they compile to struct declarations, instances are special since can be used to instantiate
-'implicit' type parameters.
+Altough they compile to struct declarations, instances are used specially, to instantiate
+`implicit` type parameters.
 
 ---
 
@@ -438,7 +455,7 @@ on *lists* of `a` (written `[a]`):
 ## ...Generic Instances
 
 We can represent a Haskell *parameterized instance* as a *generic struct*, 
-implementing an interface but parameterized by suitably constrained type parameters. 
+implementing an interface but parameterized by constrained type parameters. 
 
 Substituting, for simplicity, arrays for lists in CS we can write: 
 
@@ -482,19 +499,18 @@ In C#, `EqInt:Eq<int>` so `EqArray<int,EqInt>:Eq<int[]>` so `EqArray<int[],EqArr
 In C#, dictionary type arguments cannot be inferred... they usually don't occur elsewhere in the type!
 
 ```csharp
-
    bool Equal<A,EqA>(A a, A b) where EqA: struct, Eq<A>;
 
    Equal( {{1},{1,2},{1,2,3}}, {{1,2,3},{1,2},{1}} ) 
      // type error, C# can't infer type arguments!
    
-   Equal< EqArray<int[],EqArray<int,EqInt>>,int[]> , int[][]>
+   Equal<int[][], EqArray<int[],EqArray<int,EqInt>> >
    	( {{1},{1,2},{1,2,3}}, {{1,2,3},{1,2},{1}} ) 
      // typechecks (but kills the programmer)
 ```
 
 
-Programming in the encoding requires intolerable degree of explicit type abstraction and instantiation.
+Programming in the encoding requires an intolerable amount of explicit type instantiation.
 
 ---
 
@@ -542,9 +558,8 @@ For example, equality based list membership in Haskell is defined as follows:
 In C#, we can define:
 ```csharp
 static bool Elem<A,EqA>(A x, A[] ys) where EqA : struct, Eq<A> {
-  for (int i = 0; i < ys.Length; i++)  {
+  for (int i = 0; i < ys.Length; i++)  
     if default(EqA).Equal(x, ys[i])) return true;
-  }
   return false;
 }
 ```
@@ -552,16 +567,16 @@ static bool Elem<A,EqA>(A x, A[] ys) where EqA : struct, Eq<A> {
 Concept C#:
 ```csharp
 static bool Elem<A,implicit EqA>(A x, A[] ys) where EqA : Eq<A> {
-  for (int i = 0; i < ys.Length; i++) {
+  for (int i = 0; i < ys.Length; i++) 
     if (Equal(x, ys[i])) return true;
-  }
   return false;
 }
+```
 ---
 
 ##  Example: Numeric types
 
-Haskell has a rich numeric hierarchy (think |IArithmetic|)
+Haskell has a rich numeric hierarchy (think `IArithmetic`)
 ```Haskell
   class Num a where
     Add: a -> a -> a
@@ -576,7 +591,8 @@ Haskell has a rich numeric hierarchy (think |IArithmetic|)
   instance Num Float where 
     ...
 ``` 
-
+---
+##  ... Example: Numeric types
 C#:
 ```csharp
 interface Num<A> {
@@ -584,12 +600,11 @@ interface Num<A> {
     A Mult(A a, A b);
     A Neg(A a);
   }
-
 struct NumInt : Num<int> {
     public int Add(int a, int b) => a + b; 
     public int Mult(int a, int b) => a * b; 
     public int Neg(int a) => -a;
-  }
+}
 ```
 
 Concept C#:
@@ -598,13 +613,12 @@ concept Num<A> {
     A Add(A a, A b);
     A Mult(A a, A b);
     A Neg(A a);
-  }
-
+}
 instance NumInt : Num<int> {
     int Add(int a, int b) => a + b; 
     int Mult(int a, int b) => a * b; 
     int Neg(int a) => -a;
-  }
+ }      
 ```
 
 ---
@@ -708,6 +722,41 @@ static bool MemSq<A,implicit NumA>(A[] a_s, A a) where NumA: Num<A>
   return false;
 }
 ```
+
+
+---
+
+## The logical perspective
+
+ * concepts define *predicates*
+ * instances define *axioms* & *inference rules*
+ * well-formed types are *proofs* of predicates
+ * proof defines semantics 
+ * (choice of proof ~~ choice of semantics)
+
+```csharp
+concept Eq<A>                          Eq: Type -> Prop
+
+
+instance EqInt : Eq<int>               ------- (EqInt)
+                                       Eq<Int>
+  
+
+instance EqArray<A,EqA> : Eq<A>        EqA:Eq<A>
+                                       --------- (EqArray<A,EqA>)
+                                       Eq<A[]>
+```
+
+Haskell imposes restrictions that ensures proofs are unique and provide unambiguous ~~code~~ semantics.
+
+Concept C# could do this too *or* be more flexible:
+  * insist on unambiguous inferences
+  * but allow explicit disambiguation by instantiation (when inference fails).
+
+---
+
+# Perf
+
 ---
 
 ## MSIL ByteCode
@@ -742,13 +791,15 @@ When actual type `EqA` is a struct, due to specialization, the callee is always 
 ---
 
 
-### Performance
+## Performance
 
 Evaluating a polynomial `f(x:T) = x*x + x + (T)666` (in C#), 
 
 where `T`=`int`, `double`, `Class3D`, `Struct3D`.
 
 (We evaluate `f(x)` at `1m` values of `x` using the BenchmarkDotNet harness.)
+
+---
 
 ```csharp
 T ConceptGenericOpt<T, NumT>() where NumT : struct, Num<T> {
@@ -763,32 +814,32 @@ T ConceptGenericOpt<T, NumT>() where NumT : struct, Num<T> {
 }
 ```
 
-Comparisons:
+Competing implementations:
+
 + Baseline: non generic, hand-specialized  code (one per T)
 + AbstractClass: generic class based (OOP style)
 + Interface: generic interface based (OOP style)
-+ Delegate: generic, firt-class function based (OOP/FP style)
-+ Instance: trait based (one dictionary value per call)
-+ OptimizedInstance: optimized trait based (CSE on dictionaries) (shown above)
-+ OptimizedInstanceInlined: optimized trait based (CSE on dictionaries) with C# static operator definitions inlined in witness declaration.
++ Delegate: generic, first-class function based (OOP/FP style)
++ Instance: concept based (one dictionary value per call)
++ OptimizedInstance: optimized concept based (CSE on dictionaries) (shown above)
++ OptimizedInstanceInlined: optimized concept based (CSE on dictionaries) with C# static operator definitions inlined in witness declaration.
 ---
-###  Relative Performance at Scalar types
+## Relative Performance at Scalar types
 
 ![perf1](./images/perf1.png)
 
-(lower is better - ideally leftmost baseline (non-generic, hand-specialized code) equals rightmost generic, trait-based code.
+(lower is better - ideally leftmost baseline (non-generic, hand-specialized code) equals rightmost generic concept code.
 
-At scalar primitive value type instantiations, trait performance is:
+At scalar primitive value type instantiations, concept performance is:
 * as good as hand specialised code, 
 * at least *8-14x faster* than standard OO abstractions.
 
 ---
 
-### Relative Performance at Compound Types
-
+## Relative Performance at Compound Types
 ![perf2](./images/perf2.png)
 
-(lower is better - ideally leftmost baseline (non-generic, hand-specialized code) equals rightmost generic, trait-based code.
+(lower is better - ideally leftmost baseline equals rightmost generic, concept code.
 
 At 3-field class and struct instantiations, performance can be competive with hand specialised code, 
 1.4-8x faster than OO abstractions (if we are careful to inline).
@@ -829,7 +880,7 @@ But this is debug code, the *optimizing* JIT does *much* better ...
 
 ---
 
-##x86 (RELEASE) 
+## x86 (RELEASE) 
 
 This is the optimised code jitted at `NumInt:Num<int>`.
 
@@ -863,6 +914,83 @@ This is the optimised code jitted at `NumInt:Num<int>`.
 
 ---
 
+## Sugar: Operator Overloading
+
+Even if efficient, few will write generic arithmetic code if they can't use numeric syntax, i.e. operators.
+
+```csharp
+public A F<A,implicit NumA>(x) where NumA:Num<A> =>            
+   Plus( Plus( Mult(x,x), x),FromInteger(666)); // x*x + x + 666
+```
+
+Concept C# supports natural operator declarations and definitions:
+
+```csharp
+concept Num<A> {
+        A operator +(A a, A b);
+        A operator *(A a, A b);
+        A operator -(A a);
+        A implicit operator A(int i); //Matt, does this work yet?
+}
+instance NumInt : Num<int> {
+        int operator +(int a, int b) => a + b;
+        int operator *(int a, int b) => a * b;
+        int operator -(int a) => -a;
+        int FromInteger(int i) => i;
+}
+public A F<A,implicit NumA>(x) where NumA:Num<A> =>         
+     x*x + x + 666; // much nicer!
+```
+
+---
+
+## Syntactic Design Space
+
+Option 1: Haskell-like - anonymous instances, anonymous dictionary parameters (never implemented)
+```csharp
+instance Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equals<A>(A a, A b) where Eq<A> => a == b;
+```
+
+* bad for interop
+* precludes explicit instantiation.
+* MSIL needs a name for the instance, so do other languages.
+
+---
+
+## .. Syntactic Design Space...
+
+Option 2: Named instances with undeclared dictionary parameters
+```csharp
+instance EqInt : Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equal<A>(A a, A b) where EqA:Eq<A> => a == b;
+```
+
+* better for interop
+* `EqA` only occurs in constraint, not type parameters
+* what if we need to instantiate `EqA` at call sites? What is `Equal`'s true method signature?
+
+---
+
+## .. Syntactic Design Space
+
+Option 3: Named instances, declared dictionary type parameters, marked `implicit` 
+```csharp
+instance EqInt : Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equals<A,implicit EqA>(A a, A b) where EqA:Eq<A> =>
+    a == b;
+```
+*  best for interop 
+*  unambiguous method ignatures.
+
+---
+
 ## Proposed Case Studies (In Progress)
 
 * Micro-benchmarks for perf (sorting & arithmetic)
@@ -878,6 +1006,7 @@ Future:
 * ... any suggestions?
 
 [1]["Conal Elliot, Beautiful Differentiation"]
+
 
 ---
 
@@ -919,26 +1048,23 @@ Future:
 
 ##  Links & References
 
-C# version of this document https://github.com/CaptainHayashi/roslyn/blob/master/concepts/docs/concepts.md.
+Concept C#
+* This document https://github.com/MattWindsor91/roslyn/blob/master/concepts/docs/csconcepts.md
+* C# fork https://github.com/MattWindsor91/roslyn
+* Roslyn https://github.com/dotnet/roslyn.
 
-F# fork: https://github.com/CaptainHayashi/visualfsharp/tree/hackathon-vs
+Trait F#
+* F# version https://github.com/MattWindsor91/visualfsharp/blob/hackathon-vs/examples/fsconcepts.md
+* F# fork https://github.com/MattWindsor91/visualfsharp/tree/hackathon-vs
 
-Roslyn C# fork: https://github.com/CaptainHayashi/roslyn.
-
-Roslyn https://github.com/dotnet/roslyn.
-
-D. Gregor, J. Jarvi, J. Siek, B. Stroustrup, G. Dos Reis, and A. Lumsdaine. *Concepts: Linguistic support for generic programming in C++*, OOPSLA'06.
-
-A. Kennedy and D. Syme. Design and implementation of generics for the .net common language
+Papers (tiny subset)
+* D. Gregor, J. Jarvi, J. Siek, B. Stroustrup, G. Dos Reis, and A. Lumsdaine. *Concepts: Linguistic support for generic programming in C++*, OOPSLA'06.
+  A. Kennedy and D. Syme. Design and implementation of generics for the .net common language
   runtime, PLDI 2001.
-
-B. C. Oliveira, A. Moors, and M. Odersky. *Type classes as objects and implicits*, OOPSLA '10.
-
-S. Peyton Jones. *Haskell 98 language and libraries : the revised report*. Cambridge University Press, May 2003.
-
-P. Wadler and S. Blott. *How to make ad-hoc polymorphism less ad hoc*. POPL '89
-
-D. Yu, A. Kennedy, and D. Syme. *Formalization of generics for the .net common language runtime.*, POPL 2004.
+* B. C. Oliveira, A. Moors, and M. Odersky. *Type classes as objects and implicits*, OOPSLA '10.
+* S . Peyton Jones. *Haskell 98 language and libraries : the revised report*. Cambridge University Press, May 2003.
+  P. Wadler and S. Blott. *How to make ad-hoc polymorphism less ad hoc*. POPL '89
+* D. Yu, A. Kennedy, and D. Syme. *Formalization of generics for the .Net Common language Runtime.*, POPL 2004.
 
 
 
@@ -19548,6 +19674,8 @@ if (typeof exports === 'object') {
 		<script>
 			var slideshow = remark.create(
 {highlightStyle: 'vs',
+ highlightSpans: false,
+ center: false,
  highlightLines: true}
 );
 		</script>
