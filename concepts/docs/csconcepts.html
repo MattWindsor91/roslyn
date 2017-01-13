@@ -1027,12 +1027,14 @@ Future:
 ---
 
 ## Take Home
+
 * Haskell 98's type classes have a type preserving .NET representation.
 * Dictionaries can be manually constructed and provided or, better, inferred.
 * Generated code is efficient:
     * Dictionaries are empty (stack-allocated) structs. 
     * Dictionary allocation has zero runtime cost.
     * CLR's code specialization ensures all dictionary calls are direct calls at runtime. Many are in-lined.
+
 ---
 
 ## Future work:
