@@ -446,7 +446,6 @@ In Concept C#, we extend type argument inference so:
 
 Concept C#:
 ```csharp
-
   bool Equal<A,implicit EqA>(A a, A b) where EqA:Eq<A>;
 
   Equal({{1},{1,2},{1,2,3}},{{1,2,3},{1,2},{1}}) 
@@ -658,21 +657,19 @@ static bool MemSq<A,implicit NumA>(A[] a_s, A a) where NumA: Num<A>
 ```csharp
 concept Eq<A>                          Eq: Type -> Prop
 
-
 instance EqInt : Eq<int>               ------- (EqInt)
-                                       Eq<Int>
+                                       Eq<int>
   
-
-instance EqArray<A,EqA> : Eq<A>        EqA:Eq<A>
-                                       --------- (EqArray<A,EqA>)
-                                       Eq<A[]>
+instance EqArray<A,implicit EqA>       EqA:Eq<A>
+         where EqA:Eq<A>               --------- (EqArray<A,EqA>)
+         : Eq<A>                       Eq<A[]>
 ```
 
 Haskell imposes restrictions that ensures proofs are unique and provide unambiguous ~~code~~ semantics.
 
 Concept C# could do this too *or* be more flexible:
   * insist on unambiguous inferences
-  * but allow explicit disambiguation by instantiation (when inference fails).
+  * but allow explicit disambiguation by instantiation (when inference fails)
 
 ---
 
@@ -851,13 +848,13 @@ concept Num<A> {
         A operator +(A a, A b);
         A operator *(A a, A b);
         A operator -(A a);
-        A implicit operator A(int i); //Matt, does this work yet?
+        implicit operator A(int i); //NYI
 }
 instance NumInt : Num<int> {
         int operator +(int a, int b) => a + b;
         int operator *(int a, int b) => a * b;
         int operator -(int a) => -a;
-        int FromInteger(int i) => i;
+        implicit operator int(int i) => i;
 }
 public A F<A,implicit NumA>(x) where NumA:Num<A> =>         
      x*x + x + 666; // much nicer!
@@ -875,9 +872,10 @@ instance Eq<int> {
 static bool Equals<A>(A a, A b) where Eq<A> => a == b;
 ```
 
+Concise, but ...
+* anonymous instances prevent explicit instantiation
+* MSIL needs a name for the instance, so do other languages
 * bad for interop
-* precludes explicit instantiation.
-* MSIL needs a name for the instance, so do other languages.
 
 ---
 
@@ -891,9 +889,9 @@ instance EqInt : Eq<int> {
 static bool Equal<A>(A a, A b) where EqA:Eq<A> => a == b;
 ```
 
-* better for interop
 * `EqA` only occurs in constraint, not type parameters
 * what if we need to instantiate `EqA` at call sites? What is `Equal`'s true method signature?
+* better for interop
 
 ---
 
@@ -907,8 +905,8 @@ instance EqInt : Eq<int> {
 static bool Equals<A,implicit EqA>(A a, A b) where EqA:Eq<A> =>
     a == b;
 ```
+*  unambiguous method signatures
 *  best for interop 
-*  unambiguous method ignatures.
 
 ---
 
