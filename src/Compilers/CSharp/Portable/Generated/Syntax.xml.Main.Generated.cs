@@ -820,6 +820,18 @@ namespace Microsoft.CodeAnalysis.CSharp
       return this.DefaultVisit(node);
     }
 
+    /// <summary>Called when the visitor visits a InstanceDeclarationSyntax node.</summary>
+    public virtual TResult VisitInstanceDeclaration(InstanceDeclarationSyntax node)
+    {
+      return this.DefaultVisit(node);
+    }
+
+    /// <summary>Called when the visitor visits a ConceptDeclarationSyntax node.</summary>
+    public virtual TResult VisitConceptDeclaration(ConceptDeclarationSyntax node)
+    {
+      return this.DefaultVisit(node);
+    }
+
     /// <summary>Called when the visitor visits a InterfaceDeclarationSyntax node.</summary>
     public virtual TResult VisitInterfaceDeclaration(InterfaceDeclarationSyntax node)
     {
@@ -2043,6 +2055,18 @@ namespace Microsoft.CodeAnalysis.CSharp
 
     /// <summary>Called when the visitor visits a StructDeclarationSyntax node.</summary>
     public virtual void VisitStructDeclaration(StructDeclarationSyntax node)
+    {
+      this.DefaultVisit(node);
+    }
+
+    /// <summary>Called when the visitor visits a InstanceDeclarationSyntax node.</summary>
+    public virtual void VisitInstanceDeclaration(InstanceDeclarationSyntax node)
+    {
+      this.DefaultVisit(node);
+    }
+
+    /// <summary>Called when the visitor visits a ConceptDeclarationSyntax node.</summary>
+    public virtual void VisitConceptDeclaration(ConceptDeclarationSyntax node)
     {
       this.DefaultVisit(node);
     }
@@ -3542,8 +3566,9 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
       var attributeLists = this.VisitList(node.AttributeLists);
       var varianceKeyword = this.VisitToken(node.VarianceKeyword);
+      var implicitKeyword = this.VisitToken(node.ImplicitKeyword);
       var identifier = this.VisitToken(node.Identifier);
-      return node.Update(attributeLists, varianceKeyword, identifier);
+      return node.Update(attributeLists, varianceKeyword, implicitKeyword, identifier);
     }
 
     public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
@@ -3563,6 +3588,38 @@ namespace Microsoft.CodeAnalysis.CSharp
     }
 
     public override SyntaxNode VisitStructDeclaration(StructDeclarationSyntax node)
+    {
+      var attributeLists = this.VisitList(node.AttributeLists);
+      var modifiers = this.VisitList(node.Modifiers);
+      var keyword = this.VisitToken(node.Keyword);
+      var identifier = this.VisitToken(node.Identifier);
+      var typeParameterList = (TypeParameterListSyntax)this.Visit(node.TypeParameterList);
+      var baseList = (BaseListSyntax)this.Visit(node.BaseList);
+      var constraintClauses = this.VisitList(node.ConstraintClauses);
+      var openBraceToken = this.VisitToken(node.OpenBraceToken);
+      var members = this.VisitList(node.Members);
+      var closeBraceToken = this.VisitToken(node.CloseBraceToken);
+      var semicolonToken = this.VisitToken(node.SemicolonToken);
+      return node.Update(attributeLists, modifiers, keyword, identifier, typeParameterList, baseList, constraintClauses, openBraceToken, members, closeBraceToken, semicolonToken);
+    }
+
+    public override SyntaxNode VisitInstanceDeclaration(InstanceDeclarationSyntax node)
+    {
+      var attributeLists = this.VisitList(node.AttributeLists);
+      var modifiers = this.VisitList(node.Modifiers);
+      var keyword = this.VisitToken(node.Keyword);
+      var identifier = this.VisitToken(node.Identifier);
+      var typeParameterList = (TypeParameterListSyntax)this.Visit(node.TypeParameterList);
+      var baseList = (BaseListSyntax)this.Visit(node.BaseList);
+      var constraintClauses = this.VisitList(node.ConstraintClauses);
+      var openBraceToken = this.VisitToken(node.OpenBraceToken);
+      var members = this.VisitList(node.Members);
+      var closeBraceToken = this.VisitToken(node.CloseBraceToken);
+      var semicolonToken = this.VisitToken(node.SemicolonToken);
+      return node.Update(attributeLists, modifiers, keyword, identifier, typeParameterList, baseList, constraintClauses, openBraceToken, members, closeBraceToken, semicolonToken);
+    }
+
+    public override SyntaxNode VisitConceptDeclaration(ConceptDeclarationSyntax node)
     {
       var attributeLists = this.VisitList(node.AttributeLists);
       var modifiers = this.VisitList(node.Modifiers);
@@ -8268,7 +8325,7 @@ namespace Microsoft.CodeAnalysis.CSharp
     }
 
     /// <summary>Creates a new TypeParameterSyntax instance.</summary>
-    public static TypeParameterSyntax TypeParameter(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken varianceKeyword, SyntaxToken identifier)
+    public static TypeParameterSyntax TypeParameter(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken varianceKeyword, SyntaxToken implicitKeyword, SyntaxToken identifier)
     {
       switch (varianceKeyword.Kind())
       {
@@ -8279,6 +8336,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         default:
           throw new ArgumentException("varianceKeyword");
       }
+      switch (implicitKeyword.Kind())
+      {
+        case SyntaxKind.ImplicitKeyword:
+        case SyntaxKind.None:
+          break;
+        default:
+          throw new ArgumentException("implicitKeyword");
+      }
       switch (identifier.Kind())
       {
         case SyntaxKind.IdentifierToken:
@@ -8286,20 +8351,26 @@ namespace Microsoft.CodeAnalysis.CSharp
         default:
           throw new ArgumentException("identifier");
       }
-      return (TypeParameterSyntax)Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxFactory.TypeParameter(attributeLists.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken)varianceKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)identifier.Node).CreateRed();
+      return (TypeParameterSyntax)Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxFactory.TypeParameter(attributeLists.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.AttributeListSyntax>(), (Syntax.InternalSyntax.SyntaxToken)varianceKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)implicitKeyword.Node, (Syntax.InternalSyntax.SyntaxToken)identifier.Node).CreateRed();
     }
 
 
     /// <summary>Creates a new TypeParameterSyntax instance.</summary>
+    public static TypeParameterSyntax TypeParameter(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken varianceKeyword, SyntaxToken identifier)
+    {
+      return SyntaxFactory.TypeParameter(attributeLists, varianceKeyword, default(SyntaxToken), identifier);
+    }
+
+    /// <summary>Creates a new TypeParameterSyntax instance.</summary>
     public static TypeParameterSyntax TypeParameter(SyntaxToken identifier)
     {
-      return SyntaxFactory.TypeParameter(default(SyntaxList<AttributeListSyntax>), default(SyntaxToken), identifier);
+      return SyntaxFactory.TypeParameter(default(SyntaxList<AttributeListSyntax>), default(SyntaxToken), default(SyntaxToken), identifier);
     }
 
     /// <summary>Creates a new TypeParameterSyntax instance.</summary>
     public static TypeParameterSyntax TypeParameter(string identifier)
     {
-      return SyntaxFactory.TypeParameter(default(SyntaxList<AttributeListSyntax>), default(SyntaxToken), SyntaxFactory.Identifier(identifier));
+      return SyntaxFactory.TypeParameter(default(SyntaxList<AttributeListSyntax>), default(SyntaxToken), default(SyntaxToken), SyntaxFactory.Identifier(identifier));
     }
 
     /// <summary>Creates a new ClassDeclarationSyntax instance.</summary>
@@ -8422,6 +8493,128 @@ namespace Microsoft.CodeAnalysis.CSharp
     public static StructDeclarationSyntax StructDeclaration(string identifier)
     {
       return SyntaxFactory.StructDeclaration(default(SyntaxList<AttributeListSyntax>), default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.StructKeyword), SyntaxFactory.Identifier(identifier), default(TypeParameterListSyntax), default(BaseListSyntax), default(SyntaxList<TypeParameterConstraintClauseSyntax>), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default(SyntaxList<MemberDeclarationSyntax>), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new InstanceDeclarationSyntax instance.</summary>
+    public static InstanceDeclarationSyntax InstanceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken keyword, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken openBraceToken, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+    {
+      switch (keyword.Kind())
+      {
+        case SyntaxKind.InstanceKeyword:
+          break;
+        default:
+          throw new ArgumentException("keyword");
+      }
+      switch (identifier.Kind())
+      {
+        case SyntaxKind.IdentifierToken:
+          break;
+        default:
+          throw new ArgumentException("identifier");
+      }
+      switch (openBraceToken.Kind())
+      {
+        case SyntaxKind.OpenBraceToken:
+          break;
+        default:
+          throw new ArgumentException("openBraceToken");
+      }
+      switch (closeBraceToken.Kind())
+      {
+        case SyntaxKind.CloseBraceToken:
+          break;
+        default:
+          throw new ArgumentException("closeBraceToken");
+      }
+      switch (semicolonToken.Kind())
+      {
+        case SyntaxKind.SemicolonToken:
+        case SyntaxKind.None:
+          break;
+        default:
+          throw new ArgumentException("semicolonToken");
+      }
+      return (InstanceDeclarationSyntax)Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxFactory.InstanceDeclaration(attributeLists.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxToken>(), (Syntax.InternalSyntax.SyntaxToken)keyword.Node, (Syntax.InternalSyntax.SyntaxToken)identifier.Node, typeParameterList == null ? null : (Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterListSyntax)typeParameterList.Green, baseList == null ? null : (Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.BaseListSyntax)baseList.Green, constraintClauses.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterConstraintClauseSyntax>(), (Syntax.InternalSyntax.SyntaxToken)openBraceToken.Node, members.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.MemberDeclarationSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeBraceToken.Node, (Syntax.InternalSyntax.SyntaxToken)semicolonToken.Node).CreateRed();
+    }
+
+
+    /// <summary>Creates a new InstanceDeclarationSyntax instance.</summary>
+    public static InstanceDeclarationSyntax InstanceDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxList<MemberDeclarationSyntax> members)
+    {
+      return SyntaxFactory.InstanceDeclaration(attributeLists, modifiers, SyntaxFactory.Token(SyntaxKind.InstanceKeyword), identifier, typeParameterList, baseList, constraintClauses, SyntaxFactory.Token(SyntaxKind.OpenBraceToken), members, SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new InstanceDeclarationSyntax instance.</summary>
+    public static InstanceDeclarationSyntax InstanceDeclaration(SyntaxToken identifier)
+    {
+      return SyntaxFactory.InstanceDeclaration(default(SyntaxList<AttributeListSyntax>), default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.InstanceKeyword), identifier, default(TypeParameterListSyntax), default(BaseListSyntax), default(SyntaxList<TypeParameterConstraintClauseSyntax>), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default(SyntaxList<MemberDeclarationSyntax>), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new InstanceDeclarationSyntax instance.</summary>
+    public static InstanceDeclarationSyntax InstanceDeclaration(string identifier)
+    {
+      return SyntaxFactory.InstanceDeclaration(default(SyntaxList<AttributeListSyntax>), default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.InstanceKeyword), SyntaxFactory.Identifier(identifier), default(TypeParameterListSyntax), default(BaseListSyntax), default(SyntaxList<TypeParameterConstraintClauseSyntax>), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default(SyntaxList<MemberDeclarationSyntax>), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new ConceptDeclarationSyntax instance.</summary>
+    public static ConceptDeclarationSyntax ConceptDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken keyword, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken openBraceToken, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+    {
+      switch (keyword.Kind())
+      {
+        case SyntaxKind.ConceptKeyword:
+          break;
+        default:
+          throw new ArgumentException("keyword");
+      }
+      switch (identifier.Kind())
+      {
+        case SyntaxKind.IdentifierToken:
+          break;
+        default:
+          throw new ArgumentException("identifier");
+      }
+      switch (openBraceToken.Kind())
+      {
+        case SyntaxKind.OpenBraceToken:
+          break;
+        default:
+          throw new ArgumentException("openBraceToken");
+      }
+      switch (closeBraceToken.Kind())
+      {
+        case SyntaxKind.CloseBraceToken:
+          break;
+        default:
+          throw new ArgumentException("closeBraceToken");
+      }
+      switch (semicolonToken.Kind())
+      {
+        case SyntaxKind.SemicolonToken:
+        case SyntaxKind.None:
+          break;
+        default:
+          throw new ArgumentException("semicolonToken");
+      }
+      return (ConceptDeclarationSyntax)Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxFactory.ConceptDeclaration(attributeLists.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.AttributeListSyntax>(), modifiers.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.SyntaxToken>(), (Syntax.InternalSyntax.SyntaxToken)keyword.Node, (Syntax.InternalSyntax.SyntaxToken)identifier.Node, typeParameterList == null ? null : (Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterListSyntax)typeParameterList.Green, baseList == null ? null : (Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.BaseListSyntax)baseList.Green, constraintClauses.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterConstraintClauseSyntax>(), (Syntax.InternalSyntax.SyntaxToken)openBraceToken.Node, members.Node.ToGreenList<Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.MemberDeclarationSyntax>(), (Syntax.InternalSyntax.SyntaxToken)closeBraceToken.Node, (Syntax.InternalSyntax.SyntaxToken)semicolonToken.Node).CreateRed();
+    }
+
+
+    /// <summary>Creates a new ConceptDeclarationSyntax instance.</summary>
+    public static ConceptDeclarationSyntax ConceptDeclaration(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxList<MemberDeclarationSyntax> members)
+    {
+      return SyntaxFactory.ConceptDeclaration(attributeLists, modifiers, SyntaxFactory.Token(SyntaxKind.ConceptKeyword), identifier, typeParameterList, baseList, constraintClauses, SyntaxFactory.Token(SyntaxKind.OpenBraceToken), members, SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new ConceptDeclarationSyntax instance.</summary>
+    public static ConceptDeclarationSyntax ConceptDeclaration(SyntaxToken identifier)
+    {
+      return SyntaxFactory.ConceptDeclaration(default(SyntaxList<AttributeListSyntax>), default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.ConceptKeyword), identifier, default(TypeParameterListSyntax), default(BaseListSyntax), default(SyntaxList<TypeParameterConstraintClauseSyntax>), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default(SyntaxList<MemberDeclarationSyntax>), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
+    }
+
+    /// <summary>Creates a new ConceptDeclarationSyntax instance.</summary>
+    public static ConceptDeclarationSyntax ConceptDeclaration(string identifier)
+    {
+      return SyntaxFactory.ConceptDeclaration(default(SyntaxList<AttributeListSyntax>), default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.ConceptKeyword), SyntaxFactory.Identifier(identifier), default(TypeParameterListSyntax), default(BaseListSyntax), default(SyntaxList<TypeParameterConstraintClauseSyntax>), SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default(SyntaxList<MemberDeclarationSyntax>), SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default(SyntaxToken));
     }
 
     /// <summary>Creates a new InterfaceDeclarationSyntax instance.</summary>

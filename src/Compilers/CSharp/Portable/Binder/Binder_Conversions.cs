@@ -293,8 +293,31 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression CreateMethodGroupConversion(SyntaxNode syntax, BoundExpression source, Conversion conversion, bool isCast, TypeSymbol destination, DiagnosticBag diagnostics)
         {
-            BoundMethodGroup group = FixMethodGroupWithTypeOrValue((BoundMethodGroup)source, conversion, diagnostics);
-            BoundExpression receiverOpt = group.ReceiverOpt;
+            BoundMethodGroup group = (BoundMethodGroup)source;
+            // @t-mawind
+            //   If this is a witness method, synthesise its receiver to
+            //   allow the conversion to go through.
+            //   Probably not the right place to put this, but I couldn't
+            //   find anywhere better.
+            var receiverOpt = group.ReceiverOpt;
+            if (receiverOpt == null && conversion.Method is SynthesizedWitnessMethodSymbol)
+            {
+                receiverOpt = new BoundTypeExpression(syntax, null, (conversion.Method as SynthesizedWitnessMethodSymbol).Parent) { WasCompilerGenerated = true };
+                group = group.Update(
+                    group.TypeArgumentsOpt,
+                    group.Name,
+                    group.Methods,
+                    group.LookupSymbolOpt,
+                    group.LookupError,
+                    group.Flags,
+                    receiverOpt, //only change
+                    group.ResultKind);
+            }
+            // @t-mawind
+            //   We don't handle Concept<..>.Method here -- we do it earlier in
+            //   BindMemberAccessWithBoundLeft.
+            group = FixMethodGroupWithTypeOrValue(group, conversion, diagnostics);
+            receiverOpt = group.ReceiverOpt;
             MethodSymbol method = conversion.Method;
             bool hasErrors = false;
             if (receiverOpt != null && receiverOpt.Kind == BoundKind.BaseReference && method.IsAbstract)
@@ -436,6 +459,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             BoundExpression receiverOpt = group.ReceiverOpt;
             Debug.Assert(receiverOpt != null);
             Debug.Assert((object)conversion.Method != null);
+
             receiverOpt = ReplaceTypeOrValueReceiver(receiverOpt, conversion.Method.IsStatic && !conversion.IsExtensionMethod, diagnostics);
             return group.Update(
                 group.TypeArgumentsOpt,
@@ -575,7 +599,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return true;
                 }
             }
-            else if (IsMemberAccessedThroughType(receiverOpt))
+            else if (IsMemberAccessedThroughType(receiverOpt) && !(receiverOpt?.Type.IsInstanceType() ?? false) && !(receiverOpt?.Type.IsConceptWitness ?? false) /* @t-mawind */)
             {
                 diagnostics.Add(ErrorCode.ERR_ObjectRequired, node.Location, memberSymbol);
                 return true;
@@ -597,7 +621,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // If we could access the member through implicit "this" the receiver would be a BoundThisReference.
                 // If it is null it means that the instance member is inaccessible.
-                if (receiverOpt == null || ContainingMember().IsStatic)
+                if (!(memberSymbol is SynthesizedWitnessMethodSymbol) && (receiverOpt == null || ContainingMember().IsStatic))
                 {
                     Error(diagnostics, ErrorCode.ERR_ObjectRequired, node, memberSymbol);
                     return true;

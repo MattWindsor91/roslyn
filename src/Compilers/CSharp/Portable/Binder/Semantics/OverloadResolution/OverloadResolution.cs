@@ -518,7 +518,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             // This is specifying an impossible condition; the member lookup algorithm has already filtered
             // out methods from the method group that have the wrong generic arity.
 
-            Debug.Assert(typeArguments.Count == 0 || typeArguments.Count == member.GetMemberArity());
+            // @t-mawind
+            //   It may be that we get here with a mismatch between the type
+            //   argument count and type parameter count, even if none have
+            //   been supplied.  This can only happen if there are as many gaps
+            //   in the arguments as there are implicit parameters, and we assume
+            //   each does correspond to one.
+            Debug.Assert(typeArguments.Count == 0 ||
+                typeArguments.Count == member.GetMemberArity() ||
+                (member is MethodSymbol && (typeArguments.Count == member.GetMemberArity() - ((member as MethodSymbol).ImplicitTypeParameterCount))));
 
             // Second, we need to determine if the method is applicable in its normal form or its expanded form.
 
@@ -2822,8 +2830,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                     ImmutableArray<TypeSymbol> typeArguments;
                     if (typeArgumentsBuilder.Count > 0)
                     {
-                        // generic type arguments explicitly specified at call-site:
-                        typeArguments = typeArgumentsBuilder.ToImmutable();
+                        // @t-mawind
+                        //   Handle 'part-inferred' calls, where the argument
+                        //   list is omitting concept witnesses that may be
+                        //   inferred from the existing parameters.
+                        if (typeArgumentsBuilder.Count < method.Arity)
+                        {
+                            Debug.Assert(0 < method.Arity, "A 0-arity method should not have concept witnesses.");
+
+                            typeArguments = PartInferImplicitTypeParameters(typeArgumentsBuilder, method);
+                            if (typeArguments.IsEmpty) return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.TypeInferenceFailed());
+                            // Fall through to below.
+                        }
+                        else
+                        {
+                            // generic type arguments explicitly specified at call-site:
+                            typeArguments = typeArgumentsBuilder.ToImmutable();
+                        }
                     }
                     else
                     {
@@ -2910,6 +2933,37 @@ namespace Microsoft.CodeAnalysis.CSharp
                 completeResults: completeResults,
                 useSiteDiagnostics: ref useSiteDiagnostics);
             return new MemberResolutionResult<TMember>(member, leastOverriddenMember, applicableResult);
+        }
+
+        /// <summary>
+        /// Given a method whose type arguments appear to be missing implicit
+        /// type parameters, try to infer them.
+        /// </summary>
+        /// <param name="typeArgumentsBuilder">
+        /// The builder containing the current set of type arguments.
+        /// </param>
+        /// <param name="method">
+        /// The method for which we are inferring implicit type parameters.
+        /// </param>
+        /// <returns>
+        /// The set of all type arguments post-inference on success;
+        /// an empty array otherwise.  (We assume that there is at least
+        /// one resulting type argument, and thus the two cases are
+        /// distinguishable.)
+        /// </returns>
+        private ImmutableArray<TypeSymbol> PartInferImplicitTypeParameters(ArrayBuilder<TypeSymbol> typeArgumentsBuilder, MethodSymbol method)
+        {
+            Debug.Assert(typeArgumentsBuilder.Count + method.ImplicitTypeParameterCount == method.Arity,
+                $"Started {nameof(PartInferImplicitTypeParameters)} with incorrect number of missing arguments");
+
+            // Pointless to part-infer without implicit type parameters.
+            if (method.ImplicitTypeParameterCount == 0) return ImmutableArray<TypeSymbol>.Empty;
+            
+            var allArguments = ConceptWitnessInferrer.ForBinder(_binder).PartInfer(typeArgumentsBuilder.ToImmutable(), method.TypeParameters);
+
+            Debug.Assert(allArguments.IsEmpty || allArguments.Length == typeArgumentsBuilder.Count + method.ImplicitTypeParameterCount,
+                "Part-inference did not add in the expected number of new arguments");
+            return allArguments;
         }
 
         private ImmutableArray<TypeSymbol> InferMethodTypeArguments(

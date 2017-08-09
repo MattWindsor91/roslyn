@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -38,6 +39,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Returns the arity of this type, or the number of type parameters it takes.
         /// A non-generic type has zero arity.
+        /// Instances can increase the arity via implicit type parameters.
         /// </summary>
         public abstract int Arity { get; }
 

@@ -2897,6 +2897,31 @@ namespace Microsoft.CodeAnalysis
                 0,                                                                                                                                  // Arity
                     0,                                                                                                                              // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+
+                // System_Concepts_ConceptAttribute__ctor @t-mawind
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_ConceptAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                // System_Concepts_ConceptInstanceAttribute__ctor @t-mawind
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_ConceptInstanceAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                // System_Concepts_AssociatedTypeAttribute__ctor @t-mawind
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_AssociatedTypeAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                // System_Concepts_ConceptDefaultAttribute__ctor @t-mawind
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_ConceptDefaultAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void
             };
 
             string[] allNames = new string[(int)WellKnownMember.Count]
@@ -3258,6 +3283,11 @@ namespace Microsoft.CodeAnalysis
                 "CreatePayload",                            // Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningMultipleFiles
 
                 ".ctor",                                    // System_Runtime_CompilerServices_ReferenceAssemblyAttribute__ctor
+
+                ".ctor",                                    // System_Concepts_ConceptAttribute @t-mawind
+                ".ctor",                                    // System_Concepts_ConceptInstanceAttribute_ctor @t-mawind
+                ".ctor",                                    // System_Concepts_AssociatedTypeAttribute_ctor @t-mawind
+                ".ctor",                                    // System_Concepts_ConceptDefaultAttribute_ctor @t-mawind
             };
 
             s_descriptors = MemberDescriptor.InitializeFromStream(new System.IO.MemoryStream(initializationBytes, writable: false), allNames);

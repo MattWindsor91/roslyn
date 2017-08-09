@@ -236,6 +236,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         protected abstract TypeParameterBounds ResolveBounds(ConsList<TypeParameterSymbol> inProgress, DiagnosticBag diagnostics);
 
         /// <summary>
+        /// Determines whether this type parameter had the 'implicit' keyword set.
+        /// </summary>
+        /// <returns>
+        /// True iff the source of this type parameter carried an 'implicit'
+        /// keyword.
+        /// </returns>
+        private bool WasDeclaredImplicit()
+        {
+            foreach (var synRef in SyntaxReferences)
+            {
+                var syn = synRef.GetSyntax() as TypeParameterSyntax;
+                Debug.Assert(syn != null, "somehow got non-type parameter syntax");
+                if (syn.ImplicitKeyword.Kind() == SyntaxKind.ImplicitKeyword) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Check constraints of generic types referenced in constraint types. For instance,
         /// with "interface I&lt;T&gt; where T : I&lt;T&gt; {}", check T satisfies constraints
         /// on I&lt;T&gt;. Those constraints are not checked when binding ConstraintTypes
@@ -253,8 +272,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var conversions = new TypeConversions(corLibrary);
             var location = _locations[0];
 
+            // @t-mawind
+            //   A concept parameter with no constraint types is pointless, so
+            //   don't allow it.
+            if (WasDeclaredImplicit() && constraintTypes.IsEmpty)
+            {
+                diagnostics.Add(ErrorCode.ERR_NoConstraintsOnImplicitParam, location, Name);
+            }
+
             foreach (var constraintType in constraintTypes)
             {
+                // @t-mawind
+                //   Concept constraints can be used if and only if this
+                //   parameter has 'implicit' set. 
+                if (constraintType.IsConceptType() && !WasDeclaredImplicit())
+                {
+                    diagnostics.Add(ErrorCode.ERR_ConceptConstraintOnNonImplicitParam, location, Name, constraintType.Name);
+                }
+                if (!constraintType.IsConceptType() && WasDeclaredImplicit())
+                {
+                    diagnostics.Add(ErrorCode.ERR_NonConceptConstraintOnImplicitParam, location, Name, constraintType.Name);
+                }
+
                 HashSet<DiagnosticInfo> useSiteDiagnostics = null;
                 constraintType.AddUseSiteDiagnostics(ref useSiteDiagnostics);
 
@@ -302,6 +341,37 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
 
                 _state.SpinWaitComplete(incompletePart, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Decides whether this type parameter is a concept witness.
+        /// <para>
+        /// Source type parameters are concept witnesses if, and only if,
+        /// they were declared with the implicit keyword.  This is because
+        /// we raise errors if the parameter was declared with the keyword
+        /// and not a concept witness as per the usual test, and vice
+        /// versa.
+        /// </para>
+        /// <para>
+        /// We override this to prevent an infinite loop in constraint
+        /// resolution.
+        /// </para>
+        /// </summary>
+        internal override bool IsConceptWitness => WasDeclaredImplicit();
+
+        internal sealed override bool IsAssociatedType
+        {
+            get
+            {
+                // Usually, types are associated types if they have
+                // [AssociatedType]. @t-mawind
+                foreach (var attribute in GetAttributes())
+                {
+                    if (attribute.IsTargetAttribute(this, AttributeDescription.AssociatedTypeAttribute)) return true;
+                }
+
+                return false;
             }
         }
     }
@@ -376,7 +446,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         private TypeParameterConstraintKind GetDeclaredConstraints()
         {
-            return _owner.GetTypeParameterConstraints(this.Ordinal);
+            // @t-mawind
+            //   Add in 'struct' if this is a concept witness.
+            //   This used to be done through a synthesised symbol, but now we
+            //   have more explicit syntax it has to be done here--ugly!
+            var ownerConstraints = _owner.GetTypeParameterConstraints(this.Ordinal);
+            return IsConceptWitness ? (ownerConstraints | TypeParameterConstraintKind.ValueType) : ownerConstraints;
         }
     }
 
@@ -450,9 +525,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private TypeParameterConstraintKind GetDeclaredConstraints()
         {
             var constraintClauses = _owner.TypeParameterConstraintClauses;
-            return constraintClauses.IsEmpty
+            var ownerConstraints = constraintClauses.IsEmpty
                 ? TypeParameterConstraintKind.None
                 : constraintClauses[Ordinal]?.Constraints ?? TypeParameterConstraintKind.None;
+
+            // @t-mawind
+            //   See above type's GetDeclaredConstraints()--same reasoning.
+            return IsConceptWitness ? (ownerConstraints | TypeParameterConstraintKind.ValueType) : ownerConstraints;
         }
     }
 

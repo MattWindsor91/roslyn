@@ -425,6 +425,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 case SyntaxKind.DelegateKeyword:
                 case SyntaxKind.ClassKeyword:
                 case SyntaxKind.InterfaceKeyword:
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.StructKeyword:
                 case SyntaxKind.AbstractKeyword:
                 case SyntaxKind.InternalKeyword:
@@ -1356,6 +1358,8 @@ tryAgain:
             {
                 case SyntaxKind.StructKeyword:
                 case SyntaxKind.ClassKeyword:
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.InterfaceKeyword:
                     return true;
             }
@@ -1423,6 +1427,8 @@ tryAgain:
                 {
                     case SyntaxKind.ClassDeclaration:
                     case SyntaxKind.StructDeclaration:
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    case SyntaxKind.InstanceDeclaration: //@t-mawind
                     case SyntaxKind.InterfaceDeclaration:
                     case SyntaxKind.EnumDeclaration:
                     case SyntaxKind.DelegateDeclaration:
@@ -1439,7 +1445,7 @@ tryAgain:
             Debug.Assert(!IsInAsync);
 
             cancellationToken.ThrowIfCancellationRequested();
-
+            
             switch (this.CurrentToken.Kind)
             {
                 case SyntaxKind.ClassKeyword:
@@ -1454,6 +1460,8 @@ tryAgain:
 
                     return this.ParseClassOrStructOrInterfaceDeclaration(attributes, modifiers);
 
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.StructKeyword:
                 case SyntaxKind.InterfaceKeyword:
                     return this.ParseClassOrStructOrInterfaceDeclaration(attributes, modifiers);
@@ -1471,7 +1479,9 @@ tryAgain:
 
         private TypeDeclarationSyntax ParseClassOrStructOrInterfaceDeclaration(SyntaxListBuilder<AttributeListSyntax> attributes, SyntaxListBuilder modifiers)
         {
-            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.ClassKeyword || this.CurrentToken.Kind == SyntaxKind.StructKeyword || this.CurrentToken.Kind == SyntaxKind.InterfaceKeyword);
+            Debug.Assert(this.CurrentToken.Kind == SyntaxKind.ConceptKeyword /*@t-mawind*/ ||
+                         this.CurrentToken.Kind == SyntaxKind.InstanceKeyword /*@t-mawind*/ ||
+                         this.CurrentToken.Kind == SyntaxKind.ClassKeyword || this.CurrentToken.Kind == SyntaxKind.StructKeyword || this.CurrentToken.Kind == SyntaxKind.InterfaceKeyword);
 
             // "top-level" expressions and statements should never occur inside an asynchronous context
             Debug.Assert(!IsInAsync);
@@ -1583,6 +1593,34 @@ tryAgain:
 
                     case SyntaxKind.StructKeyword:
                         return _syntaxFactory.StructDeclaration(
+                            attributes,
+                            modifiers.ToList(),
+                            classOrStructOrInterface,
+                            name,
+                            typeParameters,
+                            baseList,
+                            constraints,
+                            openBrace,
+                            members,
+                            closeBrace,
+                            semicolon);
+
+                    case SyntaxKind.ConceptKeyword: //@t-mawind
+                        return _syntaxFactory.ConceptDeclaration(
+                            attributes,
+                            modifiers.ToList(),
+                            classOrStructOrInterface,
+                            name,
+                            typeParameters,
+                            baseList,
+                            constraints,
+                            openBrace,
+                            members,
+                            closeBrace,
+                            semicolon);
+
+                    case SyntaxKind.InstanceKeyword: //@t-mawind
+                        return _syntaxFactory.InstanceDeclaration(
                             attributes,
                             modifiers.ToList(),
                             classOrStructOrInterface,
@@ -1904,6 +1942,7 @@ tryAgain:
                 case SyntaxKind.BoolKeyword:
                 case SyntaxKind.ByteKeyword:
                 case SyntaxKind.CharKeyword:
+                case SyntaxKind.ConceptKeyword: //@t-mawind TODO: correct?
                 case SyntaxKind.ClassKeyword:
                 case SyntaxKind.ConstKeyword:
                 case SyntaxKind.DecimalKeyword:
@@ -1915,6 +1954,7 @@ tryAgain:
                 case SyntaxKind.FixedKeyword:
                 case SyntaxKind.FloatKeyword:
                 case SyntaxKind.IntKeyword:
+                case SyntaxKind.InstanceKeyword: //@t-mawind TODO: correct?
                 case SyntaxKind.InterfaceKeyword:
                 case SyntaxKind.InternalKeyword:
                 case SyntaxKind.LongKeyword:
@@ -1956,6 +1996,8 @@ tryAgain:
         {
             switch (kind)
             {
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.ClassKeyword:
                 case SyntaxKind.DelegateKeyword:
                 case SyntaxKind.EnumKeyword:
@@ -1977,6 +2019,8 @@ tryAgain:
                 {
                     case SyntaxKind.ClassDeclaration:
                     case SyntaxKind.StructDeclaration:
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    case SyntaxKind.InstanceDeclaration: //@t-mawind
                     case SyntaxKind.InterfaceDeclaration:
                     case SyntaxKind.EnumDeclaration:
                     case SyntaxKind.DelegateDeclaration:
@@ -4209,6 +4253,8 @@ tryAgain:
                     case SyntaxKind.GetAccessorDeclaration:
                     case SyntaxKind.SetAccessorDeclaration:
                         return ((CSharp.Syntax.AccessorDeclarationSyntax)decl).Modifiers;
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    case SyntaxKind.InstanceDeclaration: //@t-mawind
                     case SyntaxKind.ClassDeclaration:
                     case SyntaxKind.StructDeclaration:
                     case SyntaxKind.InterfaceDeclaration:
@@ -5011,6 +5057,7 @@ tryAgain:
                 return _syntaxFactory.TypeParameter(
                     default(SyntaxList<AttributeListSyntax>),
                     default(SyntaxToken),
+                    default(SyntaxToken),
                     this.AddError(CreateMissingIdentifierToken(), ErrorCode.ERR_IdentifierExpected));
             }
 
@@ -5032,7 +5079,18 @@ tryAgain:
                     varianceToken = CheckFeatureAvailability(this.EatToken(), MessageID.IDS_FeatureTypeVariance);
                 }
 
-                return _syntaxFactory.TypeParameter(attrs, varianceToken, this.ParseIdentifierToken());
+                // @t-mawind
+                //   This is how we find out whether the type parameter is implicit.
+                SyntaxToken implicitToken = null;
+                if (this.CurrentToken.Kind == SyntaxKind.ImplicitKeyword)
+                {
+                    // TODO: error when not appropriate?
+                    // TODO: feature flag?
+
+                    implicitToken = this.EatToken();
+                }
+
+                return _syntaxFactory.TypeParameter(attrs, varianceToken, implicitToken, this.ParseIdentifierToken());
             }
             finally
             {

@@ -52,7 +52,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var arrayBuilder = ArrayBuilder<Location>.GetInstance(builders.Count);
             foreach (var builder in builders)
             {
-                arrayBuilder.Add(builder._location);
+                //@t-mawind TODO: this is awful
+                if (builder is TypeParameterBuilder)
+                {
+                    arrayBuilder.Add(((TypeParameterBuilder)builder)._location);
+                }
             }
 
             return arrayBuilder.ToImmutableAndFree();
@@ -63,7 +67,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var arrayBuilder = ArrayBuilder<SyntaxReference>.GetInstance(builders.Count);
             foreach (var builder in builders)
             {
-                arrayBuilder.Add(builder._syntaxRef);
+                //@t-mawind TODO: this is awful
+                if (builder is TypeParameterBuilder)
+                {
+                    arrayBuilder.Add(((TypeParameterBuilder)builder)._syntaxRef);
+                }
             }
 
             return arrayBuilder.ToImmutableAndFree();

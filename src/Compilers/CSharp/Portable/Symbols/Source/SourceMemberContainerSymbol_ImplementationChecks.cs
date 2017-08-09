@@ -13,6 +13,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class SourceMemberContainerTypeSymbol
     {
+        internal ImmutableArray<SynthesizedDefaultStructImplementationMethod> GetSynthesizedDefaultImplementations(
+            CancellationToken cancellationToken)
+        {
+            if (_lazySynthesizedDefaultImplementations.IsDefault)
+            {
+                var builder = ArrayBuilder<SynthesizedDefaultStructImplementationMethod>.GetInstance();
+                var all = GetSynthesizedImplementations(cancellationToken);
+                foreach (var impl in all)
+                {
+                    if (impl is SynthesizedDefaultStructImplementationMethod) builder.Add(impl as SynthesizedDefaultStructImplementationMethod);
+                }
+
+                if (ImmutableInterlocked.InterlockedCompareExchange(
+                        ref _lazySynthesizedDefaultImplementations,
+                        builder.ToImmutableAndFree(),
+                        default(ImmutableArray<SynthesizedDefaultStructImplementationMethod>)).IsDefault)
+                {
+                    // @t-mawind do nothing here?
+                }
+            }
+
+            return _lazySynthesizedDefaultImplementations;
+        }
+
         /// <summary>
         /// In some circumstances (e.g. implicit implementation of an interface method by a non-virtual method in a 
         /// base type from another assembly) it is necessary for the compiler to generate explicit implementations for
@@ -23,6 +47,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             CancellationToken cancellationToken)
         {
             if (_lazySynthesizedExplicitImplementations.IsDefault)
+            {
+                var builder = ArrayBuilder<SynthesizedExplicitImplementationForwardingMethod>.GetInstance();
+                var all = GetSynthesizedImplementations(cancellationToken);
+                foreach (var impl in all)
+                {
+                    if (impl is SynthesizedExplicitImplementationForwardingMethod) builder.Add(impl as SynthesizedExplicitImplementationForwardingMethod);
+                }
+
+                if (ImmutableInterlocked.InterlockedCompareExchange(
+                        ref _lazySynthesizedExplicitImplementations,
+                        builder.ToImmutableAndFree(),
+                        default(ImmutableArray<SynthesizedExplicitImplementationForwardingMethod>)).IsDefault)
+                {
+                    // @t-mawind do nothing here?
+                }
+            }
+
+            return _lazySynthesizedExplicitImplementations;
+        }
+
+        private ImmutableArray<SynthesizedImplementationForwardingMethod> GetSynthesizedImplementations(
+            CancellationToken cancellationToken)
+        {
+            if (_lazySynthesizedImplementations.IsDefault)
             {
                 var diagnostics = DiagnosticBag.GetInstance();
                 try
@@ -43,9 +91,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     }
 
                     if (ImmutableInterlocked.InterlockedCompareExchange(
-                            ref _lazySynthesizedExplicitImplementations,
+                            ref _lazySynthesizedImplementations,
                             ComputeInterfaceImplementations(diagnostics, cancellationToken),
-                            default(ImmutableArray<SynthesizedExplicitImplementationForwardingMethod>)).IsDefault)
+                            default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
                     {
                         // Do not cancel from this point on.  We've assigned the member, so we must add
                         // the diagnostics.
@@ -60,7 +108,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
             }
 
-            return _lazySynthesizedExplicitImplementations;
+            return _lazySynthesizedImplementations;
         }
 
         private void CheckAbstractClassImplementations(DiagnosticBag diagnostics)
@@ -85,16 +133,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        private ImmutableArray<SynthesizedExplicitImplementationForwardingMethod> ComputeInterfaceImplementations(
+        private ImmutableArray<SynthesizedImplementationForwardingMethod> ComputeInterfaceImplementations(
             DiagnosticBag diagnostics,
             CancellationToken cancellationToken)
         {
             if (this.IsInterface)
             {
-                return ImmutableArray<SynthesizedExplicitImplementationForwardingMethod>.Empty;
+                return ImmutableArray<SynthesizedImplementationForwardingMethod>.Empty;
             }
 
-            var synthesizedImplementations = ArrayBuilder<SynthesizedExplicitImplementationForwardingMethod>.GetInstance();
+            var synthesizedImplementations = ArrayBuilder<SynthesizedImplementationForwardingMethod>.GetInstance();
 
             // NOTE: We can't iterator over this collection directly, since it is not ordered.  Instead we 
             // iterate over AllInterfaces and filter out the interfaces that are not in this set.  This is 
@@ -135,10 +183,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                     var implementingMemberAndDiagnostics = this.FindImplementationForInterfaceMemberWithDiagnostics(interfaceMember);
                     var implementingMember = implementingMemberAndDiagnostics.Symbol;
-                    var synthesizedImplementation = this.SynthesizeInterfaceMemberImplementation(implementingMemberAndDiagnostics, interfaceMember);
+
+                    // @t-mawind
+                    //   Optimistically insert a default struct forward if
+                    //   we're in a concept, under the understanding that
+                    //   we'll trigger an error later if it doesn't exist.
+                    if (implementingMember == null && interfaceMemberKind == SymbolKind.Method && IsInstance && @interface.IsConcept)
+                    {
+                        var conceptMethod = interfaceMember as MethodSymbol;
+                        var def = new SynthesizedDefaultStructImplementationMethod(conceptMethod, this);
+                        if (def != null)
+                        {
+                            synthesizedImplementations.Add(def);
+                            implementingMember = def;
+                            implementingMemberAndDiagnostics = new SymbolAndDiagnostics(implementingMember, ImmutableArray<Diagnostic>.Empty);
+                        }
+                    }
 
                     bool wasImplementingMemberFound = (object)implementingMember != null;
 
+                    var synthesizedImplementation = this.SynthesizeInterfaceMemberImplementation(implementingMemberAndDiagnostics, interfaceMember);
                     if ((object)synthesizedImplementation != null)
                     {
                         synthesizedImplementations.Add(synthesizedImplementation);
@@ -495,6 +559,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         CheckNewModifier(member, isNewField, diagnostics);
                         break;
                     case SymbolKind.NamedType:
+                        // @t-mawind
+                        //   SynthesizedDefaultStructSymbol gets here,
+                        //   because it's a member of a source symbol, but it
+                        //   isn't actually a source symbol itself.
+                        //   Quickfix: this is horrible.
+                        if (member is SynthesizedDefaultStructSymbol) break;
+
                         CheckNewModifier(member, ((SourceMemberContainerTypeSymbol)member).IsNew, diagnostics);
                         break;
                 }
@@ -1026,7 +1097,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <param name="implementingMemberAndDiagnostics">Returned from FindImplementationForInterfaceMemberWithDiagnostics.</param>
         /// <param name="interfaceMember">The interface method or property that is being implemented.</param>
         /// <returns>Synthesized implementation or null if not needed.</returns>
-        private SynthesizedExplicitImplementationForwardingMethod SynthesizeInterfaceMemberImplementation(SymbolAndDiagnostics implementingMemberAndDiagnostics, Symbol interfaceMember)
+        private SynthesizedImplementationForwardingMethod SynthesizeInterfaceMemberImplementation(SymbolAndDiagnostics implementingMemberAndDiagnostics, Symbol interfaceMember)
         {
             foreach (Diagnostic diagnostic in implementingMemberAndDiagnostics.Diagnostics)
             {

@@ -17,7 +17,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         Delegate,
         Script,
         Submission,
-        ImplicitClass
+        ImplicitClass,
+        Concept, //@t-mawind
+        Instance //@t-mawind
     }
 
     internal static partial class EnumConversions
@@ -32,6 +34,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.NamespaceDeclaration: return DeclarationKind.Namespace;
                 case SyntaxKind.EnumDeclaration: return DeclarationKind.Enum;
                 case SyntaxKind.DelegateDeclaration: return DeclarationKind.Delegate;
+                case SyntaxKind.InstanceDeclaration: return DeclarationKind.Instance; //@t-mawind
+                case SyntaxKind.ConceptDeclaration: return DeclarationKind.Concept; //@t-mawind
                 default:
                     throw ExceptionUtilities.UnexpectedValue(kind);
             }

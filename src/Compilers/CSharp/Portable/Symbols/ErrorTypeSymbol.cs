@@ -209,6 +209,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is a concept (either it was declared as a
+        /// concept, or it is an interface with the <c>System_Concepts_ConceptAttribute</c>
+        /// attribute); false otherwise.
+        /// </returns>
+        internal override bool IsConcept => false; //@t-mawind
+
+        /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is an instance (either it was declared as an
+        /// instance, or it is a struct with the
+        /// <c>System_Concepts_ConceptInstanceAttribute</c> attribute); false otherwise.
+        /// </returns>
+        internal override bool IsInstance => false; //@t-mawind
+
+        /// <summary>
         /// Get the symbol that logically contains this symbol. 
         /// </summary>
         public override Symbol ContainingSymbol

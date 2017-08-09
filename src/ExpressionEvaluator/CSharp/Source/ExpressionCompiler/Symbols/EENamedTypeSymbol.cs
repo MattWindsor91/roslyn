@@ -333,6 +333,9 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             get { return false; }
         }
 
+        internal override bool IsConcept => false; //@t-mawind correct?
+        internal override bool IsInstance => false; //@t-mawind correct?
+
         [Conditional("DEBUG")]
         internal static void VerifyTypeParameters(Symbol container, ImmutableArray<TypeParameterSymbol> typeParameters)
         {

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -197,6 +198,82 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// returns an empty list.
         /// </summary>
         public abstract ImmutableArray<TypeParameterSymbol> TypeParameters { get; }
+
+        // @t-mawind move?
+        private ImmutableArray<TypeParameterSymbol> _conceptWitnesses;
+        private ImmutableArray<TypeParameterSymbol> _associatedTypes;
+
+        /// <summary>
+        /// Returns the type parameters of this type that are concept
+        /// witnesses.
+        /// </summary>
+        internal ImmutableArray<TypeParameterSymbol> ConceptWitnesses
+        {
+            get
+            {
+                if (_conceptWitnesses.IsDefault)
+                {
+                    var builder = new ArrayBuilder<TypeParameterSymbol>();
+                    var allParams = TypeParameters;
+                    int numParams = allParams.Length;
+                    for (int i = 0; i < numParams; i++)
+                    {
+                        if (allParams[i].IsConceptWitness) builder.Add(allParams[i]);
+                    }
+                    ImmutableInterlocked.InterlockedInitialize(ref _conceptWitnesses, builder.ToImmutableAndFree());
+                }
+                return _conceptWitnesses;
+            }
+        }
+
+
+        /// <summary>
+        /// Returns the type parameters of this type that are associated
+        /// types.
+        /// </summary>
+        internal ImmutableArray<TypeParameterSymbol> AssociatedTypes
+        {
+            get
+            {
+                if (_associatedTypes.IsDefault)
+                {
+                    var builder = new ArrayBuilder<TypeParameterSymbol>();
+                    var allParams = TypeParameters;
+                    int numParams = allParams.Length;
+                    for (int i = 0; i < numParams; i++)
+                    {
+                        if (allParams[i].IsAssociatedType) builder.Add(allParams[i]);
+                    }
+                    ImmutableInterlocked.InterlockedInitialize(ref _associatedTypes, builder.ToImmutableAndFree());
+                }
+                return _associatedTypes;
+            }
+        }
+
+        //@t-mawind move?
+        private int _implicitTypeParameterCount = -1;
+
+        /// <summary>
+        /// Returns the number of implicit type parameters.
+        /// <para>
+        /// These are the concept witnesses and associated types.
+        /// </para>
+        /// <para>
+        /// This count is used for part-inference, mainly.
+        /// </para>
+        /// </summary>
+        internal virtual int ImplicitTypeParameterCount
+        {
+            get
+            {
+                if (-1 == _implicitTypeParameterCount)
+                {
+                    var count = ConceptWitnesses.Length + AssociatedTypes.Length;
+                    Interlocked.CompareExchange(ref _implicitTypeParameterCount, count, -1);
+                }
+                return _implicitTypeParameterCount;
+            }
+        }
 
         /// <summary>
         /// Call <see cref="TryGetThisParameter"/> and throw if it returns false.

@@ -229,5 +229,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             return _underlyingType.GetGuidString(out guidString);
         }
+
+        /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is a concept (either it was declared as a
+        /// concept, or it is an interface with the <c>System_Concepts_ConceptAttribute</c>
+        /// attribute); false otherwise.
+        /// </returns>
+        internal override bool IsConcept => _underlyingType.IsConcept; //@t-mawind
+
+        internal override bool IsDefaultStruct => _underlyingType.IsDefaultStruct; // @t-mawind
+
+        /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is an instance (either it was declared as an
+        /// instance, or it is a struct with the
+        /// <c>System_Concepts_ConceptInstanceAttribute</c> attribute); false otherwise.
+        /// </returns>
+        internal override bool IsInstance => _underlyingType.IsInstance; //@t-mawind TODO
+
+        /// <summary>
+        /// Returns the number of implicit type parameters.
+        /// </summary>
+        internal override int ImplicitTypeParameterCount => _underlyingType.ImplicitTypeParameterCount;
     }
 }

@@ -241,6 +241,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                         return CodeGenerationDestination.CompilationUnit;
                     case SyntaxKind.EnumDeclaration:
                         return CodeGenerationDestination.EnumType;
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
+                        return CodeGenerationDestination.ConceptType;
                     case SyntaxKind.InterfaceDeclaration:
                         return CodeGenerationDestination.InterfaceType;
                     case SyntaxKind.NamespaceDeclaration:

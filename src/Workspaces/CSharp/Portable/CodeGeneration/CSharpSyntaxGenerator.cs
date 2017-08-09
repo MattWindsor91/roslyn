@@ -70,6 +70,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.EnumDeclaration:
                 case SyntaxKind.DelegateDeclaration:
                     return declaration;
@@ -1112,6 +1113,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     return ((ClassDeclarationSyntax)declaration).AttributeLists;
                 case SyntaxKind.StructDeclaration:
                     return ((StructDeclarationSyntax)declaration).AttributeLists;
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).AttributeLists;
                 case SyntaxKind.InterfaceDeclaration:
                     return ((InterfaceDeclarationSyntax)declaration).AttributeLists;
                 case SyntaxKind.EnumDeclaration:
@@ -1158,6 +1161,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                     return ((ClassDeclarationSyntax)declaration).WithAttributeLists(attributeLists);
                 case SyntaxKind.StructDeclaration:
                     return ((StructDeclarationSyntax)declaration).WithAttributeLists(attributeLists);
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).WithAttributeLists(attributeLists);
                 case SyntaxKind.InterfaceDeclaration:
                     return ((InterfaceDeclarationSyntax)declaration).WithAttributeLists(attributeLists);
                 case SyntaxKind.EnumDeclaration:
@@ -1247,6 +1252,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).Members;
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)declaration).Members;
                 case SyntaxKind.StructDeclaration:
@@ -1357,6 +1364,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             {
                 switch (declaration.Kind())
                 {
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
+                        var od = ((ConceptDeclarationSyntax)declaration);
+                        return od.WithMembers(od.Members.AddRange(newMembers));
                     case SyntaxKind.ClassDeclaration:
                         var cd = (ClassDeclarationSyntax)declaration;
                         return cd.WithMembers(cd.Members.AddRange(newMembers));
@@ -1390,6 +1400,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    var od = ((ConceptDeclarationSyntax)declaration);
+                    return this.AsClassMember(member, od.Identifier.Text);
                 case SyntaxKind.ClassDeclaration:
                     var cd = (ClassDeclarationSyntax)declaration;
                     return this.AsClassMember(member, cd.Identifier.Text);
@@ -1413,6 +1426,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
@@ -1521,6 +1535,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 case SyntaxKind.DelegateDeclaration:
                     return DeclarationModifiers.New;
 
+                case SyntaxKind.ConceptDeclaration: //@t-mawind HACK
                 case SyntaxKind.InterfaceDeclaration:
                     return s_interfaceModifiers;
 
@@ -1603,6 +1618,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).Modifiers;
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)declaration).Modifiers;
                 case SyntaxKind.StructDeclaration:
@@ -1658,6 +1675,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).WithModifiers(modifiers);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)declaration).WithModifiers(modifiers);
                 case SyntaxKind.StructDeclaration:
@@ -1900,6 +1919,9 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).WithTypeParameterList(typeParameters);
+
                 case SyntaxKind.MethodDeclaration:
                     return ((MethodDeclarationSyntax)declaration).WithTypeParameterList(typeParameters);
 
@@ -1940,6 +1962,10 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    var concept = (ConceptDeclarationSyntax)declaration;
+                    return concept.WithConstraintClauses(WithTypeConstraints(concept.ConstraintClauses, typeParameterName, kinds, types));
+
                 case SyntaxKind.MethodDeclaration:
                     var method = (MethodDeclarationSyntax)declaration;
                     return method.WithConstraintClauses(WithTypeConstraints(method.ConstraintClauses, typeParameterName, kinds, types));
@@ -2011,6 +2037,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return DeclarationKind.Concept;
                 case SyntaxKind.ClassDeclaration:
                     return DeclarationKind.Class;
                 case SyntaxKind.StructDeclaration:
@@ -2175,6 +2203,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).Identifier.ValueText;
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)declaration).Identifier.ValueText;
                 case SyntaxKind.StructDeclaration:
@@ -2241,6 +2271,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
 
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ReplaceWithTrivia(declaration, ((ConceptDeclarationSyntax)declaration).Identifier, id);
                 case SyntaxKind.ClassDeclaration:
                     return ReplaceWithTrivia(declaration, ((ClassDeclarationSyntax)declaration).Identifier, id);
                 case SyntaxKind.StructDeclaration:
@@ -3121,6 +3153,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
         {
             switch (declaration.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)declaration).BaseList;
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)declaration).BaseList;
                 case SyntaxKind.StructDeclaration:

@@ -2726,6 +2726,9 @@
       <Kind Name="InKeyword"/>
       <Kind Name="OutKeyword"/>
     </Field>
+    <Field Name="ImplicitKeyword" Type="SyntaxToken" Optional="true">
+      <Kind Name="ImplicitKeyword"/>
+    </Field>
     <Field Name="Identifier" Type="SyntaxToken">
       <PropertyComment>
         <summary>Gets the identifier.</summary>
@@ -2779,11 +2782,11 @@
   </AbstractNode>
   <AbstractNode Name="TypeDeclarationSyntax" Base="BaseTypeDeclarationSyntax">
     <TypeComment>
-      <summary>Base class for type declaration syntax (class, struct, interface).</summary>
+      <summary>Base class for type declaration syntax (class, struct, interface, concept).</summary>
     </TypeComment>
     <Field Name="Keyword" Type="SyntaxToken">
       <PropertyComment>
-        <summary>Gets the type keyword token ("class", "struct", "interface").</summary>
+        <summary>Gets the type keyword token ("class", "struct", "interface", "concept").</summary>
       </PropertyComment>
     </Field>
     <Field Name="TypeParameterList" Type="TypeParameterListSyntax" Optional="true"/>
@@ -2840,6 +2843,66 @@
         <summary>Gets the struct keyword token.</summary>
       </PropertyComment>
       <Kind Name="StructKeyword"/>
+    </Field>
+    <Field Name="Identifier" Type="SyntaxToken" Override="true">
+      <Kind Name="IdentifierToken"/>
+    </Field>
+    <Field Name="TypeParameterList" Type="TypeParameterListSyntax" Optional="true" Override="true"/>
+    <Field Name="BaseList" Type="BaseListSyntax" Optional="true" Override="true"/>
+    <Field Name="ConstraintClauses" Type="SyntaxList&lt;TypeParameterConstraintClauseSyntax&gt;" Override="true"/>
+    <Field Name="OpenBraceToken" Type="SyntaxToken" Override="true">
+      <Kind Name="OpenBraceToken"/>
+    </Field>
+    <Field Name="Members" Type="SyntaxList&lt;MemberDeclarationSyntax&gt;" Override="true"/>
+    <Field Name="CloseBraceToken" Type="SyntaxToken" Override="true">
+      <Kind Name="CloseBraceToken"/>
+    </Field>
+    <Field Name="SemicolonToken" Type="SyntaxToken" Optional="true" Override="true">
+      <Kind Name="SemicolonToken"/>
+    </Field>
+  </Node>
+  <Node Name="InstanceDeclarationSyntax" Base="TypeDeclarationSyntax">
+    <TypeComment>
+      <summary>Instance type declaration syntax.</summary>
+    </TypeComment>
+    <Kind Name="InstanceDeclaration"/>
+    <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
+    <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
+    <Field Name="Keyword" Type="SyntaxToken" Override="true">
+      <PropertyComment>
+        <summary>Gets the instance keyword token.</summary>
+      </PropertyComment>
+      <Kind Name="InstanceKeyword"/>
+    </Field>
+    <Field Name="Identifier" Type="SyntaxToken" Override="true">
+      <Kind Name="IdentifierToken"/>
+    </Field>
+    <Field Name="TypeParameterList" Type="TypeParameterListSyntax" Optional="true" Override="true"/>
+    <Field Name="BaseList" Type="BaseListSyntax" Optional="true" Override="true"/>
+    <Field Name="ConstraintClauses" Type="SyntaxList&lt;TypeParameterConstraintClauseSyntax&gt;" Override="true"/>
+    <Field Name="OpenBraceToken" Type="SyntaxToken" Override="true">
+      <Kind Name="OpenBraceToken"/>
+    </Field>
+    <Field Name="Members" Type="SyntaxList&lt;MemberDeclarationSyntax&gt;" Override="true"/>
+    <Field Name="CloseBraceToken" Type="SyntaxToken" Override="true">
+      <Kind Name="CloseBraceToken"/>
+    </Field>
+    <Field Name="SemicolonToken" Type="SyntaxToken" Optional="true" Override="true">
+      <Kind Name="SemicolonToken"/>
+    </Field>
+  </Node>
+   <Node Name="ConceptDeclarationSyntax" Base="TypeDeclarationSyntax">
+    <TypeComment>
+      <summary>Concept type declaration syntax.</summary>
+    </TypeComment>
+    <Kind Name="ConceptDeclaration"/>
+    <Field Name="AttributeLists" Type="SyntaxList&lt;AttributeListSyntax&gt;" Override="true"/>
+    <Field Name="Modifiers" Type="SyntaxList&lt;SyntaxToken&gt;" Override="true"/>
+    <Field Name="Keyword" Type="SyntaxToken" Override="true">
+      <PropertyComment>
+        <summary>Gets the concept keyword token.</summary>
+      </PropertyComment>
+      <Kind Name="ConceptKeyword"/>
     </Field>
     <Field Name="Identifier" Type="SyntaxToken" Override="true">
       <Kind Name="IdentifierToken"/>

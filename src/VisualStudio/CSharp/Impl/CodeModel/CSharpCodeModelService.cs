@@ -91,6 +91,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
                 case SyntaxKind.EventDeclaration:
                 case SyntaxKind.IndexerDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.MethodDeclaration:
                 case SyntaxKind.NamespaceDeclaration:
                 case SyntaxKind.OperatorDeclaration:
@@ -199,6 +200,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
 
                     break;
 
+                case SyntaxKind.ConceptDeclaration: //@t-mawind HACK
                 case SyntaxKind.InterfaceDeclaration:
                     if (scope == EnvDTE.vsCMElement.vsCMElementInterface)
                     {
@@ -535,6 +537,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
             {
                 case SyntaxKind.ClassDeclaration:
                     return (EnvDTE.CodeElement)CodeClass.Create(state, fileCodeModel, nodeKey, (int)node.Kind());
+                case SyntaxKind.ConceptDeclaration: //@t-mawind HACK
                 case SyntaxKind.InterfaceDeclaration:
                     return (EnvDTE.CodeElement)CodeInterface.Create(state, fileCodeModel, nodeKey, (int)node.Kind());
                 case SyntaxKind.StructDeclaration:
@@ -584,9 +587,9 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
             {
                 case SyntaxKind.NamespaceDeclaration:
                     return (EnvDTE.CodeElement)CodeNamespace.CreateUnknown(state, fileCodeModel, node.RawKind, GetName(node));
-
                 case SyntaxKind.ClassDeclaration:
                     return (EnvDTE.CodeElement)CodeClass.CreateUnknown(state, fileCodeModel, node.RawKind, GetName(node));
+                case SyntaxKind.ConceptDeclaration: //@t-mawind HACK
                 case SyntaxKind.InterfaceDeclaration:
                     return (EnvDTE.CodeElement)CodeInterface.CreateUnknown(state, fileCodeModel, node.RawKind, GetName(node));
                 case SyntaxKind.StructDeclaration:
@@ -807,6 +810,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
 
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.StructDeclaration:
@@ -885,6 +889,8 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                     return SetNameOfClassOrStruct(node, newIdentifier);
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithIdentifier(newIdentifier);
                 case SyntaxKind.InterfaceDeclaration:
                     return ((InterfaceDeclarationSyntax)node).WithIdentifier(newIdentifier);
                 case SyntaxKind.EnumDeclaration:
@@ -1158,6 +1164,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
             }
 
             if (member.Parent.Kind() == SyntaxKind.InterfaceDeclaration ||
+                member.Parent.Kind() == SyntaxKind.ConceptDeclaration /*@t-mawind HACK*/ ||
                 member.Parent.Kind() == SyntaxKind.EnumDeclaration)
             {
                 if (newAccess == EnvDTE.vsCMAccess.vsCMAccessDefault ||
@@ -3564,6 +3571,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
                 case SyntaxKind.EnumMemberDeclaration:
                 case SyntaxKind.FieldDeclaration:
                 case SyntaxKind.IndexerDeclaration:
+                case SyntaxKind.ConceptDeclaration: // @t-mawind ?
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.MethodDeclaration:
                 case SyntaxKind.NamespaceDeclaration:
@@ -3586,6 +3594,7 @@ namespace Microsoft.VisualStudio.LanguageServices.CSharp.CodeModel
         public override bool IsType(SyntaxNode node)
         {
             return node.IsKind(SyntaxKind.ClassDeclaration)
+                || node.IsKind(SyntaxKind.ConceptDeclaration) // @t-mawind ?
                 || node.IsKind(SyntaxKind.InterfaceDeclaration)
                 || node.IsKind(SyntaxKind.StructDeclaration)
                 || node.IsKind(SyntaxKind.EnumDeclaration)

@@ -33,7 +33,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _name = name;
             _isExpressionBodied = isExpressionBodied;
 
-            var defaultAccess = DeclarationModifiers.Private;
+            // @t-mawind (is this a good idea?)
+            var defaultAccess = (ContainingType.IsInstance || ContainingType.IsConcept) ? DeclarationModifiers.Public : DeclarationModifiers.Private;
             var allowedModifiers =
                 DeclarationModifiers.AccessibilityMask |
                 DeclarationModifiers.Static |
@@ -46,13 +47,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             this.CheckUnsafeModifier(declarationModifiers, diagnostics);
 
+            if (ContainingType.IsConcept)
+            {
+                // @t-mawind Is there any easier way of doing this?
+                declarationModifiers |= DeclarationModifiers.Abstract;
+            }
+
             // We will bind the formal parameters and the return type lazily. For now,
             // assume that the return type is non-void; when we do the lazy initialization
             // of the parameters and return type we will update the flag if necessary.
 
             this.MakeFlags(methodKind, declarationModifiers, returnsVoid: false, isExtensionMethod: false);
 
-            if (this.ContainingType.IsInterface)
+            if (this.ContainingType.IsInterface && !this.ContainingType.IsConcept)
             {
                 // If we have an operator in an interface, we already have reported that fact as 
                 // an error. No need to cascade the error further.
@@ -68,12 +75,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return;
             }
 
-            // SPEC: An operator declaration must include both a public and a
-            // SPEC: static modifier
-            if (this.DeclaredAccessibility != Accessibility.Public || !this.IsStatic)
+            // @t-mawind
+            //   If we're in a concept instance, then operators must be public and
+            //   _non_ -static.
+            if (ContainingType.IsInstance || ContainingType.IsConcept)
             {
-                // CS0558: User-defined operator '...' must be declared static and public
-                diagnostics.Add(ErrorCode.ERR_OperatorsMustBeStatic, this.Locations[0], this);
+                if (DeclaredAccessibility != Accessibility.Public || IsStatic)
+                {
+                    // CS4038: User-defined concept operator '...' must be declared non-static and public.
+                    diagnostics.Add(ErrorCode.ERR_ConceptOperatorsMustBeNonStatic, Locations[0], this);
+                }
+            }
+            else
+            {
+                // SPEC: An operator declaration must include both a public and a
+                // SPEC: static modifier
+                if (this.DeclaredAccessibility != Accessibility.Public || !this.IsStatic)
+                {
+                    // CS0558: User-defined operator '...' must be declared static and public
+                    diagnostics.Add(ErrorCode.ERR_OperatorsMustBeStatic, this.Locations[0], this);
+                }
             }
 
             // SPEC: Because an external operator provides no actual implementation, 
@@ -157,7 +178,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // If we have an operator in an interface or static class then we already 
             // have reported that fact as  an error. No need to cascade the error further.
-            if (this.ContainingType.IsInterfaceType() || this.ContainingType.IsStatic)
+            if ((this.ContainingType.IsInterfaceType() && !this.ContainingType.IsConcept) || this.ContainingType.IsStatic)
             {
                 return;
             }
@@ -411,7 +432,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // SPEC: A unary + - ! ~ operator must take a single parameter of type
             // SPEC: T or T? and can return any type.
 
-            if (this.ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType)
+            // @t-mawind
+            //   If we're on an concept, we insist that the type of
+            //   the parameter is one of the type parameters of the concept.
+            //   We presume that instance inheritance enforces this constraint
+            //   for instances, so don't check them.
+            if (ContainingType.IsInstance)
+            {
+                // TODO: We should be checking that this is part of the underlying concept
+            }
+            else if (ContainingType.IsConcept)
+            {
+                bool isOk = false;
+                foreach (var typeParameter in ContainingType.TypeParameters)
+                {
+                    if (ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() == typeParameter)
+                    {
+                        isOk = true;
+                        break;
+                    }
+                }
+                if (!isOk) diagnostics.Add(ErrorCode.ERR_BadConceptUnaryOperatorSignature, this.Locations[0]);
+            }
+            else if (this.ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType)
             {
                 // The parameter of a unary operator must be the containing type
                 diagnostics.Add(ErrorCode.ERR_BadUnaryOperatorSignature, this.Locations[0]);
@@ -507,6 +550,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // SPEC: of which must have type T or T? and the second of which must
             // SPEC: have type int or int?, and can return any type.
 
+            // @t-mawind TODO: work out how to do this for concepts.
             if (this.ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType ||
                 this.ParameterTypes[1].StrippedType().SpecialType != SpecialType.System_Int32)
             {
@@ -528,7 +572,31 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             // SPEC: A binary nonshift operator must take two parameters, at least
             // SPEC: one of which must have the type T or T?, and can return any type.
-            if (this.ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType &&
+
+            // @t-mawind
+            //   If we're on an concept, we insist that the type of one of
+            //   the parameters is one of the type parameters of the concept.
+            //   We presume that instance inheritance enforces this constraint
+            //   for instances, so don't check them.
+            if (ContainingType.IsInstance)
+            {
+                // Deliberately do nothing here
+            }
+            else if (ContainingType.IsConcept)
+            {
+                bool isOk = false;
+                foreach (var typeParameter in ContainingType.TypeParameters)
+                {
+                    if (ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() == typeParameter ||
+                        ParameterTypes[1].StrippedType().TupleUnderlyingTypeOrSelf() == typeParameter)
+                    {
+                        isOk = true;
+                        break;
+                    }
+                }
+                if (!isOk) diagnostics.Add(ErrorCode.ERR_BadConceptBinaryOperatorSignature, this.Locations[0]);
+            }
+            else if (this.ParameterTypes[0].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType &&
                 this.ParameterTypes[1].StrippedType().TupleUnderlyingTypeOrSelf() != this.ContainingType)
             {
                 // CS0563: One of the parameters of a binary operator must be the containing type

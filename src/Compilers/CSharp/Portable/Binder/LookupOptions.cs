@@ -96,6 +96,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Do not consider symbols that are method type parameters.
         /// </summary>
         MustNotBeMethodTypeParameter = 1 << 14,
+
+        /// <summary>
+        /// Do not emit errors for special methods.
+        /// </summary>
+        AllowSpecialMethods = 1 << 15,
+
+        // @t-mawind TODO: the above is a nasty hack.
     }
 
     internal static class LookupOptionExtensions

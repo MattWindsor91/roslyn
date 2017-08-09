@@ -1456,6 +1456,22 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ExpressionTreeContainsOutVariable = 8198,
         #endregion diagnostics for out var
 
+        // @t-mawind
+        #region diagnostics for concepts
+
+        ERR_ConceptOperatorsMustBeNonStatic = 8947,
+        ERR_BadConceptUnaryOperatorSignature = 8948,
+        ERR_BadConceptBinaryOperatorSignature = 8949,
+        ERR_ConceptMethodNotImplementedAndNoDefault = 8950,
+        ERR_DefaultStructBadArity = 8951,
+        ERR_DefaultStructNoWitnessParam = 8952,
+        ERR_ConceptConstraintOnNonImplicitParam = 8953,
+        ERR_NonConceptConstraintOnImplicitParam = 8954,
+        ERR_NoConstraintsOnImplicitParam = 8955,
+        ERR_CantInferConceptInstance = 8956,
+
+        #endregion diagnostics for concepts
+
         #region more stragglers for C# 7
         ERR_VarInvocationLvalueReserved = 8199,
         ERR_ExpressionVariableInConstructorOrFieldInitializer = 8200,

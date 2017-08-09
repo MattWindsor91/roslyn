@@ -13,7 +13,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public static IEnumerable<SyntaxKind> GetReservedKeywordKinds()
         {
-            for (int i = (int)SyntaxKind.BoolKeyword; i <= (int)SyntaxKind.ImplicitKeyword; i++)
+            //@t-mawind We've added two keywords, so the upper bound has gone up.
+            for (int i = (int)SyntaxKind.BoolKeyword; i <= (int)SyntaxKind.InstanceKeyword; i++)
             {
                 yield return (SyntaxKind)i;
             }
@@ -34,7 +35,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public static bool IsReservedKeyword(SyntaxKind kind)
         {
-            return kind >= SyntaxKind.BoolKeyword && kind <= SyntaxKind.ImplicitKeyword;
+            //@t-mawind We've added two keywords, so the upper bound has gone up.
+            return kind >= SyntaxKind.BoolKeyword && kind <= SyntaxKind.InstanceKeyword;
         }
 
         public static bool IsAttributeTargetSpecifier(SyntaxKind kind)
@@ -311,6 +313,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.EnumDeclaration:
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                case SyntaxKind.InstanceDeclaration: //@t-mawind
                 case SyntaxKind.InterfaceDeclaration:
                     return true;
 
@@ -343,6 +347,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.DelegateDeclaration:
                 case SyntaxKind.EnumDeclaration:
@@ -778,6 +783,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.ClassDeclaration;
                 case SyntaxKind.StructKeyword:
                     return SyntaxKind.StructDeclaration;
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                    return SyntaxKind.ConceptDeclaration;
+                case SyntaxKind.InstanceKeyword: //@t-mawind
+                    return SyntaxKind.InstanceDeclaration;
                 case SyntaxKind.InterfaceKeyword:
                     return SyntaxKind.InterfaceDeclaration;
                 default:
@@ -933,6 +942,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return SyntaxKind.ClassKeyword;
                 case "struct":
                     return SyntaxKind.StructKeyword;
+                case "concept": //@crusso, @t-mawind
+                    return SyntaxKind.ConceptKeyword;
+                case "instance": //@t-mawind
+                    return SyntaxKind.InstanceKeyword;
                 case "interface":
                     return SyntaxKind.InterfaceKeyword;
                 case "enum":
@@ -1472,6 +1485,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return "class";
                 case SyntaxKind.StructKeyword:
                     return "struct";
+                case SyntaxKind.ConceptKeyword: //@t-mawind
+                    return "concept";
+                case SyntaxKind.InstanceKeyword: //@t-mawind
+                    return "instance";
                 case SyntaxKind.InterfaceKeyword:
                     return "interface";
                 case SyntaxKind.EnumKeyword:

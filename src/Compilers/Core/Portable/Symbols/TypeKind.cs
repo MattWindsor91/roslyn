@@ -78,6 +78,6 @@ namespace Microsoft.CodeAnalysis
         /// <summary>
         /// Type is an interactive submission.
         /// </summary>
-        Submission = 12,
+        Submission = 12
     }
 }

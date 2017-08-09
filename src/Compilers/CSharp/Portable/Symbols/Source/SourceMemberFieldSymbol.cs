@@ -128,6 +128,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal static DeclarationModifiers MakeModifiers(NamedTypeSymbol containingType, SyntaxToken firstIdentifier, SyntaxTokenList modifiers, DiagnosticBag diagnostics, out bool modifierErrors)
         {
+            // @t-mawind
+            //   Instances do not have fields, so, unlike methods, we do not
+            //   force their default access to public.
             DeclarationModifiers defaultAccess =
                 (containingType.IsInterface) ? DeclarationModifiers.Public : DeclarationModifiers.Private;
 

@@ -832,7 +832,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                     return MethodKind.Ordinary;
                 }
 
-                if (!this.HasRuntimeSpecialName && this.IsStatic && this.DeclaredAccessibility == Accessibility.Public)
+                // @t-mawind
+                //   Operators can be non-static if and only if they are being
+                //   defined on concepts or instances.
+                if (!this.HasRuntimeSpecialName &&
+                    (this.IsStatic || (ContainingType != null && (ContainingType.IsConcept || ContainingType.IsInstance))) &&
+                    this.DeclaredAccessibility == Accessibility.Public)
                 {
                     switch (_name)
                     {

@@ -99,6 +99,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (syntax.Arity == 0)
             {
                 _typeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
+                // @t-mawind TODO: fix this so we can have concept constraints
                 ReportErrorIfHasConstraints(syntax.ConstraintClauses, diagnostics);
             }
             else
@@ -110,7 +111,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _isExpressionBodied = !hasBlockBody && syntax.ExpressionBody != null;
             syntax.ReturnType.SkipRef(out _refKind);
 
-            if (hasBlockBody || _isExpressionBodied)
+            // @t-mawind
+            //   If this method is on a concept and has a body, then we pretend
+            //   it isn't there in various parts of this class, as it's meant for
+            //   the default struct.
+            //   First, we don't check modifiers for it here.
+            if (!containingType.IsConcept && (hasBlockBody || _isExpressionBodied))
             {
                 CheckModifiersForBody(location, diagnostics);
             }
@@ -736,7 +742,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private DeclarationModifiers MakeModifiers(SyntaxTokenList modifiers, MethodKind methodKind, Location location, DiagnosticBag diagnostics, out bool modifierErrors)
         {
             bool isInterface = this.ContainingType.IsInterface;
-            var defaultAccess = isInterface ? DeclarationModifiers.Public : DeclarationModifiers.Private;
+            bool isConceptInstance = this.ContainingType.IsInstance;
+            bool isDefault = ContainingType.IsDefaultStruct;
+
+            // @t-mawind
+            //    Concept instances default to public method access: indeed,
+            //    the only thing allowed in a concept instance is a public
+            //    method.
+            var defaultAccess = (isInterface || isConceptInstance || isDefault) ? DeclarationModifiers.Public : DeclarationModifiers.Private;
 
             // Check that the set of modifiers is allowed
             var allowedModifiers = DeclarationModifiers.Partial | DeclarationModifiers.Unsafe;

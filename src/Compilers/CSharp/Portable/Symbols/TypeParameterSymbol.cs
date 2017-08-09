@@ -477,6 +477,31 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        // This can be further overridden because synthesised witness
+        // symbols can short-circuit this to true.
+        internal override bool IsConceptWitness
+        {
+            get
+            {
+                // @t-mawind
+                //   In accordance with the F# prototype, a type parameter
+                //   is a concept witness if all of its constraints are
+                //   concepts, and at least one constraint exists.
+                //   TODO: emit error if at least one, but not all, are.
+
+                if (ConstraintTypes.IsEmpty) return false;
+
+                foreach (var constraint in ConstraintTypes)
+                {
+                    if (!constraint.IsConceptType()) return false;
+                }
+
+                // We only reach this if all constraints are concepts and
+                // at least one exists.
+                return true;
+            }
+        }
+
         internal sealed override ObsoleteAttributeData ObsoleteAttributeData
         {
             get { return null; }

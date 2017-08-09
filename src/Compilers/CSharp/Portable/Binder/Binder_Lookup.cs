@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -664,6 +665,26 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var members = GetCandidateMembers(type, name, options, originalBinder);
 
+            // @t-mawind
+            //
+            // Also look up any members of an instance that are about to
+            // forward to a default implementation.
+            //
+            // TODO: this is a painfully horrible hack, but I'm not
+            // sure how else would be best to do it.
+            var allMembersB = ArrayBuilder<Symbol>.GetInstance();
+            allMembersB.AddRange(members);
+            if (type is SourceMemberContainerTypeSymbol && type.IsInstanceType()
+                && ((options & (LookupOptions.NamespacesOrTypesOnly | LookupOptions.NamespaceAliasesOnly)) == 0))
+            {
+                var st = type as SourceMemberContainerTypeSymbol;
+                foreach (var mem in st.GetSynthesizedDefaultImplementations(CancellationToken.None))
+                {
+                    if (mem.Name == name) allMembersB.Add(mem);
+                }
+            }
+            members = allMembersB.ToImmutableAndFree();
+
             foreach (Symbol member in members)
             {
                 // Do we need to exclude override members, or is that done later by overload resolution. It seems like
@@ -1117,8 +1138,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 return LookupResult.WrongArity(symbol, diagInfo);
             }
-            else if (!InCref && !unwrappedSymbol.CanBeReferencedByNameIgnoringIllegalCharacters)
+            else if (!InCref && ((options & LookupOptions.AllowSpecialMethods) == 0) && !unwrappedSymbol.CanBeReferencedByNameIgnoringIllegalCharacters)
             {
+                // @t-mawind: The new lookup option is a nasty hack.
+
                 // Strictly speaking, this test should actually check CanBeReferencedByName.
                 // However, we don't want to pay that cost in cases where the lookup is based
                 // on a provided name.  As a result, we skip the character check here and let
@@ -1419,7 +1442,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                         Debug.Assert(object.ReferenceEquals(namedType.ConstructedFrom, namedType));
                         if (namedType.Arity != arity || options.IsAttributeTypeLookup() && arity != 0)
                         {
-                            if (namedType.Arity == 0)
+                            // @t-mawind
+                            //   Allow a match, for now, if it looks like the
+                            //   programmer has omitted implicit parameters only.
+                            if (namedType.Arity - namedType.ImplicitTypeParameterCount == arity)
+                            {
+                                diagInfo = null;
+                                return false;
+                            }
+
+                        if (namedType.Arity == 0)
                             {
                                 // The non-generic {1} '{0}' cannot be used with type arguments
                                 diagInfo = diagnose ? new CSDiagnosticInfo(ErrorCode.ERR_HasNoTypeVars, namedType, MessageID.IDS_SK_TYPE.Localize()) : null;
@@ -1440,6 +1472,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                         MethodSymbol method = (MethodSymbol)symbol;
                         if (method.Arity != arity)
                         {
+                            // @t-mawind
+                            //   Allow a match, for now, if it looks like the
+                            //   programmer has omitted implicit parameters only.
+                            if (method.Arity - method.ImplicitTypeParameterCount == arity)
+                            {
+                                diagInfo = null;
+                                return false;
+                            }
+
                             if (method.Arity == 0)
                             {
                                 // The non-generic {1} '{0}' cannot be used with type arguments

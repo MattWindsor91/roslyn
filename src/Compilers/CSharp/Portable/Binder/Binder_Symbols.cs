@@ -193,6 +193,21 @@ namespace Microsoft.CodeAnalysis.CSharp
                     CheckFeatureAvailability(syntax, MessageID.IDS_FeatureImplicitLocal, diagnostics);
                 }
 
+                // @t-mawind
+                //   We are allowed to construct a concept which has
+                //   missing and non-inferrable associated type
+                //   parameters above.  This is specifically intended
+                //   for the case where the concept is on the LHS of a
+                //   member access, so forbid it here.
+                //
+                //   TODO: where should this go?
+                if (symbol != null && symbol.Kind == SymbolKind.NamedType && IsConceptWithFailedPartInference((NamedTypeSymbol)symbol))
+                {
+                    // Using the generic {1} '{0}' requires {2} type arguments
+                    diagnostics.Add(ErrorCode.ERR_BadArity, syntax.Location, (NamedTypeSymbol)symbol, MessageID.IDS_SK_TYPE.Localize(), ((NamedTypeSymbol)symbol).Arity);
+                }
+
+
                 return symbol;
             }
         }
@@ -664,6 +679,32 @@ namespace Microsoft.CodeAnalysis.CSharp
                         symbols.Add(bindingResult);
                         bindingResult = null;
                     }
+
+                    // @t-mawind
+                    //   We might have got here by picking up a generic class
+                    //   whose type parameters are all implicit.
+                    if (bindingResult != null && bindingResult.Kind == SymbolKind.NamedType)
+                    {
+                        var nt = bindingResult as NamedTypeSymbol;
+                        if (0 < nt.Arity)
+                        {
+                            Debug.Assert(nt.ImplicitTypeParameterCount == nt.Arity,
+                                "We should only be able to get here if we're expecting part-inference.");
+                            var typeArguments = PartInferImplicitTypeParameters(ImmutableArray<TypeSymbol>.Empty, nt);
+                            if (typeArguments.IsEmpty)
+                            {
+                                diagnostics.Add(ErrorCode.ERR_BadArity, node.Location, nt, MessageID.IDS_SK_TYPE.Localize(), nt.Arity);
+
+                                // TODO: this is probably wrong.
+                                return new ExtendedErrorTypeSymbol(nt,
+                                    LookupResultKind.WrongArity,
+                                    null);
+                            }
+
+                            // TODO: this is probably not robust (constraint checks?)
+                            bindingResult = nt.Construct(typeArguments);
+                        }
+                    }
                 }
             }
 
@@ -843,7 +884,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     resultType = unconstructedType.Construct(
                         UnboundArgumentErrorTypeSymbol.CreateTypeArguments(
                             unconstructedType.TypeParameters,
-                            node.Arity,
+                            unconstructedType.Arity /* @t-mawind correct? */,
                             errorInfo: null),
                         unbound: false);
                 }
@@ -856,12 +897,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 // It's not an unbound type expression, so we must have type arguments, and we have a 
                 // generic type of the correct arity in hand (possibly an error type). Bind the type 
-                // arguments and construct the final result. 
+                // arguments and construct the final result.
+
+                var boundArguments = BindTypeArguments(typeArguments, diagnostics, basesBeingResolved);
+
                 resultType = ConstructNamedType(
                     unconstructedType,
                     node,
                     typeArguments,
-                    BindTypeArguments(typeArguments, diagnostics, basesBeingResolved),
+                    boundArguments,
                     basesBeingResolved,
                     diagnostics);
             }
@@ -877,6 +921,38 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return resultType;
+        }
+
+        /// <summary>
+        /// Given an invocation of a named type whose type arguments appear to
+        /// be missing implicit type parameters, try to infer them.
+        /// </summary>
+        /// <param name="typeArguments">
+        /// The given set of type arguments.
+        /// </param>
+        /// <param name="namedType">
+        /// The named type for which we are inferring implicit type parameters.
+        /// </param>
+        /// <returns>
+        /// The set of all type arguments post-inference on success;
+        /// an empty array otherwise.  (We assume that there is at least
+        /// one resulting type argument, and thus the two cases are
+        /// distinguishable.)
+        /// </returns>
+        private ImmutableArray<TypeSymbol> PartInferImplicitTypeParameters(ImmutableArray<TypeSymbol> typeArguments, NamedTypeSymbol namedType)
+        {
+            Debug.Assert(typeArguments.Length + namedType.ImplicitTypeParameterCount == namedType.Arity,
+                $"Started {nameof(PartInferImplicitTypeParameters)} with incorrect number of missing arguments");
+
+            // Pointless to part-infer without implicit type parameters.
+            if (namedType.ImplicitTypeParameterCount == 0) return ImmutableArray<TypeSymbol>.Empty;
+
+            var allArguments = ConceptWitnessInferrer.ForBinder(this).PartInfer(typeArguments, namedType.TypeParameters, expandAssociatedIfFailed: namedType.IsConcept);
+
+            Debug.Assert(allArguments.IsEmpty || allArguments.Length == typeArguments.Length + namedType.ImplicitTypeParameterCount,
+                "Part-inference did not add in the expected number of new arguments");
+
+            return allArguments;
         }
 
         private NamedTypeSymbol LookupGenericTypeName(
@@ -1069,6 +1145,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticBag diagnostics)
         {
             Debug.Assert(!typeArguments.IsEmpty);
+
+            // @t-mawind
+            //   If we don't have the right number of type arguments, this
+            //   hopefully means we're expecting to type-infer some witnesses.
+            //   We do so here.
+            //
+            // TODO: does this belong here?
+            if (typeArguments.Length < type.Arity)
+            {
+                typeArguments = PartInferImplicitTypeParameters(typeArguments, type);
+                if (typeArguments.IsEmpty)
+                {
+                    diagnostics.Add(ErrorCode.ERR_BadArity, typeSyntax.Location, type, MessageID.IDS_SK_TYPE.Localize(), type.Arity);
+
+                    // TODO: this is probably wrong.
+                    return new ExtendedErrorTypeSymbol(type,
+                        LookupResultKind.WrongArity,
+                        null);
+                }
+            }
+
             type = type.Construct(typeArguments);
 
             if (ShouldCheckConstraints)

@@ -48,6 +48,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.DocumentationComments
 
             switch (member.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.StructDeclaration:

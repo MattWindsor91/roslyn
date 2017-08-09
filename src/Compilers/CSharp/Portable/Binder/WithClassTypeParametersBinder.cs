@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp
@@ -57,6 +58,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
             }
+        }
+
+        internal override void GetConceptInstances(bool onlyExplicitWitnesses, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            foreach (var parameter in _namedType.TypeParameters)
+            {
+                if (parameter.IsConceptWitness) instances.Add(parameter);
+            }
+        }
+
+        internal override void GetFixedTypeParameters(ArrayBuilder<TypeParameterSymbol> fixedTypeParams)
+        {
+            foreach (var parameter in _namedType.TypeParameters) fixedTypeParams.Add(parameter);
         }
     }
 }

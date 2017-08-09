@@ -320,5 +320,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return UnderlyingMethod.GenerateDebugInfo;
             }
         }
+
+        /// <summary>
+        /// Returns the number of implicit type parameters.
+        /// </summary>
+        internal override int ImplicitTypeParameterCount => UnderlyingMethod.ImplicitTypeParameterCount; //@t-mawind
     }
 }

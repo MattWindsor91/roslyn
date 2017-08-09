@@ -12,5 +12,6 @@ namespace Microsoft.CodeAnalysis.CodeGeneration
         InterfaceType = 5,
         ModuleType = 6,
         StructType = 7,
+        ConceptType = 8, //@t-mawind
     }
 }

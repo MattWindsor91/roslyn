@@ -75,6 +75,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         return;
                     }
 
+                case SyntaxKind.ConceptDeclaration: //@t-mawind ?
+                case SyntaxKind.InstanceDeclaration: //@t-mawind ?
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:

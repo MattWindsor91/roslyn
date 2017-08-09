@@ -26,7 +26,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             { SyntaxKind.InterfaceDeclaration, 11 },
             { SyntaxKind.StructDeclaration, 12 },
             { SyntaxKind.ClassDeclaration, 13 },
-            { SyntaxKind.DelegateDeclaration, 14 }
+            { SyntaxKind.DelegateDeclaration, 14 },
+            { SyntaxKind.ConceptDeclaration, 15 } //@t-mawind probably wrong
         };
 
         private static readonly Dictionary<SyntaxKind, int> s_operatorPrecedenceMap = new Dictionary<SyntaxKind, int>(SyntaxFacts.EqualityComparer)
@@ -114,6 +115,7 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
                 case SyntaxKind.EnumDeclaration:
                     return Compare((EnumDeclarationSyntax)x, (EnumDeclarationSyntax)y);
 
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.ClassDeclaration:
@@ -348,7 +350,8 @@ namespace Microsoft.CodeAnalysis.CSharp.CodeGeneration
             // the syntax tree and don't find a containing named type.
             for (var node = parent; node != null; node = node.Parent)
             {
-                if (node.Kind() == SyntaxKind.InterfaceDeclaration)
+                //@t-mawind HACK?
+                if (node.Kind() == SyntaxKind.InterfaceDeclaration || node.Kind() == SyntaxKind.ConceptDeclaration)
                 {
                     // All interface members are public
                     return (int)Accessibility.Public;

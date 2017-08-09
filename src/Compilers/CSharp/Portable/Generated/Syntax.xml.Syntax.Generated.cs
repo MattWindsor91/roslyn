@@ -12573,10 +12573,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         }
     }
 
+    public SyntaxToken ImplicitKeyword 
+    {
+        get
+        {
+            var slot = ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterSyntax)this.Green).implicitKeyword;
+            if (slot != null)
+                return new SyntaxToken(this, slot, this.GetChildPosition(2), this.GetChildIndex(2));
+
+            return default(SyntaxToken);
+        }
+    }
+
     /// <summary>Gets the identifier.</summary>
     public SyntaxToken Identifier 
     {
-      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterSyntax)this.Green).identifier, this.GetChildPosition(2), this.GetChildIndex(2)); }
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.TypeParameterSyntax)this.Green).identifier, this.GetChildPosition(3), this.GetChildIndex(3)); }
     }
 
     internal override SyntaxNode GetNodeSlot(int index)
@@ -12606,11 +12618,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         visitor.VisitTypeParameter(this);
     }
 
-    public TypeParameterSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken varianceKeyword, SyntaxToken identifier)
+    public TypeParameterSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxToken varianceKeyword, SyntaxToken implicitKeyword, SyntaxToken identifier)
     {
-        if (attributeLists != this.AttributeLists || varianceKeyword != this.VarianceKeyword || identifier != this.Identifier)
+        if (attributeLists != this.AttributeLists || varianceKeyword != this.VarianceKeyword || implicitKeyword != this.ImplicitKeyword || identifier != this.Identifier)
         {
-            var newNode = SyntaxFactory.TypeParameter(attributeLists, varianceKeyword, identifier);
+            var newNode = SyntaxFactory.TypeParameter(attributeLists, varianceKeyword, implicitKeyword, identifier);
             var annotations = this.GetAnnotations();
             if (annotations != null && annotations.Length > 0)
                return newNode.WithAnnotations(annotations);
@@ -12622,17 +12634,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
 
     public TypeParameterSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists)
     {
-        return this.Update(attributeLists, this.VarianceKeyword, this.Identifier);
+        return this.Update(attributeLists, this.VarianceKeyword, this.ImplicitKeyword, this.Identifier);
     }
 
     public TypeParameterSyntax WithVarianceKeyword(SyntaxToken varianceKeyword)
     {
-        return this.Update(this.AttributeLists, varianceKeyword, this.Identifier);
+        return this.Update(this.AttributeLists, varianceKeyword, this.ImplicitKeyword, this.Identifier);
+    }
+
+    public TypeParameterSyntax WithImplicitKeyword(SyntaxToken implicitKeyword)
+    {
+        return this.Update(this.AttributeLists, this.VarianceKeyword, implicitKeyword, this.Identifier);
     }
 
     public TypeParameterSyntax WithIdentifier(SyntaxToken identifier)
     {
-        return this.Update(this.AttributeLists, this.VarianceKeyword, identifier);
+        return this.Update(this.AttributeLists, this.VarianceKeyword, this.ImplicitKeyword, identifier);
     }
 
     public TypeParameterSyntax AddAttributeLists(params AttributeListSyntax[] items)
@@ -12671,7 +12688,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     public abstract SyntaxToken SemicolonToken { get; }
   }
 
-  /// <summary>Base class for type declaration syntax (class, struct, interface).</summary>
+  /// <summary>Base class for type declaration syntax (class, struct, interface, concept).</summary>
   public abstract partial class TypeDeclarationSyntax : BaseTypeDeclarationSyntax
   {
     internal TypeDeclarationSyntax(Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.CSharpSyntaxNode green, SyntaxNode parent, int position)
@@ -12679,7 +12696,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     {
     }
 
-    /// <summary>Gets the type keyword token ("class", "struct", "interface").</summary>
+    /// <summary>Gets the type keyword token ("class", "struct", "interface", "concept").</summary>
     public abstract SyntaxToken Keyword { get; }
 
     public abstract TypeParameterListSyntax TypeParameterList { get; }
@@ -13158,6 +13175,478 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
     }
 
     public StructDeclarationSyntax AddMembers(params MemberDeclarationSyntax[] items)
+    {
+        return this.WithMembers(this.Members.AddRange(items));
+    }
+  }
+
+  /// <summary>Instance type declaration syntax.</summary>
+  public sealed partial class InstanceDeclarationSyntax : TypeDeclarationSyntax
+  {
+    private SyntaxNode attributeLists;
+    private TypeParameterListSyntax typeParameterList;
+    private BaseListSyntax baseList;
+    private SyntaxNode constraintClauses;
+    private SyntaxNode members;
+
+    internal InstanceDeclarationSyntax(Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.CSharpSyntaxNode green, SyntaxNode parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public override SyntaxList<AttributeListSyntax> AttributeLists 
+    {
+        get
+        {
+            return new SyntaxList<AttributeListSyntax>(this.GetRed(ref this.attributeLists, 0));
+        }
+    }
+
+    public override SyntaxTokenList Modifiers 
+    {
+        get
+        {
+            var slot = this.Green.GetSlot(1);
+            if (slot != null)
+                return new SyntaxTokenList(this, slot, this.GetChildPosition(1), this.GetChildIndex(1));
+
+            return default(SyntaxTokenList);
+        }
+    }
+
+    /// <summary>Gets the instance keyword token.</summary>
+    public override SyntaxToken Keyword 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.InstanceDeclarationSyntax)this.Green).keyword, this.GetChildPosition(2), this.GetChildIndex(2)); }
+    }
+
+    public override SyntaxToken Identifier 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.InstanceDeclarationSyntax)this.Green).identifier, this.GetChildPosition(3), this.GetChildIndex(3)); }
+    }
+
+    public override TypeParameterListSyntax TypeParameterList 
+    {
+        get
+        {
+            return this.GetRed(ref this.typeParameterList, 4);
+        }
+    }
+
+    public override BaseListSyntax BaseList 
+    {
+        get
+        {
+            return this.GetRed(ref this.baseList, 5);
+        }
+    }
+
+    public override SyntaxList<TypeParameterConstraintClauseSyntax> ConstraintClauses 
+    {
+        get
+        {
+            return new SyntaxList<TypeParameterConstraintClauseSyntax>(this.GetRed(ref this.constraintClauses, 6));
+        }
+    }
+
+    public override SyntaxToken OpenBraceToken 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.InstanceDeclarationSyntax)this.Green).openBraceToken, this.GetChildPosition(7), this.GetChildIndex(7)); }
+    }
+
+    public override SyntaxList<MemberDeclarationSyntax> Members 
+    {
+        get
+        {
+            return new SyntaxList<MemberDeclarationSyntax>(this.GetRed(ref this.members, 8));
+        }
+    }
+
+    public override SyntaxToken CloseBraceToken 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.InstanceDeclarationSyntax)this.Green).closeBraceToken, this.GetChildPosition(9), this.GetChildIndex(9)); }
+    }
+
+    public override SyntaxToken SemicolonToken 
+    {
+        get
+        {
+            var slot = ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.InstanceDeclarationSyntax)this.Green).semicolonToken;
+            if (slot != null)
+                return new SyntaxToken(this, slot, this.GetChildPosition(10), this.GetChildIndex(10));
+
+            return default(SyntaxToken);
+        }
+    }
+
+    internal override SyntaxNode GetNodeSlot(int index)
+    {
+        switch (index)
+        {
+            case 0: return this.GetRedAtZero(ref this.attributeLists);
+            case 4: return this.GetRed(ref this.typeParameterList, 4);
+            case 5: return this.GetRed(ref this.baseList, 5);
+            case 6: return this.GetRed(ref this.constraintClauses, 6);
+            case 8: return this.GetRed(ref this.members, 8);
+            default: return null;
+        }
+    }
+    internal override SyntaxNode GetCachedSlot(int index)
+    {
+        switch (index)
+        {
+            case 0: return this.attributeLists;
+            case 4: return this.typeParameterList;
+            case 5: return this.baseList;
+            case 6: return this.constraintClauses;
+            case 8: return this.members;
+            default: return null;
+        }
+    }
+
+    public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor)
+    {
+        return visitor.VisitInstanceDeclaration(this);
+    }
+
+    public override void Accept(CSharpSyntaxVisitor visitor)
+    {
+        visitor.VisitInstanceDeclaration(this);
+    }
+
+    public InstanceDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken keyword, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken openBraceToken, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+    {
+        if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || keyword != this.Keyword || identifier != this.Identifier || typeParameterList != this.TypeParameterList || baseList != this.BaseList || constraintClauses != this.ConstraintClauses || openBraceToken != this.OpenBraceToken || members != this.Members || closeBraceToken != this.CloseBraceToken || semicolonToken != this.SemicolonToken)
+        {
+            var newNode = SyntaxFactory.InstanceDeclaration(attributeLists, modifiers, keyword, identifier, typeParameterList, baseList, constraintClauses, openBraceToken, members, closeBraceToken, semicolonToken);
+            var annotations = this.GetAnnotations();
+            if (annotations != null && annotations.Length > 0)
+               return newNode.WithAnnotations(annotations);
+            return newNode;
+        }
+
+        return this;
+    }
+
+    public InstanceDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists)
+    {
+        return this.Update(attributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithModifiers(SyntaxTokenList modifiers)
+    {
+        return this.Update(this.AttributeLists, modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithKeyword(SyntaxToken keyword)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithIdentifier(SyntaxToken identifier)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithTypeParameterList(TypeParameterListSyntax typeParameterList)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, typeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithBaseList(BaseListSyntax baseList)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, baseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, constraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithOpenBraceToken(SyntaxToken openBraceToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, openBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithMembers(SyntaxList<MemberDeclarationSyntax> members)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithCloseBraceToken(SyntaxToken closeBraceToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, closeBraceToken, this.SemicolonToken);
+    }
+
+    public InstanceDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, semicolonToken);
+    }
+
+    public InstanceDeclarationSyntax AddAttributeLists(params AttributeListSyntax[] items)
+    {
+        return this.WithAttributeLists(this.AttributeLists.AddRange(items));
+    }
+
+    public InstanceDeclarationSyntax AddModifiers(params SyntaxToken[] items)
+    {
+        return this.WithModifiers(this.Modifiers.AddRange(items));
+    }
+
+    public InstanceDeclarationSyntax AddTypeParameterListParameters(params TypeParameterSyntax[] items)
+    {
+        var typeParameterList = this.TypeParameterList ?? SyntaxFactory.TypeParameterList();
+        return this.WithTypeParameterList(typeParameterList.WithParameters(typeParameterList.Parameters.AddRange(items)));
+    }
+
+    public InstanceDeclarationSyntax AddBaseListTypes(params BaseTypeSyntax[] items)
+    {
+        var baseList = this.BaseList ?? SyntaxFactory.BaseList();
+        return this.WithBaseList(baseList.WithTypes(baseList.Types.AddRange(items)));
+    }
+
+    public InstanceDeclarationSyntax AddConstraintClauses(params TypeParameterConstraintClauseSyntax[] items)
+    {
+        return this.WithConstraintClauses(this.ConstraintClauses.AddRange(items));
+    }
+
+    public InstanceDeclarationSyntax AddMembers(params MemberDeclarationSyntax[] items)
+    {
+        return this.WithMembers(this.Members.AddRange(items));
+    }
+  }
+
+  /// <summary>Concept type declaration syntax.</summary>
+  public sealed partial class ConceptDeclarationSyntax : TypeDeclarationSyntax
+  {
+    private SyntaxNode attributeLists;
+    private TypeParameterListSyntax typeParameterList;
+    private BaseListSyntax baseList;
+    private SyntaxNode constraintClauses;
+    private SyntaxNode members;
+
+    internal ConceptDeclarationSyntax(Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.CSharpSyntaxNode green, SyntaxNode parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public override SyntaxList<AttributeListSyntax> AttributeLists 
+    {
+        get
+        {
+            return new SyntaxList<AttributeListSyntax>(this.GetRed(ref this.attributeLists, 0));
+        }
+    }
+
+    public override SyntaxTokenList Modifiers 
+    {
+        get
+        {
+            var slot = this.Green.GetSlot(1);
+            if (slot != null)
+                return new SyntaxTokenList(this, slot, this.GetChildPosition(1), this.GetChildIndex(1));
+
+            return default(SyntaxTokenList);
+        }
+    }
+
+    /// <summary>Gets the concept keyword token.</summary>
+    public override SyntaxToken Keyword 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.ConceptDeclarationSyntax)this.Green).keyword, this.GetChildPosition(2), this.GetChildIndex(2)); }
+    }
+
+    public override SyntaxToken Identifier 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.ConceptDeclarationSyntax)this.Green).identifier, this.GetChildPosition(3), this.GetChildIndex(3)); }
+    }
+
+    public override TypeParameterListSyntax TypeParameterList 
+    {
+        get
+        {
+            return this.GetRed(ref this.typeParameterList, 4);
+        }
+    }
+
+    public override BaseListSyntax BaseList 
+    {
+        get
+        {
+            return this.GetRed(ref this.baseList, 5);
+        }
+    }
+
+    public override SyntaxList<TypeParameterConstraintClauseSyntax> ConstraintClauses 
+    {
+        get
+        {
+            return new SyntaxList<TypeParameterConstraintClauseSyntax>(this.GetRed(ref this.constraintClauses, 6));
+        }
+    }
+
+    public override SyntaxToken OpenBraceToken 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.ConceptDeclarationSyntax)this.Green).openBraceToken, this.GetChildPosition(7), this.GetChildIndex(7)); }
+    }
+
+    public override SyntaxList<MemberDeclarationSyntax> Members 
+    {
+        get
+        {
+            return new SyntaxList<MemberDeclarationSyntax>(this.GetRed(ref this.members, 8));
+        }
+    }
+
+    public override SyntaxToken CloseBraceToken 
+    {
+      get { return new SyntaxToken(this, ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.ConceptDeclarationSyntax)this.Green).closeBraceToken, this.GetChildPosition(9), this.GetChildIndex(9)); }
+    }
+
+    public override SyntaxToken SemicolonToken 
+    {
+        get
+        {
+            var slot = ((Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.ConceptDeclarationSyntax)this.Green).semicolonToken;
+            if (slot != null)
+                return new SyntaxToken(this, slot, this.GetChildPosition(10), this.GetChildIndex(10));
+
+            return default(SyntaxToken);
+        }
+    }
+
+    internal override SyntaxNode GetNodeSlot(int index)
+    {
+        switch (index)
+        {
+            case 0: return this.GetRedAtZero(ref this.attributeLists);
+            case 4: return this.GetRed(ref this.typeParameterList, 4);
+            case 5: return this.GetRed(ref this.baseList, 5);
+            case 6: return this.GetRed(ref this.constraintClauses, 6);
+            case 8: return this.GetRed(ref this.members, 8);
+            default: return null;
+        }
+    }
+    internal override SyntaxNode GetCachedSlot(int index)
+    {
+        switch (index)
+        {
+            case 0: return this.attributeLists;
+            case 4: return this.typeParameterList;
+            case 5: return this.baseList;
+            case 6: return this.constraintClauses;
+            case 8: return this.members;
+            default: return null;
+        }
+    }
+
+    public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor)
+    {
+        return visitor.VisitConceptDeclaration(this);
+    }
+
+    public override void Accept(CSharpSyntaxVisitor visitor)
+    {
+        visitor.VisitConceptDeclaration(this);
+    }
+
+    public ConceptDeclarationSyntax Update(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, SyntaxToken keyword, SyntaxToken identifier, TypeParameterListSyntax typeParameterList, BaseListSyntax baseList, SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses, SyntaxToken openBraceToken, SyntaxList<MemberDeclarationSyntax> members, SyntaxToken closeBraceToken, SyntaxToken semicolonToken)
+    {
+        if (attributeLists != this.AttributeLists || modifiers != this.Modifiers || keyword != this.Keyword || identifier != this.Identifier || typeParameterList != this.TypeParameterList || baseList != this.BaseList || constraintClauses != this.ConstraintClauses || openBraceToken != this.OpenBraceToken || members != this.Members || closeBraceToken != this.CloseBraceToken || semicolonToken != this.SemicolonToken)
+        {
+            var newNode = SyntaxFactory.ConceptDeclaration(attributeLists, modifiers, keyword, identifier, typeParameterList, baseList, constraintClauses, openBraceToken, members, closeBraceToken, semicolonToken);
+            var annotations = this.GetAnnotations();
+            if (annotations != null && annotations.Length > 0)
+               return newNode.WithAnnotations(annotations);
+            return newNode;
+        }
+
+        return this;
+    }
+
+    public ConceptDeclarationSyntax WithAttributeLists(SyntaxList<AttributeListSyntax> attributeLists)
+    {
+        return this.Update(attributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithModifiers(SyntaxTokenList modifiers)
+    {
+        return this.Update(this.AttributeLists, modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithKeyword(SyntaxToken keyword)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithIdentifier(SyntaxToken identifier)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithTypeParameterList(TypeParameterListSyntax typeParameterList)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, typeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithBaseList(BaseListSyntax baseList)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, baseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithConstraintClauses(SyntaxList<TypeParameterConstraintClauseSyntax> constraintClauses)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, constraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithOpenBraceToken(SyntaxToken openBraceToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, openBraceToken, this.Members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithMembers(SyntaxList<MemberDeclarationSyntax> members)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, members, this.CloseBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithCloseBraceToken(SyntaxToken closeBraceToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, closeBraceToken, this.SemicolonToken);
+    }
+
+    public ConceptDeclarationSyntax WithSemicolonToken(SyntaxToken semicolonToken)
+    {
+        return this.Update(this.AttributeLists, this.Modifiers, this.Keyword, this.Identifier, this.TypeParameterList, this.BaseList, this.ConstraintClauses, this.OpenBraceToken, this.Members, this.CloseBraceToken, semicolonToken);
+    }
+
+    public ConceptDeclarationSyntax AddAttributeLists(params AttributeListSyntax[] items)
+    {
+        return this.WithAttributeLists(this.AttributeLists.AddRange(items));
+    }
+
+    public ConceptDeclarationSyntax AddModifiers(params SyntaxToken[] items)
+    {
+        return this.WithModifiers(this.Modifiers.AddRange(items));
+    }
+
+    public ConceptDeclarationSyntax AddTypeParameterListParameters(params TypeParameterSyntax[] items)
+    {
+        var typeParameterList = this.TypeParameterList ?? SyntaxFactory.TypeParameterList();
+        return this.WithTypeParameterList(typeParameterList.WithParameters(typeParameterList.Parameters.AddRange(items)));
+    }
+
+    public ConceptDeclarationSyntax AddBaseListTypes(params BaseTypeSyntax[] items)
+    {
+        var baseList = this.BaseList ?? SyntaxFactory.BaseList();
+        return this.WithBaseList(baseList.WithTypes(baseList.Types.AddRange(items)));
+    }
+
+    public ConceptDeclarationSyntax AddConstraintClauses(params TypeParameterConstraintClauseSyntax[] items)
+    {
+        return this.WithConstraintClauses(this.ConstraintClauses.AddRange(items));
+    }
+
+    public ConceptDeclarationSyntax AddMembers(params MemberDeclarationSyntax[] items)
     {
         return this.WithMembers(this.Members.AddRange(items));
     }

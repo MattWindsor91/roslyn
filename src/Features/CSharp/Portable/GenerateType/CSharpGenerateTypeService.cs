@@ -106,6 +106,7 @@ namespace Microsoft.CodeAnalysis.CSharp.GenerateType
                 // interface.
                 return
                     baseList.IsParentKind(SyntaxKind.InterfaceDeclaration) ||
+                    baseList.IsParentKind(SyntaxKind.ConceptDeclaration) /*@t-mawind*/ ||
                     baseList.IsParentKind(SyntaxKind.StructDeclaration);
             }
 

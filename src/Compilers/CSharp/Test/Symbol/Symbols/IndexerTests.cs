@@ -163,7 +163,7 @@ class C : IB, IC
             }));
         }
 
-        private static KeyValuePair<string, string> GetPairForSynthesizedExplicitImplementation(SynthesizedExplicitImplementationForwardingMethod bridge)
+        private static KeyValuePair<string, string> GetPairForSynthesizedExplicitImplementation(SynthesizedImplementationForwardingMethod bridge)
         {
             return new KeyValuePair<string, string>(bridge.ExplicitInterfaceImplementations.Single().ToTestDisplayString(), bridge.ImplementingMethod.ToTestDisplayString());
         }

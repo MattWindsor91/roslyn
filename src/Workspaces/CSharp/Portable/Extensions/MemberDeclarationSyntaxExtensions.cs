@@ -82,6 +82,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
                 {
                     case SyntaxKind.EnumDeclaration:
                         return ((EnumDeclarationSyntax)member).Identifier;
+                    case SyntaxKind.ConceptDeclaration: // @t-mawind
+                    case SyntaxKind.InstanceDeclaration: // @t-mawind
                     case SyntaxKind.ClassDeclaration:
                     case SyntaxKind.InterfaceDeclaration:
                     case SyntaxKind.StructDeclaration:

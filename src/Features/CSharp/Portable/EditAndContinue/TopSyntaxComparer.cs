@@ -189,6 +189,7 @@ namespace Microsoft.CodeAnalysis.CSharp.EditAndContinue
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                     isLeaf = false;
                     return Label.TypeDeclaration;
 
@@ -419,6 +420,7 @@ namespace Microsoft.CodeAnalysis.CSharp.EditAndContinue
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                     return ((TypeDeclarationSyntax)node).Identifier;
 
                 case SyntaxKind.EnumDeclaration:

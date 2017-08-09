@@ -135,16 +135,31 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     SourceMemberMethodSymbol method = null;
 
-                    if (usage != NodeUsage.Normal && methodDecl.TypeParameterList != null)
+                    // @t-mawind
+                    //   To find out whether we need to use the type parameters
+                    //   binder, we can't rely on methodDecl.TypeParameterList:
+                    //   it doesn't take witnesses into account.  Instead, we
+                    //   must use the symbol's type parameter list...
+                    if (usage != NodeUsage.Normal)
                     {
-                        method = GetMethodSymbol(methodDecl, resultBinder);
-                        resultBinder = new WithMethodTypeParametersBinder(method, resultBinder);
+                        method = method ?? GetMethodSymbol(methodDecl, resultBinder);
+
+                        // @t-mawind ...which we don't get until here.
+                        if (!method.TypeParameters.IsEmpty)
+                        {
+                            resultBinder = new WithMethodTypeParametersBinder(method, resultBinder);
+                        }
                     }
 
                     if (usage == NodeUsage.MethodBody)
                     {
                         method = method ?? GetMethodSymbol(methodDecl, resultBinder);
                         resultBinder = new InMethodBinder(method, resultBinder);
+
+                        if (!method.TypeParameters.IsEmpty)
+                        {
+                            resultBinder = new WithWitnessesBinder(method, resultBinder);
+                        }
                     }
 
                     resultBinder = resultBinder.WithUnsafeRegionIfNecessary(methodDecl.Modifiers);
@@ -686,8 +701,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             resultBinder = new InContainerBinder(typeSymbol, resultBinder);
 
-                            if (parent.TypeParameterList != null)
+                            // @t-mawind We can't rely on TypeParameterList
+                            //   here, because there may be witnesses.
+                            if (!typeSymbol.TypeParameters.IsEmpty)
                             {
+                                resultBinder = new WithWitnessesBinder(typeSymbol, resultBinder);
                                 resultBinder = new WithClassTypeParametersBinder(typeSymbol, resultBinder);
                             }
                         }
@@ -708,6 +726,16 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             public override Binder VisitStructDeclaration(StructDeclarationSyntax node)
             {
+                return VisitTypeDeclarationCore(node);
+            }
+            public override Binder VisitInstanceDeclaration(InstanceDeclarationSyntax node)
+            {
+                //@t-mawind
+                return VisitTypeDeclarationCore(node);
+            }
+            public override Binder VisitConceptDeclaration(ConceptDeclarationSyntax node)
+            {
+                //@t-mawind
                 return VisitTypeDeclarationCore(node);
             }
 

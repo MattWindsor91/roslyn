@@ -4934,6 +4934,36 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_DiscardTypeInferenceFailed" xml:space="preserve">
     <value>Cannot infer the type of implicitly-typed discard.</value>
   </data>
+  <data name="ERR_ConceptOperatorsMustBeNonStatic" xml:space="preserve">
+    <value>User-defined concept operator '{0}' must be declared non-static and public.</value>
+  </data>
+  <data name="ERR_BadConceptUnaryOperatorSignature" xml:space="preserve">
+    <value>The parameter of a concept unary operator must be a type parameter on the concept.</value>
+  </data>
+  <data name="ERR_BadConceptBinaryOperatorSignature" xml:space="preserve">
+    <value>One of the parameters of a binary operator must be a type parameter on the concept.</value>
+  </data>
+  <data name="ERR_ConceptMethodNotImplementedAndNoDefault" xml:space="preserve">
+    <value>Instance '{0}' of concept '{1}' does not implement '{2}', and the concept has no default implementation.</value>
+  </data>
+  <data name="ERR_DefaultStructBadArity" xml:space="preserve">
+    <value>Default struct for concept '{0}' has arity '{1}', but expected '{2}'.</value>
+  </data>
+  <data name="ERR_DefaultStructNoWitnessParam" xml:space="preserve">
+    <value>Default struct for concept '{0}' must take a witness for that concept as its last parameter.</value>
+  </data>
+  <data name="ERR_ConceptConstraintOnNonImplicitParam" xml:space="preserve">
+    <value>Type parameter '{0}' is constrained to concept '{1}' but is not marked 'implicit'.</value>
+  </data>
+  <data name="ERR_NonConceptConstraintOnImplicitParam" xml:space="preserve">
+    <value>Type parameter '{0}' is marked 'implicit' but has been constrained to '{1}' which is not a concept.</value>
+  </data>
+  <data name="ERR_NoConstraintsOnImplicitParam" xml:space="preserve">
+    <value>Type parameter '{0}' is marked 'implicit' but has no type constraints.</value>
+  </data>
+  <data name="ERR_CantInferConceptInstance" xml:space="preserve">
+    <value>Cannot infer a valid witness for concept '{0}' at this location.</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>

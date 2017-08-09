@@ -238,6 +238,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
                     // If we see a member declaration keyword, we know we've gone too far
                     case SyntaxKind.ClassKeyword:
                     case SyntaxKind.StructKeyword:
+                    case SyntaxKind.ConceptKeyword: // @t-mawind
+                    case SyntaxKind.InstanceKeyword: // @t-mawind
                     case SyntaxKind.InterfaceKeyword:
                     case SyntaxKind.DelegateKeyword:
                     case SyntaxKind.EnumKeyword:

@@ -28,13 +28,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return;
             }
 
+            // @t-mawind
+            //   Here, we add in the possibility of having access to a concept
+            //   witness defining the unary operator.
+            bool hadConceptCandidate = GetUnaryWitnessOperators(kind, operand, result.Results, ref useSiteDiagnostics);
+
             // SPEC: An operation of the form op x or x op, where op is an overloadable unary operator,
             // SPEC: and x is an expression of type X, is processed as follows:
 
             // SPEC: The set of candidate user-defined operators provided by X for the operation operator 
             // SPEC: op(x) is determined using the rules of 7.3.5.
 
-            bool hadUserDefinedCandidate = GetUserDefinedOperators(kind, operand, result.Results, ref useSiteDiagnostics);
+            bool hadUserDefinedCandidate = hadConceptCandidate || GetUserDefinedOperators(kind, operand, result.Results, ref useSiteDiagnostics);
 
             // SPEC: If the set of candidate user-defined operators is not empty, then this becomes the 
             // SPEC: set of candidate operators for the operation. Otherwise, the predefined unary operator 
@@ -53,6 +58,44 @@ namespace Microsoft.CodeAnalysis.CSharp
             // SPEC: to select a single best operator, a binding-time error occurs.
 
             UnaryOperatorOverloadResolution(operand, result, ref useSiteDiagnostics);
+        }
+
+        /// <summary>
+        /// Populates a list of unary operator results with those from any
+        /// witness in scope at the operator site.
+        /// </summary>
+        /// <param name="kind">
+        /// The unary operator kind of the expression.
+        /// </param>
+        /// <param name="operand">
+        /// The operand expression.
+        /// </param>
+        /// <param name="results">
+        /// The results list to populate.
+        /// </param>
+        /// <param name="useSiteDiagnostics">
+        /// The set of diagnostics to populate with any errors.
+        /// </param>
+        /// <returns>
+        /// True if we managed to find candidate operators from the concept
+        /// witnesses in scope; false otherwise.
+        /// </returns>
+        private bool GetUnaryWitnessOperators(UnaryOperatorKind kind, BoundExpression operand, ArrayBuilder<UnaryOperatorAnalysisResult> results, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            Debug.Assert(operand != null);
+
+            string name = OperatorFacts.UnaryOperatorNameFromOperatorKind(kind);
+
+            var operators = ArrayBuilder<UnaryOperatorSignature>.GetInstance();
+            foreach (var method in GetWitnessOperators(name, 1, ref useSiteDiagnostics))
+            {
+                // TODO: nullability
+                operators.Add(new UnaryOperatorSignature(UnaryOperatorKind.UserDefined | kind, method.ParameterTypes[0], method.ReturnType, method));
+            }
+
+            bool hasCandidates = CandidateOperators(operators, operand, results, ref useSiteDiagnostics);
+            operators.Free();
+            return hasCandidates;
         }
 
         // Takes a list of candidates and mutates the list to throw out the ones that are worse than

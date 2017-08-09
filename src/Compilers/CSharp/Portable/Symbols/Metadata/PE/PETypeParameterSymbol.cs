@@ -370,5 +370,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
         {
             get { return null; }
         }
+
+        internal sealed override bool IsAssociatedType
+        {
+            get
+            {
+                // Usually, types are associated types if they have
+                // [AssociatedType]. @t-mawind
+                foreach (var attribute in GetAttributes())
+                {
+                    if (attribute.IsTargetAttribute(this, AttributeDescription.AssociatedTypeAttribute)) return true;
+                }
+
+                return false;
+            }
+        }
     }
 }

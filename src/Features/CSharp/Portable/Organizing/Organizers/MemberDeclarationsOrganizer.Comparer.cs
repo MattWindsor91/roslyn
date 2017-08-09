@@ -162,6 +162,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Organizing.Organizers
                     case SyntaxKind.MethodDeclaration:
                         return OuterOrdering.Methods;
                     case SyntaxKind.ClassDeclaration:
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
                     case SyntaxKind.InterfaceDeclaration:
                     case SyntaxKind.StructDeclaration:
                     case SyntaxKind.EnumDeclaration:

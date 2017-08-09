@@ -318,6 +318,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             return VisitTypeDeclaration(node, DeclarationKind.Interface);
         }
 
+        public override SingleNamespaceOrTypeDeclaration VisitConceptDeclaration(ConceptDeclarationSyntax node)
+        {
+            //@t-mawind (Don't do syntax manipulation here, it breaks Roslyn!)
+            return VisitTypeDeclaration(node, DeclarationKind.Concept);
+        }
+
+        public override SingleNamespaceOrTypeDeclaration VisitInstanceDeclaration(InstanceDeclarationSyntax node)
+        {
+            return VisitTypeDeclaration(node, DeclarationKind.Instance);
+        }
+
         private SingleNamespaceOrTypeDeclaration VisitTypeDeclaration(TypeDeclarationSyntax node, DeclarationKind kind)
         {
             SingleTypeDeclaration.TypeDeclarationFlags declFlags = node.AttributeLists.Any() ?
@@ -555,6 +566,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SyntaxKind.CompilationUnit:
                     return (((Syntax.InternalSyntax.CompilationUnitSyntax)member).AttributeLists).Any();
 
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                case SyntaxKind.InstanceDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:

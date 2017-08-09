@@ -133,8 +133,21 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(node != null);
 
-            // Rewrite the receiver
-            BoundExpression rewrittenReceiver = VisitExpression(node.ReceiverOpt);
+            BoundExpression rewrittenReceiver;
+
+            // @t-mawind
+            //   Here we synthesise a default() call for implicit calls into a
+            //   concept instance.
+            if (!node.Method.IsStatic && node.ReceiverOpt != null && node.ReceiverOpt.Kind == BoundKind.TypeExpression &&
+                (node.ReceiverOpt.Type.IsInstanceType() || node.ReceiverOpt.Type.IsConceptWitness))
+            {
+                rewrittenReceiver = SynthesizeWitnessInvocationReceiver(node.ReceiverOpt.Syntax, node.ReceiverOpt.Type);
+            }
+            else
+            {
+                // Rewrite the receiver normally.
+                rewrittenReceiver = VisitExpression(node.ReceiverOpt);
+            }
 
             // Rewrite the arguments.
             // NOTE: We may need additional argument rewriting such as generating a params array, re-ordering arguments based on argsToParamsOpt map, inserting arguments for optional parameters, etc.
@@ -1471,6 +1484,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(node.TypeArgumentsOpt.IsDefault);
             var loweredReceiver = VisitExpression(node.Receiver);
             return _dynamicFactory.MakeDynamicGetMember(loweredReceiver, node.Name, node.Indexed).ToExpression();
+        }
+
+        /// <summary>
+        /// Synthesizes the correct receiver of a witness invocation.
+        /// </summary>
+        /// <param name="syntax">
+        /// The syntax from which the receiver is being synthesized.
+        /// </param>
+        /// <param name="witness">
+        /// The witness on which we are invoking a method.
+        /// </param>
+        /// <returns></returns>
+        BoundExpression SynthesizeWitnessInvocationReceiver(SyntaxNode syntax, TypeSymbol witness)
+        {
+            return new BoundDefaultExpression(syntax, witness) { WasCompilerGenerated = true };
         }
     }
 }

@@ -65,7 +65,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
     }
 
-    internal sealed class MethodTypeInferrer
+    internal sealed partial class MethodTypeInferrer
     {
         private enum InferenceResult
         {
@@ -219,10 +219,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(formalParameterRefKinds.IsDefault || formalParameterRefKinds.Length == formalParameterTypes.Length);
             Debug.Assert(!arguments.IsDefault);
 
-            // Early out: if the method has no formal parameters then we know that inference will fail.
+            // Early out: if the method has no formal parameters then we know that inference will fail...
+            // ..unless the only type parameters to infer are concept witnesses or
+            // associated types (@t-mawind)
             if (formalParameterTypes.Length == 0)
             {
-                return new MethodTypeInferenceResult(false, default(ImmutableArray<TypeSymbol>));
+                foreach (var tp in methodTypeParameters)
+                {
+                    if (!tp.IsConceptWitness && !tp.IsAssociatedType) return new MethodTypeInferenceResult(false, default(ImmutableArray<TypeSymbol>));
+                }
 
                 // UNDONE: OPTIMIZATION: We could check to see whether there is a type
                 // UNDONE: parameter which is never used in any formal parameter; if
@@ -510,6 +515,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             // SPEC: bounds. The second phase may have to be repeated a number of times.
             InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
             bool success = InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics);
+            // @t-mawind Adding in witness phase.
+            if (!success) success = InferTypeArgsConceptPhase(binder, ref useSiteDiagnostics);
             return new MethodTypeInferenceResult(success, GetResults());
         }
 

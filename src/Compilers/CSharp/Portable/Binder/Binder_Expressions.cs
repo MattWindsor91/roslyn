@@ -1290,6 +1290,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (hasTypeArguments && isNamedType)
                     {
                         symbol = ConstructNamedTypeUnlessTypeArgumentOmitted(node, (NamedTypeSymbol)symbol, typeArgumentList, typeArguments, diagnostics);
+                        // @t-mawind
+                        //   Can't use IsConceptWithFailedPartInference here:
+                        //   this could be part of a color-color access.
                     }
 
                     expression = BindNonMethod(node, symbol, diagnostics, lookupResult.Kind, isError);
@@ -1449,7 +1452,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return null;
             }
 
-            var declaringType = members[0].ContainingType;
+            // @t-mawind
+            //   Witnesses are in their own binder, so if we see one witness
+            //   method, all of the methods in the method group are witnesses.
+            if (members[0] is SynthesizedWitnessMethodSymbol)
+            {
+                // However, we can't tell at this stage what the receiver _is_,
+                // as the method group may contain bindings from multiple
+                // receivers, so we rely on later binding to work it out.
+                return null;
+            }
+
+            NamedTypeSymbol declaringType = members[0].ContainingType;
 
             HashSet<DiagnosticInfo> unused = null;
             if (currentType.IsEqualToOrDerivedFrom(declaringType, TypeCompareKind.ConsiderEverything, useSiteDiagnostics: ref unused))
@@ -5190,8 +5204,45 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(node != null);
             Debug.Assert(boundLeft != null);
 
-            boundLeft = MakeMemberAccessValue(boundLeft, diagnostics);
+            // @t-mawind
+            //   If we have as our LHS a concept, then we assume the user is
+            //   trying to access a concept witness method using it, without
+            //   having the specific witness itself.
+            //
+            //   We do this so early because we might have associated types
+            //   in our concept.  These can be fixed in this round of inference,
+            //   because the unification used in the inference will note that
+            //   they are not fixed by other means and eagerly match them with
+            //   any potential instance.  (TODO: Should we rely on this?  It
+            //   seems like a bit of a kludge.)
+            //
+            //   Hopefully, we will only get here if 1) the concept is fully
+            //   inferred, or 2) part-inference failed but only failed by
+            //   missing associated types, in which case we told it to continue
+            //   up to this point in the hope that this will fix the missing
+            //   types.
+            //
+            //   This is the one place where we don't need to use
+            //   IsConceptWithFailedPartInference.
+            //
+            //   TODO: clean this up.
+            if ((object)boundLeft.Type != null && boundLeft.Type.IsConceptType())
+            {
+                var requiredConcepts = ImmutableArray.Create(boundLeft.Type);
+                var instance = ConceptWitnessInferrer.ForBinder(this).InferOneWitnessFromRequiredConcepts(requiredConcepts, new ImmutableTypeMap()).Instance;
+                if (instance == null)
+                {
+                    DiagnosticInfo diagnosticInfo = new CSDiagnosticInfo(ErrorCode.ERR_CantInferConceptInstance, boundLeft.Display);
+                    diagnostics.Add(new CSDiagnostic(diagnosticInfo, operatorToken.GetLocation()));
+                    return BadExpression(node);
+                }
+                boundLeft = new BoundTypeExpression(boundLeft.Syntax, null, true, instance);
+            }
+            Debug.Assert(boundLeft.Type == null || !boundLeft.Type.IsConceptType(),
+                "Concept inference should have eliminated any possible concepts on the LHS");
 
+            boundLeft = MakeMemberAccessValue(boundLeft, diagnostics);
+            
             TypeSymbol leftType = boundLeft.Type;
 
             if ((object)leftType != null && leftType.IsDynamic())
@@ -5327,7 +5378,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundKind.TypeExpression:
                         {
                             Debug.Assert((object)leftType != null);
-                            if (leftType.TypeKind == TypeKind.TypeParameter)
+                            // @t-mawind Allow type parameter receivers if they are concept witnesses.
+                            //   These are lowered into valid receivers later.
+                            if (leftType.TypeKind == TypeKind.TypeParameter && !leftType.IsConceptWitness)
                             {
                                 Error(diagnostics, ErrorCode.ERR_BadSKunknown, boundLeft.Syntax, leftType, MessageID.IDS_SK_TYVAR.Localize());
                                 return BadExpression(node, LookupResultKind.NotAValue, boundLeft);
@@ -5787,6 +5840,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                         if (!typeArguments.IsDefault)
                         {
                             type = ConstructNamedTypeUnlessTypeArgumentOmitted(right, type, typeArgumentsSyntax, typeArguments, diagnostics);
+
+                            // @t-mawind
+                            //   We are allowed to construct a concept which has
+                            //   missing and non-inferrable associated type
+                            //   parameters above.  This is specifically intended
+                            //   for the case where the concept is on the LHS of a
+                            //   member access, so forbid it here.
+                            if (IsConceptWithFailedPartInference(type))
+                            {
+                                // Using the generic {1} '{0}' requires {2} type arguments
+                                diagnostics.Add(ErrorCode.ERR_BadArity, node.Location, type, MessageID.IDS_SK_TYPE.Localize(), type.Arity);
+                            }
                         }
 
                         result = new BoundTypeExpression(

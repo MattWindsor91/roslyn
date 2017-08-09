@@ -78,6 +78,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                          declaration.Kind == DeclarationKind.Interface ||
                          declaration.Kind == DeclarationKind.Enum ||
                          declaration.Kind == DeclarationKind.Delegate ||
+                         declaration.Kind == DeclarationKind.Instance /*@ta-mawind*/ ||
+                         declaration.Kind == DeclarationKind.Concept /*@ta-mawind*/ ||
                          declaration.Kind == DeclarationKind.Class);
 
             if (containingSymbol.Kind == SymbolKind.NamedType)
@@ -97,6 +99,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     return ((EnumDeclarationSyntax)node).Identifier;
                 case SyntaxKind.DelegateDeclaration:
                     return ((DelegateDeclarationSyntax)node).Identifier;
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                case SyntaxKind.InstanceDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
                 case SyntaxKind.StructDeclaration:
@@ -136,20 +140,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 SyntaxKind typeKind = typeDecl.Kind();
                 switch (typeKind)
                 {
+                    case SyntaxKind.InstanceDeclaration: //@t-mawind
+                    case SyntaxKind.ConceptDeclaration: //@t-mawind
                     case SyntaxKind.ClassDeclaration:
                     case SyntaxKind.StructDeclaration:
                     case SyntaxKind.InterfaceDeclaration:
                         tpl = ((TypeDeclarationSyntax)typeDecl).TypeParameterList;
                         break;
-
                     case SyntaxKind.DelegateDeclaration:
                         tpl = ((DelegateDeclarationSyntax)typeDecl).TypeParameterList;
                         break;
 
                     case SyntaxKind.EnumDeclaration:
                     default:
-                        // there is no such thing as a generic enum, so code should never reach here.
-                        throw ExceptionUtilities.UnexpectedValue(typeDecl.Kind());
+                    // there is no such thing as a generic enum, so code should never reach here.
+                    throw ExceptionUtilities.UnexpectedValue(typeDecl.Kind());
                 }
 
                 bool isInterfaceOrDelegate = typeKind == SyntaxKind.InterfaceDeclaration || typeKind == SyntaxKind.DelegateDeclaration;
@@ -310,6 +315,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                case SyntaxKind.InstanceDeclaration: //@t-mawind
                 case SyntaxKind.ClassDeclaration:
                 case SyntaxKind.StructDeclaration:
                 case SyntaxKind.InterfaceDeclaration:
@@ -1106,6 +1113,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 {
                     AddSynthesizedAttribute(ref attributes, compilation.SynthesizeTupleNamesAttribute(baseType));
                 }
+            }
+
+            // Is this a concept or instance?
+            // If so, add in the concept attributes, if we don't have them
+            // already.
+
+            // @t-mawind
+            if (this.IsConcept && !this.HasConceptAttribute)
+            {
+                AddSynthesizedAttribute(ref attributes, compilation.TrySynthesizeAttribute(WellKnownMember.System_Concepts_ConceptAttribute__ctor));
+            }
+            else if (this.IsInstance && !this.HasInstanceAttribute)
+            {
+                AddSynthesizedAttribute(ref attributes, compilation.TrySynthesizeAttribute(WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor));
             }
         }
 

@@ -398,6 +398,12 @@ namespace Microsoft.CodeAnalysis
         private static readonly byte[][] s_signaturesOfExperimentalAttribute = { s_signature_HasThis_Void };
         private static readonly byte[][] s_signaturesOfExcludeFromCodeCoverageAttribute = { s_signature_HasThis_Void };
 
+        //@t-mawind
+        private static readonly byte[][] s_signaturesOfConceptAttribute = { s_signature_HasThis_Void };
+        private static readonly byte[][] s_signaturesOfConceptInstanceAttribute = { s_signature_HasThis_Void };
+        private static readonly byte[][] s_signaturesOfAssociatedTypeAttribute = { s_signature_HasThis_Void };
+        private static readonly byte[][] s_signaturesOfConceptDefaultAttribute = { s_signature_HasThis_Void };
+
         // early decoded attributes:
         internal static readonly AttributeDescription OptionalAttribute = new AttributeDescription("System.Runtime.InteropServices", "OptionalAttribute", s_signaturesOfOptionalAttribute);
         internal static readonly AttributeDescription ComImportAttribute = new AttributeDescription("System.Runtime.InteropServices", "ComImportAttribute", s_signaturesOfComImportAttribute);
@@ -508,5 +514,11 @@ namespace Microsoft.CodeAnalysis
         internal static readonly AttributeDescription DeprecatedAttribute = new AttributeDescription("Windows.Foundation.Metadata", "DeprecatedAttribute", s_signaturesOfDeprecatedAttribute);
         internal static readonly AttributeDescription ExperimentalAttribute = new AttributeDescription("Windows.Foundation.Metadata", "ExperimentalAttribute", s_signaturesOfExperimentalAttribute);
         internal static readonly AttributeDescription ExcludeFromCodeCoverageAttribute = new AttributeDescription("System.Diagnostics.CodeAnalysis", "ExcludeFromCodeCoverageAttribute", s_signaturesOfExcludeFromCodeCoverageAttribute);
+ 
+        //@t-mawind
+        internal static readonly AttributeDescription ConceptAttribute = new AttributeDescription("System.Concepts", "ConceptAttribute", s_signaturesOfConceptAttribute);
+        internal static readonly AttributeDescription ConceptInstanceAttribute = new AttributeDescription("System.Concepts", "ConceptInstanceAttribute", s_signaturesOfConceptInstanceAttribute);
+        internal static readonly AttributeDescription AssociatedTypeAttribute = new AttributeDescription("System.Concepts", "AssociatedTypeAttribute", s_signaturesOfAssociatedTypeAttribute);
+        internal static readonly AttributeDescription ConceptDefaultAttribute = new AttributeDescription("System.Concepts", "ConceptDefaultAttribute", s_signaturesOfConceptDefaultAttribute);
     }
 }

@@ -431,6 +431,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (compilationState.Emitting)
                 {
+                    CompileSynthesizedDefaultImplementations(sourceTypeSymbol, compilationState);
                     CompileSynthesizedExplicitImplementations(sourceTypeSymbol, compilationState);
                 }
             }
@@ -748,15 +749,41 @@ namespace Microsoft.CodeAnalysis.CSharp
             // we are not generating any observable diagnostics here so it is ok to short-circuit on global errors.
             if (!_globalHasErrors)
             {
-                foreach (var synthesizedExplicitImpl in sourceTypeSymbol.GetSynthesizedExplicitImplementations(_cancellationToken))
+                foreach (var synthesizedImpl in sourceTypeSymbol.GetSynthesizedExplicitImplementations(_cancellationToken))
                 {
-                    Debug.Assert(synthesizedExplicitImpl.SynthesizesLoweredBoundBody);
+                    Debug.Assert(synthesizedImpl.SynthesizesLoweredBoundBody);
                     var discardedDiagnostics = DiagnosticBag.GetInstance();
-                    synthesizedExplicitImpl.GenerateMethodBody(compilationState, discardedDiagnostics);
+                    synthesizedImpl.GenerateMethodBody(compilationState, discardedDiagnostics);
                     Debug.Assert(!discardedDiagnostics.HasAnyErrors());
                     discardedDiagnostics.Free();
-                    _moduleBeingBuiltOpt.AddSynthesizedDefinition(sourceTypeSymbol, synthesizedExplicitImpl);
+                    _moduleBeingBuiltOpt.AddSynthesizedDefinition(sourceTypeSymbol, synthesizedImpl);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Compiles stubs redirecting missing concept instance methods to
+        /// their default implementation.
+        /// </summary>
+        /// <param name="sourceTypeSymbol">
+        /// The type symbol whose default implementations are being compiled.
+        /// </param>
+        /// <param name="compilationState">
+        /// The current state of the compilation.
+        /// </param>
+        /// <remarks>
+        /// Unlike compiling explicit instances, this can fail, for example if
+        /// the default struct is missing or does not have the method in
+        /// question.  Thus, we emit diagnostics here.  Ideally these checks
+        /// should be made earlier in a production version.
+        /// </remarks>
+        private void CompileSynthesizedDefaultImplementations(SourceMemberContainerTypeSymbol sourceTypeSymbol, TypeCompilationState compilationState)
+        {
+            foreach (var synthesizedImpl in sourceTypeSymbol.GetSynthesizedDefaultImplementations(_cancellationToken))
+            {
+                Debug.Assert(synthesizedImpl.SynthesizesLoweredBoundBody);
+                synthesizedImpl.GenerateMethodBody(compilationState, _diagnostics);
+                _moduleBeingBuiltOpt.AddSynthesizedDefinition(sourceTypeSymbol, synthesizedImpl);
             }
         }
 
@@ -1601,6 +1628,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (bodySyntax != null)
                 {
                     var inMethodBinder = factory.GetBinder(bodySyntax);
+
+                    // @t-mawind TODO: MASSIVE HACK.
+                    //   This exists to correct the fact that default
+                    //   struct methods take their syntax from their definition
+                    //   in the _concept_, not their synthesis in the struct.
+                    //   Thus, we have to bring the struct's witnesses (ie the
+                    //   instance using the default struct) into scope.
+                    //
+                    // TODO: make sure this works for expression bodied methods too.
+                    if (method.ContainingType.IsDefaultStruct)
+                    {
+                        inMethodBinder = new WithWitnessesBinder(method.ContainingType, inMethodBinder);
+                    }
+
                     var binder = new ExecutableCodeBinder(bodySyntax, sourceMethod, inMethodBinder);
                     importChain = binder.ImportChain;
 
@@ -1811,6 +1852,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)containerNode).OpenBraceToken;
+                case SyntaxKind.InstanceDeclaration: //@t-mawind ??
+                    return ((InstanceDeclarationSyntax)containerNode).OpenBraceToken;
                 case SyntaxKind.StructDeclaration:
                     return ((StructDeclarationSyntax)containerNode).OpenBraceToken;
                 case SyntaxKind.EnumDeclaration:

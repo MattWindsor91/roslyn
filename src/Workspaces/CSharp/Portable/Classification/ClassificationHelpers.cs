@@ -137,8 +137,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Classification
                     return ClassificationTypeNames.ClassName;
                 case SyntaxKind.EnumDeclaration:
                     return ClassificationTypeNames.EnumName;
+                case SyntaxKind.InstanceDeclaration: //@t-mawind
                 case SyntaxKind.StructDeclaration:
                     return ClassificationTypeNames.StructName;
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
                 case SyntaxKind.InterfaceDeclaration:
                     return ClassificationTypeNames.InterfaceName;
                 default:

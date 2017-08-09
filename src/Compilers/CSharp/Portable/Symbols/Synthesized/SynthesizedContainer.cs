@@ -53,7 +53,21 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeMap = typeMap;
         }
 
-        private ImmutableArray<TypeParameterSymbol> CreateTypeParameters(int parameterCount, bool returnsVoid)
+        // @t-mawind This is a hack...
+        protected SynthesizedContainer(string name, Func<SynthesizedContainer, ImmutableArray<TypeParameterSymbol>> typeParametersF, TypeMap typeMap)
+        {
+            Debug.Assert(name != null);
+            Debug.Assert(typeParametersF != null);
+            Debug.Assert(typeMap != null);
+
+            Name = name;
+            _typeParameters = typeParametersF(this);
+            Debug.Assert(!_typeParameters.IsDefault);
+            TypeMap = typeMap;
+        }
+
+        // @t-mawind As is this accessibility change
+        internal ImmutableArray<TypeParameterSymbol> CreateTypeParameters(int parameterCount, bool returnsVoid)
         {
             var typeParameters = ArrayBuilder<TypeParameterSymbol>.GetInstance(parameterCount + (returnsVoid ? 0 : 1));
             for (int i = 0; i < parameterCount; i++)
@@ -205,5 +219,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal override TypeLayout Layout => default(TypeLayout);
 
         internal override bool HasSpecialName => false;
+
+        /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is a concept (either it was declared as a
+        /// concept, or it is an interface with the <c>System_Concepts_ConceptAttribute</c>
+        /// attribute); false otherwise.
+        /// </returns>
+        internal override bool IsConcept => false; //@t-mawind TODO
+
+        /// <summary>
+        /// Gets whether this symbol represents a concept.
+        /// </summary>
+        /// <returns>
+        /// True if this symbol is an instance (either it was declared as an
+        /// instance, or it is a struct with the
+        /// <c>System_Concepts_ConceptInstanceAttribute</c> attribute); false otherwise.
+        /// </returns>
+        internal override bool IsInstance => false; //@t-mawind TODO
     }
 }

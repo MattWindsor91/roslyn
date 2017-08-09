@@ -20,6 +20,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).AddMembers(members);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).AddMembers(members);
                 case SyntaxKind.InterfaceDeclaration:
@@ -36,6 +38,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithMembers(members);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithMembers(members);
                 case SyntaxKind.InterfaceDeclaration:
@@ -52,6 +56,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithAttributeLists(attributes);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithAttributeLists(attributes);
                 case SyntaxKind.InterfaceDeclaration:
@@ -68,6 +74,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithIdentifier(identifier);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithIdentifier(identifier);
                 case SyntaxKind.InterfaceDeclaration:
@@ -84,6 +92,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithModifiers(modifiers);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithModifiers(modifiers);
                 case SyntaxKind.InterfaceDeclaration:
@@ -100,6 +110,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithTypeParameterList(list);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithTypeParameterList(list);
                 case SyntaxKind.InterfaceDeclaration:
@@ -116,6 +128,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithBaseList(list);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithBaseList(list);
                 case SyntaxKind.InterfaceDeclaration:
@@ -132,6 +146,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithConstraintClauses(constraintClauses);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithConstraintClauses(constraintClauses);
                 case SyntaxKind.InterfaceDeclaration:
@@ -148,6 +164,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithOpenBraceToken(openBrace);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithOpenBraceToken(openBrace);
                 case SyntaxKind.InterfaceDeclaration:
@@ -164,6 +182,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Extensions
         {
             switch (node.Kind())
             {
+                case SyntaxKind.ConceptDeclaration: //@t-mawind
+                    return ((ConceptDeclarationSyntax)node).WithCloseBraceToken(closeBrace);
                 case SyntaxKind.ClassDeclaration:
                     return ((ClassDeclarationSyntax)node).WithCloseBraceToken(closeBrace);
                 case SyntaxKind.InterfaceDeclaration:

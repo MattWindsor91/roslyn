@@ -920,6 +920,19 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var receiver = ReplaceTypeOrValueReceiver(methodGroup.Receiver, method.IsStatic && !invokedAsExtensionMethod, diagnostics);
 
+            // @t-mawind
+            //   Witness invocations, which manifest as null receiver and
+            //   witness-method symbol, turn for now into invocations on the
+            //   witness itself, and are lowered later.
+            //   (TODO: Remove these in favour of the below?)
+            if (receiver == null && method is SynthesizedWitnessMethodSymbol)
+            {
+                receiver = new BoundTypeExpression(node, null, (method as SynthesizedWitnessMethodSymbol).Parent) { WasCompilerGenerated = true };
+            }
+            // @t-mawind
+            //   We don't handle Concept<..>.Method here -- we do it earlier in
+            //   BindMemberAccessWithBoundLeft.
+
             // Note: we specifically want to do final validation (7.6.5.1) without checking delegate compatibility (15.2),
             // so we're calling MethodGroupFinalValidation directly, rather than via MethodGroupConversionHasErrors.
             // Note: final validation wants the receiver that corresponds to the source representation

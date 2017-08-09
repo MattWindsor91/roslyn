@@ -122,5 +122,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             _underlyingTypeParameter.EnsureAllConstraintsAreResolved();
         }
+
+        //@t-mawind
+        internal override bool IsConceptWitness => _underlyingTypeParameter.IsConceptWitness;
+        internal override bool IsAssociatedType => _underlyingTypeParameter.IsAssociatedType;
     }
 }

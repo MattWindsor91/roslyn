@@ -1259,6 +1259,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to One of the parameters of a binary operator must be a type parameter on the concept..
+        /// </summary>
+        internal static string ERR_BadConceptBinaryOperatorSignature {
+            get {
+                return ResourceManager.GetString("ERR_BadConceptBinaryOperatorSignature", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The parameter of a concept unary operator must be a type parameter on the concept..
+        /// </summary>
+        internal static string ERR_BadConceptUnaryOperatorSignature {
+            get {
+                return ResourceManager.GetString("ERR_BadConceptUnaryOperatorSignature", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Invalid constraint type. A type used as a constraint must be an interface, a non-sealed class or a type parameter..
         /// </summary>
         internal static string ERR_BadConstraintType {
@@ -2510,6 +2528,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot infer a valid witness for concept &apos;{0}&apos; at this location..
+        /// </summary>
+        internal static string ERR_CantInferConceptInstance {
+            get {
+                return ResourceManager.GetString("ERR_CantInferConceptInstance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The type arguments for method &apos;{0}&apos; cannot be inferred from the usage. Try specifying the type arguments explicitly..
         /// </summary>
         internal static string ERR_CantInferMethTypeArgs {
@@ -2888,6 +2915,33 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Type parameter &apos;{0}&apos; is constrained to concept &apos;{1}&apos; but is not marked &apos;implicit&apos;..
+        /// </summary>
+        internal static string ERR_ConceptConstraintOnNonImplicitParam {
+            get {
+                return ResourceManager.GetString("ERR_ConceptConstraintOnNonImplicitParam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Instance &apos;{0}&apos; of concept &apos;{1}&apos; does not implement &apos;{2}&apos;, and the concept has no default implementation..
+        /// </summary>
+        internal static string ERR_ConceptMethodNotImplementedAndNoDefault {
+            get {
+                return ResourceManager.GetString("ERR_ConceptMethodNotImplementedAndNoDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User-defined concept operator &apos;{0}&apos; must be declared non-static and public..
+        /// </summary>
+        internal static string ERR_ConceptOperatorsMustBeNonStatic {
+            get {
+                return ResourceManager.GetString("ERR_ConceptOperatorsMustBeNonStatic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &apos;{0}&apos; must declare a body because it is not marked abstract, extern, or partial.
         /// </summary>
         internal static string ERR_ConcreteMissingBody {
@@ -3235,6 +3289,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_DefaultMemberOnIndexedType {
             get {
                 return ResourceManager.GetString("ERR_DefaultMemberOnIndexedType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Default struct for concept &apos;{0}&apos; has arity &apos;{1}&apos;, but expected &apos;{2}&apos;..
+        /// </summary>
+        internal static string ERR_DefaultStructBadArity {
+            get {
+                return ResourceManager.GetString("ERR_DefaultStructBadArity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Default struct for concept &apos;{0}&apos; must take a witness for that concept as its last parameter..
+        /// </summary>
+        internal static string ERR_DefaultStructNoWitnessParam {
+            get {
+                return ResourceManager.GetString("ERR_DefaultStructNoWitnessParam", resourceCulture);
             }
         }
         
@@ -6668,6 +6740,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Type parameter &apos;{0}&apos; is marked &apos;implicit&apos; but has no type constraints..
+        /// </summary>
+        internal static string ERR_NoConstraintsOnImplicitParam {
+            get {
+                return ResourceManager.GetString("ERR_NoConstraintsOnImplicitParam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The type &apos;{0}&apos; has no constructors defined.
         /// </summary>
         internal static string ERR_NoConstructors {
@@ -6883,6 +6964,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to Type parameter &apos;{0}&apos; is marked &apos;implicit&apos; but has been constrained to &apos;{1}&apos; which is not a concept..
+        /// </summary>
+        internal static string ERR_NonConceptConstraintOnImplicitParam {
+            get {
+                return ResourceManager.GetString("ERR_NonConceptConstraintOnImplicitParam", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Cannot compile net modules when using /refout or /refonly..
         /// </summary>

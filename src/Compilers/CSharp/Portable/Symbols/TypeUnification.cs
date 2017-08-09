@@ -16,15 +16,26 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         public static bool CanUnify(TypeSymbol t1, TypeSymbol t2)
         {
+            MutableTypeMap substitution = null;
+            return CanUnify(t1, t2, ref substitution, ImmutableHashSet<TypeParameterSymbol>.Empty);
+        }
+
+        /// <summary>
+        /// Tries to produce a substitution of type parameters that will make
+        /// two types identical.
+        /// </summary>
+        public static bool CanUnify(TypeSymbol t1, TypeSymbol t2, ref MutableTypeMap substitution, ImmutableHashSet<TypeParameterSymbol> untouchables)
+        {
+
             if (t1 == t2)
             {
                 return true;
             }
 
-            MutableTypeMap substitution = null;
             bool result = CanUnifyHelper((object)t1 == null ? default(TypeWithModifiers) : new TypeWithModifiers(t1),
                                          (object)t2 == null ? default(TypeWithModifiers) : new TypeWithModifiers(t2),
-                                         ref substitution);
+                                         ref substitution,
+                                         untouchables);
 #if DEBUG
             Debug.Assert(!result ||
                 SubstituteAllTypeParameters(substitution, new TypeWithModifiers(t1)).Equals(SubstituteAllTypeParameters(substitution, new TypeWithModifiers(t2)), TypeCompareKind.IgnoreTupleNames));
@@ -61,12 +72,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Will be updated with new substitutions by the callee.
         /// Should be ignored when false is returned.
         /// </param>
+        /// <param name="untouchables">
+        /// Set of type symbols that cannot be replaced by substitution.
+        /// </param>
         /// <returns>True if there exists a type map such that Map(LHS) == Map(RHS).</returns>
         /// <remarks>
         /// Derived from Dev10's BSYMMGR::UnifyTypes.
         /// Two types will not unify if they have different custom modifiers.
         /// </remarks>
-        private static bool CanUnifyHelper(TypeWithModifiers t1, TypeWithModifiers t2, ref MutableTypeMap substitution)
+        private static bool CanUnifyHelper(TypeWithModifiers t1, TypeWithModifiers t2, ref MutableTypeMap substitution, ImmutableHashSet<TypeParameterSymbol> untouchables)
         {
             if (t1 == t2)
             {
@@ -119,7 +133,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             return false;
                         }
 
-                        return CanUnifyHelper(new TypeWithModifiers(at1.ElementType, at1.CustomModifiers), new TypeWithModifiers(at2.ElementType, at2.CustomModifiers), ref substitution);
+                        return CanUnifyHelper(new TypeWithModifiers(at1.ElementType, at1.CustomModifiers), new TypeWithModifiers(at2.ElementType, at2.CustomModifiers), ref substitution, untouchables);
                     }
                 case SymbolKind.PointerType:
                     {
@@ -131,7 +145,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         PointerTypeSymbol pt1 = (PointerTypeSymbol)t1.Type;
                         PointerTypeSymbol pt2 = (PointerTypeSymbol)t2.Type;
 
-                        return CanUnifyHelper(new TypeWithModifiers(pt1.PointedAtType, pt1.CustomModifiers), new TypeWithModifiers(pt2.PointedAtType, pt2.CustomModifiers), ref substitution);
+                        return CanUnifyHelper(new TypeWithModifiers(pt1.PointedAtType, pt1.CustomModifiers), new TypeWithModifiers(pt2.PointedAtType, pt2.CustomModifiers), ref substitution, untouchables);
                     }
                 case SymbolKind.NamedType:
                 case SymbolKind.ErrorType:
@@ -151,7 +165,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 return false;
                             }
 
-                            return CanUnifyHelper(new TypeWithModifiers(nt1.TupleUnderlyingType), new TypeWithModifiers(nt2.TupleUnderlyingType), ref substitution);
+                            return CanUnifyHelper(new TypeWithModifiers(nt1.TupleUnderlyingType), new TypeWithModifiers(nt2.TupleUnderlyingType), ref substitution, untouchables);
                         }
 
                         if (!nt1.IsGenericType)
@@ -180,7 +194,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             if (!CanUnifyHelper(new TypeWithModifiers(nt1Arguments[i], nt1HasModifiers ? nt1.GetTypeArgumentCustomModifiers(i) : default(ImmutableArray<CustomModifier>)),
                                                 new TypeWithModifiers(nt2Arguments[i], nt2HasModifiers ? nt2.GetTypeArgumentCustomModifiers(i) : default(ImmutableArray<CustomModifier>)),
-                                                ref substitution))
+                                                ref substitution,
+                                                untouchables))
                             {
                                 return false;
                             }
@@ -188,7 +203,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                         // Note: Dev10 folds this into the loop since GetTypeArgsAll includes type args for containing types
                         // TODO: Calling CanUnifyHelper for the containing type is an overkill, we simply need to go through type arguments for all containers.
-                        return (object)nt1.ContainingType == null || CanUnifyHelper(new TypeWithModifiers(nt1.ContainingType), new TypeWithModifiers(nt2.ContainingType), ref substitution);
+                        return (object)nt1.ContainingType == null || CanUnifyHelper(new TypeWithModifiers(nt1.ContainingType), new TypeWithModifiers(nt2.ContainingType), ref substitution, untouchables);
                     }
                 case SymbolKind.TypeParameter:
                     {
@@ -207,44 +222,50 @@ namespace Microsoft.CodeAnalysis.CSharp
                             return false;
                         }
 
-                        if (t1.CustomModifiers.IsDefaultOrEmpty)
+                        if (!untouchables.Contains(tp1))
                         {
-                            AddSubstitution(ref substitution, tp1, t2);
-                            return true;
-                        }
+                            if (t1.CustomModifiers.IsDefaultOrEmpty)
+                            {
+                                AddSubstitution(ref substitution, tp1, t2);
+                                return true;
+                            }
 
-                        if (t1.CustomModifiers.SequenceEqual(t2.CustomModifiers))
-                        {
-                            AddSubstitution(ref substitution, tp1, new TypeWithModifiers(t2.Type));
-                            return true;
-                        }
+                            if (t1.CustomModifiers.SequenceEqual(t2.CustomModifiers))
+                            {
+                                AddSubstitution(ref substitution, tp1, new TypeWithModifiers(t2.Type));
+                                return true;
+                            }
 
-                        if (t1.CustomModifiers.Length < t2.CustomModifiers.Length &&
-                            t1.CustomModifiers.SequenceEqual(t2.CustomModifiers.Take(t1.CustomModifiers.Length)))
-                        {
-                            AddSubstitution(ref substitution, tp1,
-                                            new TypeWithModifiers(t2.Type,
-                                                                  ImmutableArray.Create(t2.CustomModifiers, t1.CustomModifiers.Length, t2.CustomModifiers.Length - t1.CustomModifiers.Length)));
-                            return true;
+                            if (t1.CustomModifiers.Length < t2.CustomModifiers.Length &&
+                                t1.CustomModifiers.SequenceEqual(t2.CustomModifiers.Take(t1.CustomModifiers.Length)))
+                            {
+                                AddSubstitution(ref substitution, tp1,
+                                                new TypeWithModifiers(t2.Type,
+                                                                      ImmutableArray.Create(t2.CustomModifiers, t1.CustomModifiers.Length, t2.CustomModifiers.Length - t1.CustomModifiers.Length)));
+                                return true;
+                            }
                         }
 
                         if (t2.Type.IsTypeParameter())
                         {
                             var tp2 = (TypeParameterSymbol)t2.Type;
 
-                            if (t2.CustomModifiers.IsDefaultOrEmpty)
+                            if (!untouchables.Contains(tp2))
                             {
-                                AddSubstitution(ref substitution, tp2, t1);
-                                return true;
-                            }
+                                if (t2.CustomModifiers.IsDefaultOrEmpty)
+                                {
+                                    AddSubstitution(ref substitution, tp2, t1);
+                                    return true;
+                                }
 
-                            if (t2.CustomModifiers.Length < t1.CustomModifiers.Length &&
-                                t2.CustomModifiers.SequenceEqual(t1.CustomModifiers.Take(t2.CustomModifiers.Length)))
-                            {
-                                AddSubstitution(ref substitution, tp2,
-                                                new TypeWithModifiers(t1.Type,
-                                                                      ImmutableArray.Create(t1.CustomModifiers, t2.CustomModifiers.Length, t1.CustomModifiers.Length - t2.CustomModifiers.Length)));
-                                return true;
+                                if (t2.CustomModifiers.Length < t1.CustomModifiers.Length &&
+                                    t2.CustomModifiers.SequenceEqual(t1.CustomModifiers.Take(t2.CustomModifiers.Length)))
+                                {
+                                    AddSubstitution(ref substitution, tp2,
+                                                    new TypeWithModifiers(t1.Type,
+                                                                          ImmutableArray.Create(t1.CustomModifiers, t2.CustomModifiers.Length, t1.CustomModifiers.Length - t2.CustomModifiers.Length)));
+                                    return true;
+                                }
                             }
                         }
 
@@ -285,6 +306,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SymbolKind.ErrorType:
                     {
                         NamedTypeSymbol namedType = (NamedTypeSymbol)type;
+
                         while ((object)namedType != null)
                         {
                             ImmutableArray<TypeSymbol> typeParts = namedType.IsTupleType ? namedType.TupleElementTypes : namedType.TypeArgumentsNoUseSiteDiagnostics;

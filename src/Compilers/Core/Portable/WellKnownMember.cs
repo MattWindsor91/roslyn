@@ -419,6 +419,12 @@ namespace Microsoft.CodeAnalysis
 
         System_Runtime_CompilerServices_ReferenceAssemblyAttribute__ctor,
 
+        //@t-mawind
+        System_Concepts_ConceptAttribute__ctor,
+        System_Concepts_ConceptInstanceAttribute__ctor,
+        System_Concepts_AssociatedTypeAttribute__ctor,
+        System_Concepts_ConceptDefaultAttribute__ctor,
+
         Count
     }
 }
