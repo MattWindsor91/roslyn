@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>{{title}}</title>
+		<style>
+			{{{style}}}
+		</style>
+	</head>
+	<body>
+		<textarea id="source">
+{{{content}}}
+		</textarea>
+		{{{remarkSource}}}
+		<script>
+			var slideshow = remark.create(
+{highlightStyle: 'vs',
+ highlightSpans: false,
+ center: false,
+ highlightLines: true}
+);
+		</script>
+		<script>{{{script}}}</script>
+	</body>
+</html>
+ 

@@ -1,0 +1,87 @@
+Dear Claudio,
+
+We are happy to inform you that your submission:
+
+  Classes for the Masses
+
+has been selected for presentation at the ML 2016 workshop.  The talk will be for 25 minutes, including questions.  This year, we plan to circulate an informal proceedings, in addition to the program with synopses.  If you want to include your 2-page paper there, please prepare for it by the beginning of September.  I will come back to you with details in a month.
+
+Thank you for the submission and looking forward to seeing you in Nara.
+
+Best regards,
+Kenichi Asai, ML 2016 workshop chair
+
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 9
+TITLE: Classes for the Masses
+AUTHORS: Claudio Russo and Matthew Windsor
+
+OVERALL EVALUATION: 3 (strong accept)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- Review -----------
+The authors focus on the integration of a type class mechanism in C# and F#, and, more generally, in any .NET language. So far, they focused mainly their effort on the C# implementation, but the F# one should follow a similar route, up to syntactic details.
+
+The key idea is to treat the type class instances passed to the functions not as proper arguments, but instead as type arguments.
+In .NET, types have a runtime representation, which makes it possible to pass structures with computational contents as type arguments. 
+The authors argue that this approach has a number of benefits.
+In particular, it should interact nicely with the JIT optimizations.
+
+The authors claim that advanced type class features are well supported, the only limitation being the lack of support for higher kindded type classes.
+
+I think this presentation would be of great interest for the ML workshop. Type classes have been very successful, and I find it both very interesting and practically useful to explore the various ways in which type classes may be integrated and optimized in different programming languages.
+
+---
+
+Remark for the authors: it was not very clear to me in section 2.4 what is the meaning of "default" in "default(EqA).equals(a.head,B.head)".
+
+Typo: "compile type cla sses" (extra space).
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 9
+TITLE: Classes for the Masses
+AUTHORS: Claudio Russo and Matthew Windsor
+
+OVERALL EVALUATION: 2 (accept)
+REVIEWER'S CONFIDENCE: 3 (medium)
+
+----------- Review -----------
+It is really nice to see adoption of features from one language to another.  And it is particularly interesting to see a potential evolution of F# go through C# / .NET first.
+
+It would be easy to complain that this 2-page abstract spends too much time on the introduction (it does), not enough on the details and not enough on any hint of an 'evaluation'.  But I'll give the authors the benefit of the doubt (as the section 2.5 strongly hints that this is legitimate).
+
+It is however quite disappointing that some clearly related work, in particular S. Wehr and M.M.T. Chakravarty.  ML Modules and Haskell Type Classes: A Constructive Comparison.  APLAS (2008) is not cited.
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 9
+TITLE: Classes for the Masses
+AUTHORS: Claudio Russo and Matthew Windsor
+
+OVERALL EVALUATION: 1 (weak accept)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- Review -----------
+This paper describes an approach to mapping Haskell type classes (and similar mechanisms found in other languages) to the .NET CLR.  The work is based on using CLR struct types to serve the role of dictionaries in the translation.
+A type class maps to an abstract struct type (interface) and instances of the class are implementations of the interface.  For example, a type class C will map to a paremeterize interface C<T>, and a polymorphic function with constrained type
+
+	(C a) => a -> t
+
+will take both a type parameter "A" and a class parameter "CA" that is an subtype (instance) of C<A>.  Thus the instantiation of the type parameter "A" will pick the implementation "C<A>" as the dictionary of "C" operations.
+
+The motivation for the work is to support extending F# with type classes (called concepts, since F# already has classes), but the authors are first implementing these ideas in the Rosyln open-source C# compiler.
+
+For an ML Workshop paper, the paper is a bit light on ML.  Perhaps you could drop the Haskell examples and just use the proposed F# syntax (which is close enough to the Haskell syntax to be understandable to someone familiar with Haskell type classes).  More details about the proposed F# extension (e.g., impact on type inference, interaction with other language features, ...) would make the paper more relevant to the ML community.
+
+In Section 1: "cla sses"
+
+I'm not sure I believe the claim that type classes can be resolved statically in Haskell.  That would seem to require monomorphization (and whole-program compilation), which is not possible for Haskell (e.g., polymorphic recursion).
+
+In Section 2.2: what class does the Equals<A,EqA> method belong to?
+
+Typo: at the beginning of Section 2.2, "(Eq q)" should be "(Eq a)".
+
+In Section 2.4: should the Equals method in EqList be marked "static"?
+
