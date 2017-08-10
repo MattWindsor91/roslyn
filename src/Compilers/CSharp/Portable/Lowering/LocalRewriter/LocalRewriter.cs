@@ -76,7 +76,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             DiagnosticBag diagnostics,
             out bool sawLambdas,
             out bool sawLocalFunctions,
-            out bool sawAwaitInExceptionHandler)
+            out bool sawAwaitInExceptionHandler,
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Sending concept witnesses to hoist to method compiler.
+            // TODO: need to work out better way to do this
+            out SmallDictionary<TypeSymbol, LocalSymbol> conceptWitnessesToHoist)
         {
             Debug.Assert(statement != null);
             Debug.Assert(compilationState != null);
@@ -100,12 +105,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                     dynamicAnalysisSpans = dynamicInstrumenter.DynamicAnalysisSpans;
                 }
 
+                conceptWitnessesToHoist = localRewriter._conceptWitnessesToHoist;  // @MattWindsor91 (Concept-C# 2017)
+
                 return loweredStatement;
             }
             catch (SyntheticBoundNodeFactory.MissingPredefinedMember ex)
             {
                 diagnostics.Add(ex.Diagnostic);
                 sawLambdas = sawLocalFunctions = sawAwaitInExceptionHandler = false;
+
+                conceptWitnessesToHoist = null;  // @MattWindsor91 (Concept-C# 2017)
+
                 return new BoundBadStatement(statement.Syntax, ImmutableArray.Create<BoundNode>(statement), hasErrors: true);
             }
         }

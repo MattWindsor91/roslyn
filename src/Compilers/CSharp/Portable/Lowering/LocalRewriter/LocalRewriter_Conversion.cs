@@ -349,7 +349,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         if (mg.ReceiverOpt is BoundTypeExpression)
                         {
                             var ty = (mg.ReceiverOpt as BoundTypeExpression).Type;
-                            if (ty.IsConceptWitness || ty.IsInstanceType()) mg = mg.Update(mg.TypeArgumentsOpt, mg.Name, mg.Methods, mg.LookupSymbolOpt, mg.LookupError, mg.Flags, SynthesizeWitnessInvocationReceiver(mg.Syntax, ty), mg.ResultKind);
+                            if (ty.IsConceptWitness || ty.IsInstanceType()) mg = mg.Update(mg.TypeArgumentsOpt, mg.Name, mg.Methods, mg.LookupSymbolOpt, mg.LookupError, mg.Flags, SynthesizeWitnessReceiver(mg.Syntax, ty), mg.ResultKind);
                         }
 
                         var method = oldNode.SymbolOpt;

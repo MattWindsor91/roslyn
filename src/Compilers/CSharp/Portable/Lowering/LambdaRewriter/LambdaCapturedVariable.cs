@@ -75,6 +75,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     return GeneratedNames.MakeHoistedLocalFieldName(local.SynthesizedKind, uniqueId++, local.Name);
                 }
+
+                //
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // We added a new type of synthesised variable to represent
+                // concept witness dictionaries, so we must generate names for
+                // them.
+
+                if (local.SynthesizedKind == SynthesizedLocalKind.ConceptDictionary)
+                {
+                    return GeneratedNames.MakeConceptDictionaryLocalFieldName(uniqueId++);
+                }
             }
 
             Debug.Assert(variable.Name != null);

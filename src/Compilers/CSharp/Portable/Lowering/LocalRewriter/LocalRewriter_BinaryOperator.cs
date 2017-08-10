@@ -722,7 +722,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             //   in default(), so we have to take it directly from the method.
             if (method is SynthesizedWitnessMethodSymbol)
             {
-                return BoundCall.Synthesized(syntax, SynthesizeWitnessInvocationReceiver(syntax, ((SynthesizedWitnessMethodSymbol)method).Parent), method, loweredLeft, loweredRight);
+                return BoundCall.Synthesized(syntax, SynthesizeWitnessReceiver(syntax, ((SynthesizedWitnessMethodSymbol)method).Parent), method, loweredLeft, loweredRight);
             }
             // Otherwise, nothing special here.
             return BoundCall.Synthesized(syntax, null, method, loweredLeft, loweredRight);

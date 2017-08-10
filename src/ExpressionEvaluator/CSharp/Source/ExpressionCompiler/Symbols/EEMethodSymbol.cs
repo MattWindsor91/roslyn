@@ -540,7 +540,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                         diagnostics: diagnostics,
                         sawLambdas: out sawLambdas,
                         sawLocalFunctions: out sawLocalFunctions,
-                        sawAwaitInExceptionHandler: out sawAwaitInExceptionHandler);
+                        sawAwaitInExceptionHandler: out sawAwaitInExceptionHandler,
+                        conceptWitnessesToHoist: out var conceptWitnessesToHoist /* @MattWindsor91 (Concept-C# 2017) */);
 
                     Debug.Assert(!sawAwaitInExceptionHandler);
                     Debug.Assert(dynamicAnalysisSpans.Length == 0);
@@ -548,6 +549,20 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
                     if (body.HasErrors)
                     {
                         return;
+                    }
+
+                    // @MattWindsor91 (Concept-C# 2017)
+                    //
+                    // Inject witness dictionary construction here, because the
+                    // correct place for it is not yet obvious.
+                    //
+                    // Copied from MethodCompiler, might not work.  Mainly here
+                    // to plug the gap til we can do this right.
+                    //
+                    // TODO: handle this properly.
+                    if (conceptWitnessesToHoist != null)
+                    {
+                        body = MethodCompiler.HoistConceptWitnesses(conceptWitnessesToHoist, body);
                     }
 
                     // Variables may have been captured by lambdas in the original method

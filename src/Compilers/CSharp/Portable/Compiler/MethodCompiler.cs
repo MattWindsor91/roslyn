@@ -1272,7 +1272,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     diagnostics: diagnostics,
                     sawLambdas: out sawLambdas,
                     sawLocalFunctions: out sawLocalFunctions,
-                    sawAwaitInExceptionHandler: out sawAwaitInExceptionHandler);
+                    sawAwaitInExceptionHandler: out sawAwaitInExceptionHandler,
+                    // @MattWindsor91 (Concept-C# 2017)
+                    //
+                    // Sending concept witnesses to hoist to method compiler.
+                    // TODO: need to work out better way to do this
+                    conceptWitnessesToHoist: out var conceptWitnessesToHoist);
 
                 if (loweredBody.HasErrors)
                 {
@@ -1303,6 +1308,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (lazyVariableSlotAllocator == null)
                 {
                     lazyVariableSlotAllocator = compilationState.ModuleBuilderOpt.TryCreateVariableSlotAllocator(method, method, diagnostics);
+                }
+
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // Inject witness dictionary construction here, because the
+                // correct place for it is not yet obvious.
+                //
+                // TODO: handle this properly.
+                if (conceptWitnessesToHoist != null)
+                {
+                    loweredBody = HoistConceptWitnesses(conceptWitnessesToHoist, loweredBody);
                 }
 
                 BoundStatement bodyWithoutLambdas = loweredBody;
@@ -1349,6 +1365,54 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ex.AddAnError(diagnostics);
                 return new BoundBadStatement(body.Syntax, ImmutableArray.Create<BoundNode>(body), hasErrors: true);
             }
+        }
+
+        /// <summary>
+        /// Injects a local variable into a method block for each concept
+        /// witness invocation that was found inside that block.
+        /// </summary>
+        /// <param name="conceptWitnessesToHoist">
+        /// A dictionary, mapping concept witness types to the generated local
+        /// variable representing each.  These local variables will be
+        /// injected into the locals list for this block.
+        /// </param>
+        /// <param name="body">
+        /// The method body, which must be a block.
+        /// </param>
+        /// <returns>
+        /// The result of injecting all concept witness dictionaries into
+        /// <paramref name="body"/>.
+        /// </returns>
+        internal static BoundStatement HoistConceptWitnesses(SmallDictionary<TypeSymbol, LocalSymbol> conceptWitnessesToHoist, BoundStatement body)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // TODO: move this out of MethodCompiler, as it's used in the
+            //       expression evaluator too.
+
+            Debug.Assert(conceptWitnessesToHoist != null, "Concept witness dictionary should not be null: we shouldn't have got here if it is");
+
+            if (!(body is BoundBlock blk))
+            {
+                Debug.Fail("If a statement has concept witnesses, it should be a block");
+                return body;
+            }
+
+            var locals = blk.Locals;
+
+            var newLocals = ArrayBuilder<LocalSymbol>.GetInstance();
+            // Ensure the old locals are at the top.
+            newLocals.AddRange(locals);
+
+            // TODO: at this stage, maybe conceptWitnessesToHoist should be an
+            //       immutable array.  There's no need to use a dictionary once
+            //       we've seen every witness.
+            foreach (var witness in conceptWitnessesToHoist)
+            {
+                newLocals.Add(witness.Value);
+            }
+
+            return blk.Update(newLocals.ToImmutableAndFree(), blk.LocalFunctions, blk.Statements);
         }
 
         private static MethodBody GenerateMethodBody(

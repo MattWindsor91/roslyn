@@ -398,6 +398,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return SynthesizedLocalNamePrefix + "InstrumentationPayload" + StringExtensions.GetNumeral(uniqueId);
         }
 
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        //
+        // TODO: investigate what's actually going on with converting
+        // dictionaries to lambda fields.
+        //
+
+        /// <summary>
+        /// Generates a concept witness dictionary local field name.
+        /// </summary>
+        /// <param name="uniqueId">
+        /// A number unique to this dictionary.
+        /// </param>
+        /// <returns>
+        /// An internal name suitable for a concept witness dictionary local
+        /// field.
+        /// </returns>
+        internal static string MakeConceptDictionaryLocalFieldName(int uniqueId)
+        {
+            return SynthesizedLocalNamePrefix + "ConceptDictionary" + StringExtensions.GetNumeral(uniqueId);
+        }
+
         internal static string MakeLambdaDisplayLocalName(int uniqueId)
         {
             Debug.Assert((char)GeneratedNameKind.DisplayClassLocalOrField == '8');

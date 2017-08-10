@@ -210,6 +210,12 @@ namespace Microsoft.CodeAnalysis
         SwitchCasePatternMatching = 35,
 
         /// <summary>
+        /// Local variable that represents a hoisted concept dictionary.
+        /// These variables are always empty structs.
+        /// </summary>
+        ConceptDictionary = 36,  // @MattWindsor91 (Concept-C# 2017)
+
+        /// <summary>
         /// All values have to be less than or equal to <see cref="MaxValidValueForLocalVariableSerializedToDebugInformation"/> 
         /// (<see cref="EditAndContinueMethodDebugInformation"/>)
         /// </summary>
