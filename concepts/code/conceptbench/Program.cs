@@ -10,7 +10,45 @@ using System.Numerics;
 
 using System.Runtime.CompilerServices;
 namespace conceptbench {
+    public concept CNum<T>
+    {
+        T FromInteger(int v);
+        T operator +(T a, T b);
+        T operator *(T a, T b);
+    }
 
+    public instance CNumInt : CNum<int>
+    {
+        public int FromInteger(int v) => v;
+        public int operator +(int a, int b) => a + b;
+
+        public int operator *(int a, int b) => a * b;
+    }
+
+
+    public instance CNumLong : CNum<long>
+    {
+        public long FromInteger(int v) => v;
+        public long operator +(long a, long b) => a + b;
+
+        public long operator *(long a, long b) => a * b;
+    }
+
+    public instance CNumFloat : CNum<float>
+    {
+        public float FromInteger(int v) => v;
+        public float operator +(float a, float b) => a + b;
+
+        public float operator *(float a, float b) => a * b;
+    }
+
+    public instance CNumDouble : CNum<double>
+    {
+        public double FromInteger(int v) => v;
+        public double operator +(double a, double b) => a + b;
+
+        public double operator *(double a, double b) => a * b;
+    }
 
     public interface Num<T> {
         T FromInteger(int v);
@@ -191,6 +229,22 @@ namespace conceptbench {
         public Vec3 Plus(Vec3 a, Vec3 b) => a + b;
         }
 
+    instance CNumVec3 : CNum<Vec3>
+    {
+        Vec3 FromInteger(int v) => new Vec3(v, v, v);
+        Vec3 operator *(Vec3 a, Vec3 b) => new Vec3(a.v1 * b.v1, a.v2 * b.v2, a.v3 * b.v3);
+
+        Vec3 operator +(Vec3 a, Vec3 b) => new Vec3(a.v1 + b.v1, a.v2 + b.v2, a.v3 + b.v3);
+    }
+
+    instance CNumVector3 : CNum<Vector3>
+    {
+        Vector3 FromInteger(int v) => new Vector3(v);
+        Vector3 operator *(Vector3 a, Vector3 b) => Vector3.Multiply(a, b);
+
+        Vector3 operator +(Vector3 a, Vector3 b) => Vector3.Add(a, b);
+    }
+
 
     public struct Vec1 {
         public readonly float v1;
@@ -219,6 +273,15 @@ namespace conceptbench {
 
         public Vec1 Plus(Vec1 a, Vec1 b) => new Vec1(a.v1 + b.v1);
     }
+
+    instance CNumVec1 : CNum<Vec1>
+    {
+        Vec1 FromInteger(int v) => new Vec1(v);
+        Vec1 operator *(Vec1 a, Vec1 b) => new Vec1(a.v1 * b.v1);
+
+        Vec1 operator +(Vec1 a, Vec1 b) => new Vec1(a.v1 + b.v1);
+    }
+
 
     public class ClassVec3 {
         public readonly float v1;
@@ -252,6 +315,13 @@ namespace conceptbench {
         public ClassVec3 Plus(ClassVec3 a, ClassVec3 b) => new ClassVec3(a.v1 + b.v1, a.v2 + b.v2, a.v3 + b.v3);
     }
 
+    public instance CNumClassVec3 : CNum<ClassVec3>
+    {
+        ClassVec3 FromInteger(int v) => new ClassVec3(v, v, v);
+        ClassVec3 operator *(ClassVec3 a, ClassVec3 b) => new ClassVec3(a.v1 * b.v1, a.v2 * b.v2, a.v3 * b.v3);
+
+        ClassVec3 operator +(ClassVec3 a, ClassVec3 b) => new ClassVec3(a.v1 + b.v1, a.v2 + b.v2, a.v3 + b.v3);
+    }
 
     abstract class AbstractNum<T> {
         public abstract T FromInteger(int v);
@@ -491,6 +561,11 @@ namespace conceptbench {
             return ConceptGenericOpt<int,SlowNumInt>();
         }
 
+        public int ConceptCSharpInstanceInt()
+        {
+            return ConceptCSharpGeneric<int>();
+        }
+
 
         //[Benchmark]
         public double ConceptInstanceDouble() {
@@ -503,6 +578,10 @@ namespace conceptbench {
             return ConceptGenericOpt<double, NumDouble>();
         }
 
+        public double ConceptCSharpInstanceDouble()
+        {
+            return ConceptCSharpGeneric<double>();
+        }
 
         //[Benchmark]
         public float ConceptInstanceFloat() {
@@ -515,7 +594,10 @@ namespace conceptbench {
             return ConceptGenericOpt<float, NumFloat>();
         }
 
-
+        public float ConceptCSharpInstanceFloat()
+        {
+            return ConceptCSharpGeneric<float>();
+        }
 
         //[Benchmark]
         public long ConceptInstanceLong() {
@@ -528,7 +610,10 @@ namespace conceptbench {
             return ConceptGenericOpt<long, NumLong>();
         }
 
-
+        public long ConceptCSharpInstanceLong()
+        {
+            return ConceptCSharpGeneric<long>();
+        }
 
         //[Benchmark]
         public Vector3 ConceptInstanceVector3() {
@@ -538,6 +623,11 @@ namespace conceptbench {
         //[Benchmark]
         public Vector3 ConceptOptInstanceVector3() {
             return ConceptGenericOpt<Vector3, NumVector3>();
+        }
+
+        public Vector3 ConceptCSharpInstanceVector3()
+        {
+            return ConceptCSharpGeneric<Vector3>();
         }
 
         //[Benchmark]
@@ -561,6 +651,11 @@ namespace conceptbench {
             return Class<Vec3, NumVec3>.ConceptGenericOpt();
         }
 
+        public Vec3 ConceptCSharpInstanceVec3()
+        {
+            return ConceptCSharpGeneric<Vec3>();
+        }
+
 
         //[Benchmark]
         public Vec1 ConceptInstanceVec1() {
@@ -571,7 +666,10 @@ namespace conceptbench {
         public Vec1 ConceptOptInstanceVec1() {
             return ConceptGenericOpt<Vec1, NumVec1>();
         }
-
+        public Vec1 ConceptCSharpInstanceVec1()
+        {
+            return ConceptCSharpGeneric<Vec1>();
+        }
 
         //[Benchmark]
         public ClassVec3 ConceptInstanceClassVec3() {
@@ -581,6 +679,12 @@ namespace conceptbench {
         //[Benchmark]
         public ClassVec3 ConceptOptInstanceClassVec3() {
             return ConceptGenericOpt<ClassVec3, NumClassVec3>();
+        }
+
+        //[Benchmark]
+        public ClassVec3 ConceptCSharpInstanceClassVec3()
+        {
+            return ConceptCSharpGeneric<ClassVec3>();
         }
 
 
@@ -678,7 +782,17 @@ namespace conceptbench {
             return y;
         }
 
-
+        T ConceptCSharpGeneric<T, implicit NumT>() where NumT : CNum<T>
+        {
+            var y = NumT.FromInteger(0);
+            var c = NumT.FromInteger(666);
+            for (int i = 0; i < n; i++)
+            {
+                var x = NumT.FromInteger(i);
+                y = ((x * x) + x) + c;
+            }
+            return y;
+        }
 
         T ConceptGeneric<T, NumT>() where NumT : struct, Num<T> {
             var y = default(NumT).FromInteger(0);
@@ -783,6 +897,9 @@ namespace conceptbench {
 
         [Benchmark]
         public int OptimizedInstance() => base.ConceptOptInstanceInt();
+
+        [Benchmark]
+        public int ConceptCSharpInstance() => ConceptCSharpInstanceInt();
     }
 
 
@@ -805,6 +922,9 @@ namespace conceptbench {
 
         [Benchmark]
         public double OptimizedInstance() => base.ConceptOptInstanceDouble();
+
+        [Benchmark]
+        public double ConceptCSharpInstance() => ConceptCSharpInstanceDouble();
     }
 
     public class ClassBenchmarks : Benchmarks {
@@ -826,6 +946,9 @@ namespace conceptbench {
 
         [Benchmark]
         public ClassVec3 OptimizedInstance() => base.ConceptOptInstanceClassVec3();
+
+        [Benchmark]
+        public ClassVec3 ConceptCSharpInstance() => ConceptCSharpInstanceClassVec3();
     }
 
     public class StructBenchmarks : Benchmarks {
@@ -853,6 +976,9 @@ namespace conceptbench {
 
         [Benchmark]
         public Vec3 AltOptimizedInstance() => base.ConceptOptInstanceAltVec3();
+
+        [Benchmark]
+        public Vec3 ConceptCSharpInstance() => ConceptCSharpInstanceVec3();
     }
 
 
@@ -875,6 +1001,9 @@ namespace conceptbench {
 
         [Benchmark]
         public Vec1 OptimizedInstance() => base.ConceptOptInstanceVec1();
+
+        [Benchmark]
+        public Vec1 ConceptCSharpInstance() => ConceptCSharpInstanceVec1();
     }
 
 
