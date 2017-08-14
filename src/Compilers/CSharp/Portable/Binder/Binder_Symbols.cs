@@ -680,14 +680,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                         bindingResult = null;
                     }
 
-                    // @t-mawind
-                    //   We might have got here by picking up a generic class
-                    //   whose type parameters are all implicit.
                     if (bindingResult != null && bindingResult.Kind == SymbolKind.NamedType)
                     {
                         var nt = bindingResult as NamedTypeSymbol;
+
+                        // @MattWindsor91 (Concept-C# 2017)
+                        //
+                        // Don't allow binding of any concept-related types
+                        // unless we have the required attributes.
+                        //
+                        // TODO: is this the right place to check?
+                        CheckAttributesExistIfConceptsUsed(node, diagnostics, nt);
+
                         if (0 < nt.Arity)
                         {
+                            // @MattWindsor91 (Concept-C# 2016)
+                            //   We might have got here by picking up a generic
+                            //   class whose type parameters are all implicit.
                             Debug.Assert(nt.ImplicitTypeParameterCount == nt.Arity,
                                 "We should only be able to get here if we're expecting part-inference.");
                             var typeArguments = PartInferImplicitTypeParameters(ImmutableArray<TypeSymbol>.Empty, nt);
@@ -710,6 +719,34 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             result.Free();
             return bindingResult;
+        }
+
+        /// <summary>
+        /// Checks whether a newly bound named type symbol uses concepts.
+        /// If so, flags an error if the concept attributes are missing.
+        /// </summary>
+        /// <param name="node">
+        /// The syntax node representing the use of the named type symbol.
+        /// </param>
+        /// <param name="diagnostics">
+        /// The diagnostic bag to add errors into if things aren't right.
+        /// </param>
+        /// <param name="nt">
+        /// The named type symbol to check.
+        /// </param>
+        private void CheckAttributesExistIfConceptsUsed(NameSyntax node, DiagnosticBag diagnostics, NamedTypeSymbol nt)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // (ConceptWitnesses aren't named types, so don't check
+            //  for them here.)
+            var isConcepty = nt.IsConcept || nt.IsInstance || nt.IsDefaultStruct;
+            if (isConcepty && !Compilation.HasConceptAttributes)
+            {
+                // CS8860: Cannot use concepts because the required attributes cannot be found. Are you missing a reference?
+                var info = new CSDiagnosticInfo(ErrorCode.ERR_ConceptAttributesMissing);
+                Symbol.ReportUseSiteDiagnostic(info, diagnostics, node.Location);
+            }
         }
 
         private void ReportUseSiteDiagnosticForDynamic(DiagnosticBag diagnostics, IdentifierNameSyntax node)
@@ -918,6 +955,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(resultType.IsErrorType());
                 resultType = new ExtendedErrorTypeSymbol(GetContainingNamespaceOrType(resultType), resultType,
                     LookupResultKind.NotAnAttributeType, errorInfo: null);
+            }
+
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Don't allow binding of any concept-related types
+            // unless we have the required attributes.
+            //
+            // TODO: is this the right place to check?
+            if (resultType != null && resultType.Kind == SymbolKind.NamedType)
+            {
+                CheckAttributesExistIfConceptsUsed(node, diagnostics, resultType as NamedTypeSymbol);
             }
 
             return resultType;

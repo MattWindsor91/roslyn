@@ -1108,9 +1108,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     }
                 }
 
+                // @MattWindsor91 (Concept-C# 2016)
+                //
+                // If this type is a concept, it includes an inner struct
+                // that holds its default implementations.
+                //
+                // TODO: Can we skip creating a default struct if there are no
+                //       default implementations?
                 if (IsConcept)
                 {
                     Debug.Assert(this is SourceNamedTypeSymbol, "got a non-named-type concept somehow");
+
+                    // @MattWindsor91 (Concept-C# 2017)
+                    // We have to have concept attributes.
+                    // Otherwise, creating the symbol will crash and burn!
+                    if (!DeclaringCompilation.HasConceptAttributes)
+                    {
+                        diagnostics.Add(ErrorCode.ERR_ConceptAttributesMissing, Locations[0]);
+                    }
+
                     var val = new SynthesizedDefaultStructSymbol(DefaultStructName, this as SourceNamedTypeSymbol);
                     symbols.Add(val);
                 }

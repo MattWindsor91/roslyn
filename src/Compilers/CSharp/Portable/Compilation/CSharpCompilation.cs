@@ -3033,6 +3033,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             (object)GetWellKnownTypeMember(WellKnownMember.System_Runtime_CompilerServices_TupleElementNamesAttribute__ctorTransformNames) != null;
 
         /// <summary>
+        /// Returns if the compilation has all of the members necessary to emit
+        /// metadata about concepts.
+        /// </summary>
+        /// <returns>
+        /// True if all of the concept members are present;
+        /// false otherwise.
+        /// </returns>
+        internal bool HasConceptAttributes =>
+            // @MattWindsor91 (Concept-C# 2017)
+            // Used to emit errors if we try to do concept stuff without
+            // concept attributes.
+            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_AssociatedTypeAttribute__ctor) != null &&
+            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptAttribute__ctor) != null &&
+            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptDefaultAttribute__ctor) != null &&
+            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor) != null;
+
+        /// <summary>
         /// Returns whether the compilation has the Boolean type and if it's good.
         /// </summary>
         /// <returns>Returns true if Boolean is present and healthy.</returns>

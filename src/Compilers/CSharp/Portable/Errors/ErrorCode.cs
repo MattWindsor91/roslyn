@@ -1469,6 +1469,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_NonConceptConstraintOnImplicitParam = 8954,
         ERR_NoConstraintsOnImplicitParam = 8955,
         ERR_CantInferConceptInstance = 8956,
+        ERR_ConceptAttributesMissing = 8860,
 
         #endregion diagnostics for concepts
 

@@ -4964,6 +4964,9 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_CantInferConceptInstance" xml:space="preserve">
     <value>Cannot infer a valid witness for concept '{0}' at this location.</value>
   </data>
+  <data name="ERR_ConceptAttributesMissing" xml:space="preserve">
+    <value>Cannot use concepts because the required attributes cannot be found. Are you missing a reference?</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>
