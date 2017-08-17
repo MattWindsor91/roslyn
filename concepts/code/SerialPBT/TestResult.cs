@@ -27,11 +27,6 @@ namespace SerialPBT
         }
 
         /// <summary>
-        /// The name of the test.
-        /// </summary>
-        private string name = null;
-
-        /// <summary>
         /// The current outcome of the test.
         /// </summary>
         private Outcome outcome = Outcome.Inconclusive;
@@ -47,18 +42,10 @@ namespace SerialPBT
         private Queue<R> skipped = new Queue<R>();
 
         /// <summary>
-        /// The number of inputs this test result has consumed.
+        /// The number of inputs this test result has consumed, not
+        /// including skipped inputs.
         /// </summary>
         private int testNum = 0;
-
-        /// <summary>
-        /// Gets the name of this test.
-        /// </summary>
-        public string Name
-        {
-            get => name ?? "(untitled)";
-            set => name = value;
-        }
 
         /// <summary>
         /// Gets whether this test has passed.
@@ -71,7 +58,8 @@ namespace SerialPBT
         public bool Failed => outcome == Outcome.Failed;
 
         /// <summary>
-        /// Gets the number of test cases logged in this test result.
+        /// Gets the number of non-skipped test cases logged in this test
+        /// result.
         /// </summary>
         public int TestCount => testNum;
 
@@ -112,9 +100,22 @@ namespace SerialPBT
         public void Merge<R2>(TestResult<R2> inner, Func<R2, R> witnessMapper)
         {
             testNum += inner.TestCount;
-            outcome = (Outcome)inner.outcome;
-            witnessOpt = witnessMapper(inner.Witness);
-            skipped.Concat(from r in inner.Skipped select witnessMapper(r));
+
+            var o = (Outcome)inner.outcome;
+            if (o != Outcome.Inconclusive)
+            {
+                // NB: If we merge a failing test result onto a passing result,
+                // or vice versa, the new outcome overrides the old one.
+                // This is ok, as long as we handle the semantics properly in
+                // the parent (eg. break at first failure for forall).
+                outcome = o;
+                witnessOpt = witnessMapper(inner.Witness);
+            }
+
+            foreach (var r in inner.Skipped)
+            {
+                skipped.Enqueue(witnessMapper(r));
+            }
         }
 
         /// <summary>
@@ -126,14 +127,13 @@ namespace SerialPBT
         /// <returns>
         /// A test result representing the pass.
         /// </returns>
-        public static TestResult<R> Pass(R witness)
-        {
-            var res = new TestResult<R>();
-            res.outcome = Outcome.Passed;
-            res.witnessOpt = witness;
-            res.testNum++;
-            return res;
-        }
+        public static TestResult<R> Pass(R witness) =>
+            new TestResult<R>
+            {
+                outcome = Outcome.Passed,
+                witnessOpt = witness,
+                testNum = 1
+            };
 
         /// <summary>
         /// Reports a failing test case with the given witness.
@@ -144,25 +144,29 @@ namespace SerialPBT
         /// <returns>
         /// A test result representing the failure.
         /// </returns>
-        public static TestResult<R> Fail(R witness)
-        {
-            var res = new TestResult<R>();
-            res.outcome = Outcome.Failed;
-            res.witnessOpt = witness;
-            res.testNum++;
-            return res;
-        }
+        public static TestResult<R> Fail(R witness) =>
+            new TestResult<R>
+            {
+                outcome = Outcome.Failed,
+                witnessOpt = witness,
+                testNum = 1
+            };
 
         /// <summary>
-        /// Adds a skipped input to this test result.
+        /// Reports a skipped test case.
         /// </summary>
         /// <param name="toSkip">
         /// The input to skip.
         /// </param>
-        public void Skip(R toSkip)
+        public static TestResult<R> Skip(R toSkip)
         {
-            skipped.Enqueue(toSkip);
-            testNum++;
+            var res = new TestResult<R>
+            {
+                outcome = Outcome.Inconclusive
+            };
+            // Don't record this in testNum.
+            res.skipped.Enqueue(toSkip);
+            return res;
         }
     }
 
@@ -175,40 +179,36 @@ namespace SerialPBT
     {
         public void Show(TestResult<R> me, StringBuilder sb)
         {
-            var name = me.Name;
-            sb.AppendLine(name);
-            sb.Append('=', name.Length);
-            sb.AppendLine();
-            sb.AppendLine();
-
             if (me.Succeeded)
             {
-                sb.Append("  Passed after ");
+                sb.Append("Passed after ");
                 CShowable<int>.Show(me.TestCount, sb);
                 sb.AppendLine(" tests.");
             }
-            else
+            else if (me.Failed)
             {
-                sb.Append("  Failed at test ");
+                sb.Append("Failed at test ");
                 CShowable<int>.Show(me.TestCount, sb);
                 sb.AppendLine(":");
-                sb.Append("    ");
+                sb.Append("  ");
                 ShowableR.Show(me.Witness, sb);
                 sb.AppendLine();
+            }
+            else
+            {
+                sb.Append("Test inconclusive.");
             }
 
             var sc = me.Skipped.Count();
             if (0 < sc)
             {
-                sb.Append("  Skipped ");
+                sb.Append("Skipped ");
                 CShowable<int>.Show(sc, sb);
                 sb.AppendLine(" tests, for example:");
 
-                int i = 0;
                 foreach (var skipped in me.Skipped.Take(10))
                 {
-                    i++;
-                    sb.Append("    - ");
+                    sb.Append("  - ");
                     ShowableR.Show(skipped, sb);
                     sb.AppendLine();
                 }

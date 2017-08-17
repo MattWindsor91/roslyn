@@ -21,6 +21,17 @@ namespace SerialPBT
     public concept CTestable<T, [AssociatedType] InputTrace>
     {
         /// <summary>
+        /// Gets the name of a test.
+        /// </summary>
+        /// <param name="test">
+        /// The test to be named.
+        /// </param>
+        /// <returns>
+        /// The name of the test.
+        /// </returns>
+        string Name(T test) => "(untitled)";
+
+        /// <summary>
         /// Tests a testable value.
         /// </summary>
         /// <param name="test">
@@ -49,50 +60,74 @@ namespace SerialPBT
     /// </summary>
     public instance TestableBool : CTestable<bool, EndTrace>
     {
-        TestResult<EndTrace> Test(bool test, int depth)
-        {
-            return test ? TestResult<EndTrace>.Pass(new EndTrace()) : TestResult<EndTrace>.Fail(new EndTrace());
-        }
+        string Name(bool _) => "(Boolean)";
+
+        TestResult<EndTrace> Test(bool test, int depth) =>
+            test ? TestResult<EndTrace>.Pass(new EndTrace()) : TestResult<EndTrace>.Fail(new EndTrace());
     }
 
     /// <summary>
     /// Instance allowing testing of arity-0 functions.
     /// <para>
-    /// This allows naming otherwise anonymous tests.
+    /// This allows lazy evaluation of tests, for instance.
     /// </para>
     /// </summary>
     public instance TestableF0<T, [AssociatedType] R, implicit TestableT> : CTestable<Func<T>, R>
         where TestableT : CTestable<T, R>
     {
-        TestResult<R> Test(Func<T> f, int depth)
-        {
-            var result = TestableT.Test(f(), depth);
-            result.Name = f.Method?.Name;
-            return result;
-        }
+        string Name(Func<T> test) => test.Method?.Name ?? "(unnamed func)";
+        TestResult<R> Test(Func<T> f, int depth) => TestableT.Test(f(), depth);
     }
 
     /// <summary>
-    /// Instance allowing testing of unfiltered arity-1 functions.
+    /// Instance allowing testing of arity-1 functions.
     /// </summary>
     public instance TestableF1<A, T, [AssociatedType] R, implicit SerialA, implicit TestableT> : CTestable<Func<A, T>, F1Trace<A, R>>
         where SerialA : CSerial<A>
         where TestableT : CTestable<T, R>
     {
+        string Name(Func<A, T> test) => test.Method?.Name ?? "(unnamed func)";
+
         TestResult<F1Trace<A, R>> Test(Func<A, T> f, int depth)
         {
-            var result = new TestResult<F1Trace<A, R>>();
-            result.Name = f.Method?.Name;
-
+            var result = new TestResult<F1Trace<A, R>> {};
             foreach (var a in SerialA.Series(depth))
             {
-                result.Merge(TestableT.Test(f(a), depth), (w) => new F1Trace<A, R> { input = a, next = w, skipped = false });
+                result.Merge(TestableT.Test(f(a), depth), (w) => new F1Trace<A, R> { input = a, next = w });
                 if (result.Failed)
                 {
                     break;
                 }
             }
 
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Instance allowing testing of arity-2 functions.
+    /// </summary>
+    public instance TestableF2<A, B, T, [AssociatedType] R, implicit SerialA, implicit SerialB, implicit TestableT> : CTestable<Func<A, B, T>, F2Trace<A, B, R>>
+        where SerialA : CSerial<A>
+        where SerialB : CSerial<B>
+        where TestableT : CTestable<T, R>
+    {
+        string Name(Func<A, B, T> test) => test.Method?.Name ?? "(unnamed func)";
+
+        TestResult<F2Trace<A, B, R>> Test(Func<A, B, T> f, int depth)
+        {
+            var result = new TestResult<F2Trace<A, B, R>> { };
+            foreach (var a in SerialA.Series(depth))
+            {
+                foreach (var b in SerialB.Series(depth))
+                {
+                    result.Merge(TestableT.Test(f(a, b), depth), (w) => new F2Trace<A, B, R> { input1 = a, input2 = b, next = w });
+                    if (result.Failed)
+                    {
+                        break;
+                    }
+                }
+            }
             return result;
         }
     }

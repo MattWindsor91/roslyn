@@ -13,25 +13,35 @@ using System.Linq;
 /// </summary>
 namespace SerialPBT
 {
+
+    static class Extensions
+    {
+        public static Imp<TL,TR> Implies<TL, TR, [AssociatedType] RL, [AssociatedType] RR, implicit TestableL, implicit TestableR>(this TL filter, TR property)
+            where TestableL : CTestable<TL, RL>
+            where TestableR : CTestable<TR, RR> =>
+            new Imp<TL, TR> { filter=filter, property = property };
+    }
+
+
     class Program
     {
         static TestResult<R> Check<T, [AssociatedType] R, implicit TestableT>(T test, int depth)
             where TestableT : CTestable<T, R>
         {
+            var name = TestableT.Name(test);
+            Console.WriteLine(name);
+            Console.WriteLine(new string('=', name.Length));
+            Console.WriteLine();
             return TestableT.Test(test, depth);
         }
 
         static bool Prop_IsSingleDigit(int num) => -10 < num && num < 10;
 
         static Exists<int, bool> Prop_IsSingleDigit_Exists =>
-            new Exists<int, bool> { property = Prop_IsSingleDigit };
-
-        static Filtered<int, bool> Prop_IsSingleDigit_Filtered =>
-            new Filtered<int, bool>
-            {
-                filter = (x) => x == 0,
-                property = Prop_IsSingleDigit
-            };
+            new Exists<int, bool>(Prop_IsSingleDigit);
+        // Exists((int num) => Prop_IsSingleDigit(num);
+        static Imp<bool, Func<bool>> Prop_IsSingleDigit_Filtered(int x) =>
+            (x == 0).Implies((Func<bool>)(() => Prop_IsSingleDigit(x)));
 
         /// <summary>
         /// Broken function that checks whether one array is a prefix of
@@ -89,60 +99,50 @@ namespace SerialPBT
             {
                 isPrefix_Impl = impl;
             }
-            public bool Prop_IsPrefix((A[] xs, A[] ys) tup)
+            public bool Prop_IsPrefix(A[] xs, A[] ys)
             {
-                var zs = new A[tup.xs.Length + tup.ys.Length];
-                Array.Copy(tup.xs, zs, tup.xs.Length);
-                Array.Copy(tup.ys, 0, zs, tup.xs.Length, tup.ys.Length);
-                return isPrefix_Impl(tup.xs, zs);
+                var zs = new A[xs.Length + ys.Length];
+                Array.Copy(xs, zs, xs.Length);
+                Array.Copy(ys, 0, zs, xs.Length, ys.Length);
+                return isPrefix_Impl(xs, zs);
             }
 
-            public Filtered<(A[], A[]), Exists<A[], bool>> Prop_IsPrefix_Sound =>
-                new Filtered<(A[], A[]), Exists<A[], bool>>
+            public Imp<bool, Exists<A[], bool>> Prop_IsPrefix_Sound(A[] xs, A[] ys) =>
+                new Imp<bool, Exists<A[], bool>>
                 {
-                    filter = (t) => isPrefix_Impl(t.Item1, t.Item2),
+                    filter = isPrefix_Impl(xs, ys),
                     property =
-                        (t) =>
-                            new Exists<A[], bool>
-                            {
-                                property = (rest) => Enumerable.SequenceEqual(t.Item1.Concat(rest), t.Item2)
-                            }
+                    new Exists<A[], bool>((rest) => Enumerable.SequenceEqual(xs.Concat(rest), ys))
                 };
         }
 
         static void Main(string[] args)
         {
-            for (var i = 0; i < 3; i++)
-            {
-                Console.WriteLine($"Arrays of size {i}");
-                foreach (var ary in CSerial<int[]>.Series(i))
-                {
-                    ShowableHelpers.WriteLine(ary);
-                }
-            }
-
+            // TODO: the concept inferrer can't handle implicit conversions
+            // so we have to add the type annotation for Check when we pass a
+            // method as a Func.
+            
+            // We can test simple predicates...
             ShowableHelpers.WriteLine(Check<Func<int, bool>>(Prop_IsSingleDigit, 9));
-            Console.WriteLine("---");
             ShowableHelpers.WriteLine(Check<Func<int, bool>>(Prop_IsSingleDigit, 11));
-            Console.WriteLine("---");
+
+            // ...existentials, and implications.
             ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Exists, 11));
-            Console.WriteLine("---");
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Filtered, 11));
-            Console.WriteLine("---");
+            ShowableHelpers.WriteLine(Check<Func<int, Imp<bool, Func<bool>>>>(Prop_IsSingleDigit_Filtered, 11));
 
+            // We can wrap tests up in generic classes.
+            // For example, our IsPrefix test suite can be used both on an
+            // invalid implementation...
             var faulty = new IsPrefixTests<int>(IsPrefixFaulty);
+            ShowableHelpers.WriteLine(Check<Func<int[], int[], bool>>(faulty.Prop_IsPrefix, 4));
+            ShowableHelpers.WriteLine(Check<Func<int[], int[], Imp<bool, Exists<int[], bool>>>>(faulty.Prop_IsPrefix_Sound, 4));
 
-            ShowableHelpers.WriteLine(Check<Func<(int[], int[]), bool>>(faulty.Prop_IsPrefix, 4));
-            Console.WriteLine("---");
-            ShowableHelpers.WriteLine(Check(faulty.Prop_IsPrefix_Sound, 4));
-            Console.WriteLine("---");
-
+            // ...and a valid one.
             var valid = new IsPrefixTests<int>(IsPrefixValid);
-
-            ShowableHelpers.WriteLine(Check<Func<(int[], int[]), bool>>(valid.Prop_IsPrefix, 4));
-            Console.WriteLine("---");
-            ShowableHelpers.WriteLine(Check(valid.Prop_IsPrefix_Sound, 4));
-            Console.WriteLine("---");
+            ShowableHelpers.WriteLine(Check<Func<int[], int[], bool>>(valid.Prop_IsPrefix, 4));
+            // We can also name properties.
+            var named = new Named<Func<int[], int[], Imp<bool, Exists<int[], bool>>>>("valid IsPrefix is sound", valid.Prop_IsPrefix_Sound);
+            ShowableHelpers.WriteLine(Check(named, 4));
         }
     }
 }

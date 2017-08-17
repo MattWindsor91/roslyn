@@ -5,6 +5,49 @@ using System.Concepts;
 
 namespace SerialPBT
 {
+    /// <summary>
+    /// Renames a test.
+    /// </summary>
+    /// <typeparam name="T">
+    /// Type of the renamed test.
+    /// </typeparam>
+    public struct Named<T>
+    {
+        /// <summary>
+        /// The name of the test.
+        /// </summary>
+        public string name;
+
+        /// <summary>
+        /// The renamed test.
+        /// </summary>
+        public T test;
+
+        /// <summary>
+        /// Constructs a new named test.
+        /// </summary>
+        /// <param name="n">
+        /// The name of the test.
+        /// </param>
+        /// <param name="t">
+        /// The test to name.
+        /// </param>
+        public Named(string n, T t)
+        {
+            name = n;
+            test = t;
+        }
+    }
+
+    /// <summary>
+    /// Instance allowing testing of named tests.
+    /// </summary>
+    public instance TestableNamed<T, [AssociatedType] R, implicit TestableT> : CTestable<Named<T>, R>
+        where TestableT : CTestable<T, R>
+    {
+        string Name(Named<T> test) => test.name;
+        TestResult<R> Test(Named<T> f, int depth) => TestableT.Test(f.test, depth);
+    }
 
     /// <summary>
     /// Passes if, and only if, there exists an input that satisfies the
@@ -22,22 +65,33 @@ namespace SerialPBT
         /// The property over which we are existentially quantifying.
         /// </summary>
         public Func<A, T> property;
+
+        /// <summary>
+        /// Creates an existential quantification.
+        /// </summary>
+        /// <param name="p">
+        /// The property over which we are existentially quantifying.
+        /// </param>
+        public Exists(Func<A, T> p) { property = p; }
     }
 
     /// <summary>
-    /// Testable instance for existentials.
+    /// Instance allowing testing of existentials.
     /// </summary>
     instance TestableExists<A, T, [AssociatedType] R, implicit ShowableA, implicit SerialA, implicit TestableT> : CTestable<Exists<A, T>, ExistsTrace>
         where ShowableA : CShowable<A>
         where SerialA : CSerial<A>
         where TestableT : CTestable<T, R>
     {
+        string Name(Exists<A, T> e)
+        {
+            var atype = e.property.GetType().GenericTypeArguments[0].ToString();
+            return $"<exists some {atype} satisfying {e.property.Method?.Name ?? "(untitled)"}>";
+        }
+
         TestResult<ExistsTrace> Test(Exists<A, T> f, int depth)
         {
             var result = new TestResult<ExistsTrace>();
-            var atype = f.property.GetType().GenericTypeArguments[0].ToString();
-            result.Name = $"<exists some {atype} satisfying {f.property.Method?.Name ?? "(untitled)"}>";
-
             foreach (var a in SerialA.Series(depth))
             {
                 var innerResult = TestableT.Test(f.property(a), depth);
@@ -62,45 +116,35 @@ namespace SerialPBT
     /// Type of the property that must hold for all inputs that pass the
     /// filter.
     /// </typeparam>
-    public struct Filtered<A, T>
+    public struct Imp<TL, TR>
     {
         /// <summary>
         /// The filter to apply to candidate inputs.
         /// </summary>
-        public Func<A, bool> filter;
+        public TL filter;
+
         /// <summary>
         /// The property that must hold for all inputs that pass the filter.
         /// </summary>
-        public Func<A, T> property;
+        public TR property;
     }
 
     /// <summary>
-    /// Instance allowing testing of filtered arity-1 functions.
+    /// Instance allowing testing of implications.
     /// </summary>
-    public instance TestableF1_Filtered<A, T, [AssociatedType] R, implicit SerialA, implicit TestableT> : CTestable<Filtered<A, T>, F1Trace<A, R>>
-        where SerialA : CSerial<A>
-        where TestableT : CTestable<T, R>
+    public instance TestableImp<TL, TR, [AssociatedType] RL, [AssociatedType] RR, implicit TestableL, implicit TestableR> : CTestable<Imp<TL, TR>, ImpTrace<RR>>
+        where TestableL : CTestable<TL, RL>
+        where TestableR : CTestable<TR, RR>
     {
-        TestResult<F1Trace<A, R>> Test(Filtered<A, T> f, int depth)
+        TestResult<ImpTrace<RR>> Test(Imp<TL, TR> f, int depth)
         {
-            var result = new TestResult<F1Trace<A, R>>();
-            result.Name = $"<filtered: {f.property.Method?.Name ?? "(untitled)"}>";
-
-            foreach (var a in SerialA.Series(depth))
+            if (TestableL.Test(f.filter, depth).Failed)
             {
-                if (!f.filter(a))
-                {
-                    result.Skip(new F1Trace<A, R> { input = a, next = default, skipped = true });
-                    continue;
-                }
-
-                result.Merge(TestableT.Test(f.property(a), depth), (r) => new F1Trace<A, R> { input = a, next = r, skipped = false });
-                if (result.Failed)
-                {
-                    break;
-                }
+                return TestResult<ImpTrace<RR>>.Skip(new ImpTrace<RR> { skipped = true, next = default });
             }
 
+            var result = new TestResult<ImpTrace<RR>>();
+            result.Merge(TestableR.Test(f.property, depth), (r) => new ImpTrace<RR> { skipped = false, next = r });
             return result;
         }
     }

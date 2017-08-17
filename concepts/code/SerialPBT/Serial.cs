@@ -124,13 +124,56 @@ namespace SerialPBT
         /// </returns>
         public static IEnumerable<R> Sum<R>(Func<int, IEnumerable<R>> lseries, Func<int, IEnumerable<R>> rseries, int depth) => lseries(depth).Concat(rseries(depth));
 
+        /// <summary>
+        /// Uses two serial generators to generate Cartesian products.
+        /// </summary>
+        /// <typeparam name="R">
+        /// The serial type of the left-hand side of the product.
+        /// </typeparam>
+        /// <typeparam name="S">
+        /// The serial type of the right-hand side of the product.
+        /// </typeparam>
+        /// <param name="lseries">
+        /// The generator of the left-hand series.
+        /// </param>
+        /// <param name="rseries">
+        /// The generator of the right-hand series.
+        /// </param>
+        /// <param name="depth">
+        /// The depth for the combined generator.
+        /// </param>
+        /// <returns>
+        /// All Cartesian products from both generators at the given depth.
+        /// </returns>
         public static IEnumerable<(R, S)> Prod<R, S>(Func<int, IEnumerable<R>> lseries, Func<int, IEnumerable<S>> rseries, int depth) => from l in lseries(depth) from r in rseries(depth) select (l, r);
 
-        public static IEnumerable<R> Cons0<R>(R f, int depth)
-        {
-            yield return f;
-        }
+        #region Combinators for constructors
 
+        // We don't provide the paper's Cons0, as it's trivial
+        // (yield return).
+
+        /// <summary>
+        /// Adapts a 1-argument constructor of a sum type into a series
+        /// generator.
+        /// </summary>
+        /// <typeparam name="A">
+        /// The type of input into the constructor.
+        /// </typeparam>
+        /// <typeparam name="R">
+        /// The type of output from the constructor.
+        /// </typeparam>
+        /// <typeparam name="SerialA">
+        /// The witness for CSerial for the input type.
+        /// </typeparam>
+        /// <param name="f">
+        /// The constructor.
+        /// </param>
+        /// <param name="depth">
+        /// The depth at which to generate the series.
+        /// </param>
+        /// <returns>
+        /// The generated series.
+        /// </returns>
         public static IEnumerable<R> Cons1<A, R, implicit SerialA>(Func<A, R> f, int depth)
             where SerialA : CSerial<A>
         {
@@ -143,6 +186,34 @@ namespace SerialPBT
             }
         }
 
+        /// <summary>
+        /// Adapts a 2-argument constructor of a sum type into a series
+        /// generator.
+        /// </summary>
+        /// <typeparam name="A">
+        /// The first type of input into the constructor.
+        /// </typeparam>
+        /// <typeparam name="B">
+        /// The second type of input into the constructor.
+        /// </typeparam>
+        /// <typeparam name="R">
+        /// The type of output from the constructor.
+        /// </typeparam>
+        /// <typeparam name="SerialA">
+        /// The witness for CSerial for the first input type.
+        /// </typeparam>
+        /// <typeparam name="SerialB">
+        /// The witness for CSerial for the second input type.
+        /// </typeparam>
+        /// <param name="f">
+        /// The constructor.
+        /// </param>
+        /// <param name="depth">
+        /// The depth at which to generate the series.
+        /// </param>
+        /// <returns>
+        /// The generated series.
+        /// </returns>
         public static IEnumerable<R> Cons2<A, B, R, implicit SerialA, implicit SerialB>(Func<A, B, R> f, int depth)
             where SerialA : CSerial<A>
             where SerialB : CSerial<B>
@@ -155,5 +226,7 @@ namespace SerialPBT
                 }
             }
         }
+
+        #endregion Combinators for constructors
     }
 }
