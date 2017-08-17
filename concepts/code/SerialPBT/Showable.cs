@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Text;
 
+// Concept and basic instances for pretty-printing.
+
 namespace SerialPBT
 {
     /// <summary>
@@ -11,16 +13,25 @@ namespace SerialPBT
         void Show(T t, StringBuilder sb);
     }
 
+    /// <summary>
+    /// Instance to allow Booleans to be pretty-printed.
+    /// </summary>
     public instance ShowableBool : CShowable<bool>
     {
         void Show(bool i, StringBuilder sb) => sb.Append(i);
     }
 
+    /// <summary>
+    /// Instance to allow integers to be pretty-printed.
+    /// </summary>
     public instance ShowableInt : CShowable<int>
     {
         void Show(int i, StringBuilder sb) => sb.Append(i);
     }
 
+    /// <summary>
+    /// Instance to allow arrays of showable items to be pretty-printed.
+    /// </summary>
     public instance ShowableArray<A, implicit ShowableA> : CShowable<A[]>
         where ShowableA : CShowable<A>
     {
@@ -43,6 +54,9 @@ namespace SerialPBT
         }
     }
 
+    /// <summary>
+    /// Instance to allow 2-tuples of showable items to be pretty-printed.
+    /// </summary>
     public instance ShowableVTup2<A, B, implicit ShowableA, implicit ShowableB> : CShowable<(A, B)>
         where ShowableA : CShowable<A>
         where ShowableB : CShowable<B>
@@ -57,8 +71,26 @@ namespace SerialPBT
         }
     }
 
+    /// <summary>
+    /// Helper functions for using showable items.
+    /// </summary>
     static class ShowableHelpers
     {
+        /// <summary>
+        /// Outputs a showable item as a string.
+        /// </summary>
+        /// <typeparam name="A">
+        /// Type of showable items.
+        /// </typeparam>
+        /// <typeparam name="ShowableA">
+        /// The CShowable instance for the item.
+        /// </typeparam>
+        /// <param name="a">
+        /// The item to show.
+        /// </param>
+        /// <returns>
+        /// The string representation of the item.
+        /// </returns>
         public static string String<A, implicit ShowableA>(A a)
             where ShowableA : CShowable<A>
         {
@@ -67,7 +99,19 @@ namespace SerialPBT
             return sb.ToString();
         }
 
-        public static void Write<A, implicit ShowableA>(A a)
+        /// <summary>
+        /// Outputs a showable item to the console with a newline.
+        /// </summary>
+        /// <typeparam name="A">
+        /// Type of showable items.
+        /// </typeparam>
+        /// <typeparam name="ShowableA">
+        /// The CShowable instance for the item.
+        /// </typeparam>
+        /// <param name="a">
+        /// The item to show.
+        /// </param>
+        public static void WriteLine<A, implicit ShowableA>(A a)
             where ShowableA : CShowable<A>
         {
             Console.WriteLine(String(a));
