@@ -50,9 +50,27 @@ namespace Microsoft.CodeAnalysis.CSharp
                     continue;
                 }
 
+                /* Note: One might be tempted to put in an assertion here that
+                   the map can't assign to _fixedResults[i] the same thing as
+                   _methodTypeParameters[i].  However, sometimes it can!
+
+                   For example, consider
+
+                   private static void Qsort<T, implicit OrdT>
+                       (T[] xs, int lo, int hi) where OrdT : Ord<T>
+                   {
+                       if (lo < hi)
+                       {
+                           var p = Partition(xs, lo, hi);
+                           Qsort(xs, lo, p - 1);
+                           Qsort(xs, p + 1, hi);
+                       }
+                  }
+
+                  In this case, the map will resolve the missing
+                  type parameters in each Qsort call as T->T, OrdT->OrdT.
+                  These are exactly the same symbols. */
                 _fixedResults[i] = fixedMap.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
-                Debug.Assert(!ReferenceEquals(_fixedResults[i], _methodTypeParameters[i]),
-                    "Allegedly inferred type parameter was resolved to itself");
             }
 
             return true;
@@ -257,11 +275,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// either be represented by a null, or a copy of the corresponding
         /// type parameter.
         /// </param>
-        /// <param name="treatUnboundAsUnfixed">
-        /// If true, treat type arguments that are unbound type parameters as
-        /// unfixed.  This should be true for recursive inference calls, but
-        /// nothing else as it harms completeness.
-        /// </param>
         /// <returns>
         /// A tuple of:
         /// <list type="bullet">
@@ -282,14 +295,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         internal (bool success, ImmutableArray<int> conceptIndices, ImmutableArray<int> associatedIndices, ImmutableTypeMap fixedParamMap) PartitionTypeParameters(
             ImmutableArray<TypeParameterSymbol> typeParameters,
-            ImmutableArray<TypeSymbol> typeArguments,
-            bool treatUnboundAsUnfixed
+            ImmutableArray<TypeSymbol> typeArguments
         )
         {
-            // @t-mawind
-            //   It's no longer certain whether treatUnboundAsUnfixed is
-            //   needed, but I ran out of time to check.
-
             Debug.Assert(typeParameters.Length == typeArguments.Length,
                 "There should be as many type parameters as arguments.");
 
@@ -299,7 +307,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             for (int i = 0; i < typeParameters.Length; i++)
             {
-                if (TypeArgumentIsFixed(typeArguments[i], treatUnboundAsUnfixed))
+                if (TypeArgumentIsFixed(typeArguments[i]))
                 {
                     fixedMapB.Add(typeParameters[i], new TypeWithModifiers(typeArguments[i]));
                     continue;
@@ -329,17 +337,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="typeArgument">
         /// The type argument to check.
         /// </param>
-        /// <param name="treatUnboundAsUnfixed">
-        /// If true, treat type arguments that are unbound type parameters as
-        /// unfixed.  This should be true for recursive inference calls, but
-        /// nothing else as it harms completeness.
-        /// </param>
         /// <returns>
         /// True if the argument is fixed.  This method may sometimes
         /// return false negatives, which affects completeness
         /// (some valid type inference may fail) but not soundness.
         /// </returns>
-        private bool TypeArgumentIsFixed(TypeSymbol typeArgument, bool treatUnboundAsUnfixed)
+        private bool TypeArgumentIsFixed(TypeSymbol typeArgument)
         {
             // @t-mawind
             //   This is slightly ad-hoc and needs checking.
@@ -350,13 +353,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 return false;
             }
-            //   2) In other places, they are some type parameter; currently
-            //      we filter on those places with treatUnboundAsUnfixed, but
-            //      it is unclear whether we need this.
-            if (!treatUnboundAsUnfixed)
-            {
-                return true;
-            }
+            //   2) In other places, they are some type parameter.
             if (typeArgument.Kind != SymbolKind.TypeParameter)
             {
                 return true;
@@ -375,7 +372,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             return _boundParams.Contains(typeArgument as TypeParameterSymbol);
         }
 
-
         #endregion Setup from binder
         #region Main driver
 
@@ -385,23 +381,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 "should have as many type parameters as type arguments");
 
             (bool success, var conceptIndices, var associatedIndices, var fixedMap) =
-                PartitionTypeParameters(
-                typeParameters,
-                typeArguments,
-                treatUnboundAsUnfixed);
+                PartitionTypeParameters(typeParameters, typeArguments);
             if (!success)
             {
                 // This instance has some unfixed non-witness/non-associated type
                 // parameters.  We can't infer these, so give up on this
                 // candidate instance.
                 return default;
-            }
-
-            // If there were no unfixed witnesses/associated types, we don't
-            // need to bother with inference!
-            if (conceptIndices.IsEmpty && associatedIndices.IsEmpty)
-            {
-                return existingFixedMap;
             }
 
             return InferWithClassifiedParameters(conceptIndices, associatedIndices, typeParameters, existingFixedMap.Compose(fixedMap), chain);
@@ -447,7 +433,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Early out: if we don't have any concept indices, we can't infer.
             if (conceptIndices.IsEmpty)
             {
-                return default;
+                return existingFixedMap;
             }
 
             bool inferredAll;
@@ -1327,23 +1313,27 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // TODO: ensure that this is sound---there might be places
                 // where we claim this is ok, but then don't go on to infer the
                 // concept and the result is a spurious type error or crash. 
-                if (!expandAssociatedIfFailed || !conceptIndices.IsEmpty) return ImmutableArray<TypeSymbol>.Empty;
-                foreach (var i in associatedIndices)
+                if (!expandAssociatedIfFailed || !conceptIndices.IsEmpty)
+                {
+                    return ImmutableArray<TypeSymbol>.Empty;
+            }
+            foreach (var i in associatedIndices)
                 {
                     allArguments[i] = typeParameters[i];
                 }
                 return allArguments.ToImmutableArray();
             }
 
+            /* As in normal inference, it is not necessarily a bug for
+               the map to map typeParameters[i] to typeParameters[i].
+               This might be, eg., a recursive call. */
             foreach (var i in conceptIndices)
             {
                 allArguments[i] = unification.SubstituteType(typeParameters[i]).AsTypeSymbolOnly();
-                Debug.Assert(allArguments[i] != typeParameters[i], "part-inference inferred a concept to its own type parameter");
             }
             foreach (var i in associatedIndices)
             {
                 allArguments[i] = unification.SubstituteType(typeParameters[i]).AsTypeSymbolOnly();
-                Debug.Assert(allArguments[i] != typeParameters[i], "part-inference inferred an associated type to its own type parameter");
             }
 
             return allArguments.ToImmutableArray();
