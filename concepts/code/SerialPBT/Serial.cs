@@ -73,13 +73,16 @@ namespace SerialPBT
 
             yield return (new A[] { });
 
-            foreach ((var l, var rs) in SerialHelpers.Prod(SerialA.Series, this.Series, depth - 1))
+            foreach (var l in SerialA.Series(depth - 1))
             {
-                var len = rs.Length;
-                var xs = new A[len + 1];
-                Array.Copy(rs, 0, xs, 1, len);
-                xs[0] = l;
-                yield return xs;
+                foreach (var rs in this.Series(depth - 1))
+                {
+                    var len = rs.Length;
+                    var xs = new A[len + 1];
+                    Array.Copy(rs, 0, xs, 1, len);
+                    xs[0] = l;
+                    yield return xs;
+                }
             }
         }
     }

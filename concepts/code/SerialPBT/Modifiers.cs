@@ -5,6 +5,8 @@ using System.Concepts;
 
 namespace SerialPBT
 {
+    #region Modifier structs
+
     /// <summary>
     /// Renames a test.
     /// </summary>
@@ -146,6 +148,42 @@ namespace SerialPBT
             var result = new TestResult<ImpTrace<RR>>();
             result.Merge(TestableR.Test(f.property, depth), (r) => new ImpTrace<RR> { skipped = false, next = r });
             return result;
+        }
+    }
+
+    #endregion Modifier structs
+
+    /// <summary>
+    /// Functions that wrap common modifier patterns.
+    /// </summary>
+    static class ModifierHelpers
+    {
+        /// <summary>
+        /// Creates a test that filters the input to an arity-1 function.
+        /// </summary>
+        /// <typeparam name="A">
+        /// Type of inputs to the test function.
+        /// </typeparam>
+        /// <typeparam name="TL">
+        /// Type of the test to run when filtering the input.
+        /// </typeparam>
+        /// <typeparam name="TR">
+        /// Type of the test to run on the filtered input.
+        /// </typeparam>
+        /// <param name="filter">
+        /// The predicate to use to filter inputs.
+        /// </param>
+        /// <param name="property">
+        /// The test to run on the outputs.
+        /// </param>
+        /// <returns>
+        /// A test that accepts inputs of type <typeparamref name="A"/>,
+        /// filters them using <paramref name="filter"/>, then runs
+        /// <paramref name="property"/> on them.
+        /// </returns>
+        public static Func<A, Imp<TL, Lazy<TR>>> Filter<A, TL, TR>(Func<A, TL> filter, Func<A, TR> property)
+        {
+            return (a) => new Imp<TL, Lazy<TR>> { filter = filter(a), property = new Lazy<TR>(() => property(a)) };
         }
     }
 }

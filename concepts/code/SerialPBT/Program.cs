@@ -40,8 +40,18 @@ namespace SerialPBT
         static Exists<int, bool> Prop_IsSingleDigit_Exists =>
             new Exists<int, bool>(Prop_IsSingleDigit);
         // Exists((int num) => Prop_IsSingleDigit(num);
-        static Imp<bool, Func<bool>> Prop_IsSingleDigit_Filtered(int x) =>
+
+        static Imp<bool, Func<bool>> Prop_IsSingleDigit_Imp(int x) =>
             (x == 0).Implies((Func<bool>)(() => Prop_IsSingleDigit(x)));
+
+        // There is more than one way to do it...
+
+        static Imp<bool, Lazy<bool>> Prop_IsSingleDigit_ImpLazy(int x) =>
+            (x == 0).Implies(new Lazy<bool>(() => Prop_IsSingleDigit(x)));
+
+        static Func<int, Imp<bool, Lazy<bool>>> Prop_IsSingleDigit_Filtered =>
+            ModifierHelpers.Filter((int y) => y == 0, Prop_IsSingleDigit);
+
 
         /// <summary>
         /// Broken function that checks whether one array is a prefix of
@@ -128,7 +138,8 @@ namespace SerialPBT
 
             // ...existentials, and implications.
             ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Exists, 11));
-            ShowableHelpers.WriteLine(Check<Func<int, Imp<bool, Func<bool>>>>(Prop_IsSingleDigit_Filtered, 11));
+            ShowableHelpers.WriteLine(Check<Func<int, Imp<bool, Func<bool>>>>(Prop_IsSingleDigit_Imp, 11));
+            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Filtered, 11));
 
             // We can wrap tests up in generic classes.
             // For example, our IsPrefix test suite can be used both on an
