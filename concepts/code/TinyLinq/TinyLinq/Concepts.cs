@@ -50,46 +50,9 @@ The System.Linq namespace provides an implementation of the query operator patte
 
 namespace TinyLinq
 {
-    concept CSelect<[AssociatedType] T, [AssociatedType] U, S, D>
+    public concept CSelect<[AssociatedType] T, [AssociatedType] U, S, D>
     {
         D Select(S src, Func<T, U> f);
-    }
-
-    public struct ArrayCursor<TElem>
-    {
-        public TElem[] source;
-        public int lo;
-        public int hi;
-    }
-
-    public instance Enumerator_ArrayCursor<TElem> : CEnumerator<TElem, ArrayCursor<TElem>>
-    {
-        void Reset(ref ArrayCursor<TElem> enumerator)
-        {
-            enumerator.lo = -1;
-        }
-
-        bool MoveNext(ref ArrayCursor<TElem> enumerator)
-        {
-            // hi always points to one index beyond the end of the array slice
-            if (enumerator.hi <= enumerator.lo + 1)
-            {
-                return false;
-            }
-            enumerator.lo++;
-            return true;
-        }
-
-        TElem Current(ref ArrayCursor<TElem> enumerator)
-        {
-            if (enumerator.lo == -1)
-            {
-                return default;
-            }
-            return enumerator.source[enumerator.lo];
-        }
-
-        void Dispose(ref ArrayCursor<TElem> enumerator) { }
     }
 
     public struct Selection<TEnum, TElem, TProj>
@@ -125,26 +88,33 @@ namespace TinyLinq
     }
 
 
-    public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], Selection<ArrayCursor<TElem>, TElem, TProj>>
+    public instance Select_Enumerable<TElem, TProj, [AssociatedType] TSrc, [AssociatedType] TDst, implicit E>
+        : CSelect<TElem, TProj, TSrc, Selection<TDst, TElem, TProj>>
+        where E : CEnumerable<TSrc, TElem, TDst>
     {
-        Selection<ArrayCursor<TElem>, TElem, TProj> Select(TElem[] t, Func<TElem, TProj> projection)
+        Selection<TDst, TElem, TProj> Select(TSrc t, Func<TElem, TProj> projection)
         {
-            return new Selection<ArrayCursor<TElem>, TElem, TProj>
+            return new Selection<TDst, TElem, TProj>
             {
-                source = new ArrayCursor<TElem> { source = t, lo = -1, hi = t.Length },
+                source = E.GetEnumerator(t),
                 projection = projection
             };
         }
     }
 
-    instance ListSelect<T, U> : CSelect<T, U, List<T>, List<U>>
+    /// <summary>
+    /// Instance reducing chained Select queries to a single Selection on a
+    /// composed projection.
+    /// </summary>
+    public instance Select_Selection<TElem, TProj1, TProj2, TDest> : CSelect<TProj1, TProj2, Selection<TDest, TElem, TProj1>, Selection<TDest, TElem, TProj2>>
     {
-        List<U> Select(List<T> src, Func<T, U> f)
+        Selection<TDest, TElem, TProj2> Select(Selection<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection)
         {
-            var l = new List<U>(src.Capacity);
-            foreach (var e in src)
-                l.Add(f(e));
-            return l;
+            return new Selection<TDest, TElem, TProj2>
+            {
+                source = t.source,
+                projection = x => projection(t.projection(x))
+            };
         }
     }
 

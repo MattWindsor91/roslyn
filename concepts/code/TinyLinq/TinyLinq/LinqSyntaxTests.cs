@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Concepts;
 using System.Concepts.Enumerable;
+using static System.Concepts.Enumerable.Instances;
 
 namespace TinyLinq
 {
@@ -49,7 +50,7 @@ namespace TinyLinq
             // List queries
             List<int> l = new List<int>(new int[] { 1, 2, 3 });
 
-            List<double> l1 = from x in l where x % 2 == 0 select (double) x;
+            var l1 = from x in l where x % 2 == 0 select (double) x;
 
             List<Tuple<int,int>> a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
 
@@ -63,7 +64,6 @@ namespace TinyLinq
 
             int[] c = new int[] { 1, 2, 3 };
             Selection<ArrayCursor<int>, int, double> a4 = from x in a where x % 2 == 0  select (double) x;
-
         }
     }
 }
