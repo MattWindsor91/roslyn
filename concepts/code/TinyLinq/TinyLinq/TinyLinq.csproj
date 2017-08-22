@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -30,6 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -52,6 +54,10 @@
     <ProjectReference Include="..\..\ConceptAttributes\ConceptAttributes.csproj">
       <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
       <Name>ConceptAttributes</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ConceptLibrary\ConceptLibrary.csproj">
+      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
+      <Name>ConceptLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

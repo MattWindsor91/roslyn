@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Concepts;
+using System.Concepts.Enumerable;
 
 /*
  What we need to implement.
@@ -51,9 +50,92 @@ The System.Linq namespace provides an implementation of the query operator patte
 namespace TinyLinq
 {
 
-    concept CSelect<[AssociatedType] T, [AssociatedType] U, S, [AssociatedType] D>
+    
+    concept CSelect<[AssociatedType] T, [AssociatedType] U, S, D>
     {
         D Select(S src, Func<T, U> f);
+    }
+
+    public struct ArrayCursor<TElem>
+    {
+        public TElem[] source;
+        public int lo;
+        public int hi;
+    }
+
+    public instance Enumerator_ArrayCursor<TElem> : CEnumerator<TElem, ArrayCursor<TElem>>
+    {
+        void Reset(ref ArrayCursor<TElem> enumerator)
+        {
+            enumerator.lo = -1;
+        }
+
+        bool MoveNext(ref ArrayCursor<TElem> enumerator)
+        {
+            // hi always points to one index beyond the end of the array slice
+            if (enumerator.hi <= enumerator.lo + 1)
+            {
+                return false;
+            }
+            enumerator.lo++;
+            return true;
+        }
+
+        TElem Current(ref ArrayCursor<TElem> enumerator)
+        {
+            if (enumerator.lo == -1)
+            {
+                return default;
+            }
+            return enumerator.source[enumerator.lo];
+        }
+
+        void Dispose(ref ArrayCursor<TElem> enumerator) { }
+    }
+
+    public struct Selection<TEnum, TElem, TProj>
+    {
+        public TEnum source;
+        public Func<TElem, TProj> projection;
+    }
+
+    public instance Enumerator_Selection<TEnum, [AssociatedType] TElem, TProj, implicit E>
+        : CEnumerator<TProj, Selection<TEnum, TElem, TProj>>
+        where E : CEnumerator<TElem, TEnum>
+    {
+        void Reset(ref Selection<TEnum, TElem, TProj> enumerator)
+        {
+            E.Reset(ref enumerator.source);
+        }
+
+        bool MoveNext(ref Selection<TEnum, TElem, TProj> enumerator)
+        {
+            if (!E.MoveNext(ref enumerator.source))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        TProj Current(ref Selection<TEnum, TElem, TProj> enumerator)
+        {
+            return enumerator.projection(E.Current(ref enumerator.source));
+        }
+
+        void Dispose(ref Selection<TEnum, TElem, TProj> enumerator) { }
+    }
+
+
+    public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], Selection<ArrayCursor<TElem>, TElem, TProj>>
+    {
+        Selection<ArrayCursor<TElem>, TElem, TProj> Select(TElem[] t, Func<TElem, TProj> projection)
+        {
+            return new Selection<ArrayCursor<TElem>, TElem, TProj>
+            {
+                source = new ArrayCursor<TElem> { source = t, lo = -1, hi = t.Length },
+                projection = projection
+            };
+        }
     }
 
     instance ListSelect<T, U> : CSelect<T, U, List<T>, List<U>>
@@ -66,18 +148,6 @@ namespace TinyLinq
             return l;
         }
     }
-
-    instance ArraySelect<T, U> : CSelect<T, U, T[], U[]>
-    {
-        U[] Select(T[] src, Func<T, U> f)
-        {
-            var l = new U[src.Length];
-            for (int i = 0; i < src.Length; i++)
-                l[i] = f(src[i]);
-            return l;
-        }
-    }
-
 
     concept CWhere<[AssociatedType] T, S>
     {
@@ -200,12 +270,31 @@ namespace TinyLinq
 
             // Array queries
             int[] a = new int[] { 1, 2, 3 };
-            double[] a2 = from x in a where x % 2 == 0  select (double) x;
+            Selection<ArrayCursor<int>, int, double> a2 = from x in a where x % 2 == 0  select (double) x;
 
             int[] b = new int[] { 1, 2, 3 };
 
             Tuple<int, int>[] a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
 
+            int[] c = new int[] { 1, 2, 3 };
+            Selection<ArrayCursor<int>, int, double> a4 = from x in a where x % 2 == 0  select (double) x;
+
+
+            int[] sample = { 2, 4, 5, 10, 99, 398, 34 };
+
+            var f = sample.Select((int x) => x + 5);
+            while (CEnumerator<int, Selection<ArrayCursor<int>, int, int>>.MoveNext(ref f))
+            {
+                Console.WriteLine(CEnumerator<int, Selection<ArrayCursor<int>, int, int>>.Current(ref f));
+            }
+
+            Console.WriteLine("oOo");
+
+            var g = ((IEnumerable<int>)sample).Select((x) => x + 5).GetEnumerator();
+            while (g.MoveNext())
+            {
+                Console.WriteLine(g.Current);
+            }
         }
     }
 }
