@@ -1288,7 +1288,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 else
                 {
                     allArguments[i] = typeArguments[j];
-                    fixedMap.Add(typeParameters[i], new TypeWithModifiers(typeArguments[i]));
+                    fixedMap.Add(typeParameters[i], new TypeWithModifiers(typeArguments[j]));
                     j++;
                 }
             }
