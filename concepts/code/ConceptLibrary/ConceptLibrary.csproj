@@ -39,6 +39,7 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Enumerable.cs" />
     <Compile Include="Lazy.cs" />
     <Compile Include="Monoid.cs" />
     <Compile Include="Prelude.cs" />

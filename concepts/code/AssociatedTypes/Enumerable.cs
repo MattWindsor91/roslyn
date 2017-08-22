@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Concepts;
+using System.Concepts.Enumerable;
 using System.Linq;
 
 /// <summary>
@@ -227,44 +228,6 @@ namespace AssociatedTypes
     {
         int Length((A, B) tup) => Math.Min(LA.Length(tup.Item1), LB.Length(tup.Item2));
     }
-
-    /// <summary>
-    ///     Concept for types which may be enumerated.
-    /// </summary>
-    /// <typeparam name="C">
-    ///     The type to be enumerated.
-    /// </typeparam>
-    /// <typeparam name="E">
-    ///     The element returned by the enumerator.
-    /// </typeparam>
-    /// <typeparam name="S">
-    ///     The state held by the enumerator.
-    /// </typeparam>
-    public concept CEnumerator<E, [AssociatedType] S>
-    {
-        void Reset(ref S enumerator);
-        bool MoveNext(ref S enumerator);
-        E Current(ref S enumerator);
-        void Dispose(ref S enumerator);
-    }
-
-    /// <summary>
-    ///     Concept for types which may be enumerated.
-    /// </summary>
-    /// <typeparam name="C">
-    ///     The type to be enumerated.
-    /// </typeparam>
-    /// <typeparam name="E">
-    ///     The element returned by the enumerator.
-    /// </typeparam>
-    /// <typeparam name="S">
-    ///     The state held by the enumerator.
-    /// </typeparam>
-    public concept CEnumerable<C, [AssociatedType] E, [AssociatedType] S> : CEnumerator<E, S>
-    {
-        S GetEnumerator(C container);
-    }
-
 
     /// <summary>
     ///     Unspecialised implementation of CEnumerable based on CLength and
