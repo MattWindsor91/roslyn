@@ -5229,14 +5229,24 @@ namespace Microsoft.CodeAnalysis.CSharp
             if ((object)boundLeft.Type != null && boundLeft.Type.IsConceptType())
             {
                 var requiredConcepts = ImmutableArray.Create(boundLeft.Type);
-                var instance = ConceptWitnessInferrer.ForBinder(this).InferOneWitnessFromRequiredConcepts(requiredConcepts, new ImmutableTypeMap()).Instance;
-                if (instance == null)
+
+                var candidate = ConceptWitnessInferrer.ForBinder(this).InferOneWitnessFromRequiredConcepts(requiredConcepts, new ImmutableTypeMap(), null);
+                if (!candidate.Viable)
                 {
+                    if (!candidate.Diagnostics.IsNullOrEmpty())
+                    {
+                        foreach (var diag in candidate.Diagnostics)
+                        {
+                            diagnostics.Add(new CSDiagnostic(diag, operatorToken.GetLocation()));
+                        }
+                    }
+
                     DiagnosticInfo diagnosticInfo = new CSDiagnosticInfo(ErrorCode.ERR_CantInferConceptInstance, boundLeft.Display);
                     diagnostics.Add(new CSDiagnostic(diagnosticInfo, operatorToken.GetLocation()));
+
                     return BadExpression(node);
                 }
-                boundLeft = new BoundTypeExpression(boundLeft.Syntax, null, true, instance);
+                boundLeft = new BoundTypeExpression(boundLeft.Syntax, null, true, candidate.Instance);
             }
             Debug.Assert(boundLeft.Type == null || !boundLeft.Type.IsConceptType(),
                 "Concept inference should have eliminated any possible concepts on the LHS");

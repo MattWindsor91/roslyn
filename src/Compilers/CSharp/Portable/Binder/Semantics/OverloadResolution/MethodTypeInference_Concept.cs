@@ -36,7 +36,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 "Concept witness inference is pointless if there is nothing to infer");
 
             var inferrer = ConceptWitnessInferrer.ForBinder(binder);
-            var fixedMap = inferrer.Infer(_methodTypeParameters, _fixedResults.AsImmutable(), false, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty);
+            var fixedMap = inferrer.Infer(_methodTypeParameters, _fixedResults.AsImmutable(), new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
             if (fixedMap == null)
             {
                 return false;
@@ -105,6 +105,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal struct Candidate
         {
             /// <summary>
+            /// Whether the candidate is viable.
+            /// </summary>
+            public bool Viable;
+
+            /// <summary>
             /// The candidate instance.
             /// </summary>
             public readonly TypeSymbol Instance;
@@ -113,6 +118,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// The unification that must be made to accept this instance.
             /// </summary>
             public readonly ImmutableTypeMap Unification;
+
+            /// <summary>
+            /// The diagnostics, if any, that killed off this candidate.
+            /// </summary>
+            public HashSet<DiagnosticInfo> Diagnostics;
 
             /// <summary>
             /// Constructs a Candidate.
@@ -127,6 +137,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 Instance = instance;
                 Unification = unification;
+                Diagnostics = null;
+                Viable = true;
+            }
+
+            /// <summary>
+            /// Constructs a failing Candidate with a given diagnostic.
+            /// </summary>
+            /// <param name="errors">
+            /// The set of errors that caused this Candidate to fail.
+            /// </param>
+            public Candidate(HashSet<DiagnosticInfo> errors)
+            {
+                Instance = null;
+                Unification = null;
+                Diagnostics = errors;
+                Viable = false;
             }
         }
 
@@ -283,7 +309,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// concept witness or associated type;
         /// </item>
         /// <item>
-        /// An array of unfixed concept witness indices;
+        /// An array of unfixed concept witness parameters;
         /// </item>
         /// <item>
         /// An array of unfixed associated type parameters;
@@ -293,7 +319,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </item>
         /// </list>
         /// </returns>
-        internal (bool success, ImmutableArray<int> conceptIndices, ImmutableArray<int> associatedIndices, ImmutableTypeMap fixedParamMap) PartitionTypeParameters(
+        internal (bool success, ImmutableArray<TypeParameterSymbol> conceptParams, ImmutableArray<TypeParameterSymbol> associatedParams, ImmutableTypeMap fixedParamMap) PartitionTypeParameters(
             ImmutableArray<TypeParameterSymbol> typeParameters,
             ImmutableArray<TypeSymbol> typeArguments
         )
@@ -301,8 +327,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(typeParameters.Length == typeArguments.Length,
                 "There should be as many type parameters as arguments.");
 
-            var wBuilder = ArrayBuilder<int>.GetInstance();
-            var aBuilder = ArrayBuilder<int>.GetInstance();
+            var wBuilder = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+            var aBuilder = ArrayBuilder<TypeParameterSymbol>.GetInstance();
             var fixedMapB = new MutableTypeMap();
 
             for (int i = 0; i < typeParameters.Length; i++)
@@ -314,8 +340,25 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 // If we got here, the parameter is unfixed.
 
-                if (typeParameters[i].IsConceptWitness) wBuilder.Add(i);
-                else if (typeParameters[i].IsAssociatedType) aBuilder.Add(i);
+                if (typeParameters[i].IsConceptWitness)
+                {
+                    wBuilder.Add(typeParameters[i]);
+                }
+                else if (typeParameters[i].IsAssociatedType)
+                {
+                    aBuilder.Add(typeParameters[i]);
+                }
+                else if (typeArguments[i] != null && typeArguments[i].IsAssociatedType)
+                {
+                    /* @MattWindsor91 (Concept-C# 2017)
+                     * We treat a parameter slot as being associated if it has
+                     * been assigned to a type argument corresponding to an
+                     * unfixed associated type parameter from further up.
+                     *
+                     * This allows recursive fixing of associated types.
+                     */
+                    aBuilder.Add((TypeParameterSymbol)typeArguments[i]);
+                }
                 else
                 {
                     // If we got here, the type parameter is unfixed, but is
@@ -323,7 +366,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // inferrer can't possibly fix these, so we give up. 
                     wBuilder.Free();
                     aBuilder.Free();
-                    return (false, ImmutableArray<int>.Empty, ImmutableArray<int>.Empty, new ImmutableTypeMap());
+                    return (false, ImmutableArray<TypeParameterSymbol>.Empty, ImmutableArray<TypeParameterSymbol>.Empty, new ImmutableTypeMap());
                 }
             }
 
@@ -342,7 +385,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// return false negatives, which affects completeness
         /// (some valid type inference may fail) but not soundness.
         /// </returns>
-        private bool TypeArgumentIsFixed(TypeSymbol typeArgument)
+        internal bool TypeArgumentIsFixed(TypeSymbol typeArgument)
         {
             // @t-mawind
             //   This is slightly ad-hoc and needs checking.
@@ -375,40 +418,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         #endregion Setup from binder
         #region Main driver
 
-        internal ImmutableTypeMap Infer(ImmutableArray<TypeParameterSymbol> typeParameters, ImmutableArray<TypeSymbol> typeArguments, bool treatUnboundAsUnfixed, ImmutableTypeMap existingFixedMap, ImmutableHashSet<NamedTypeSymbol> chain)
-        {
-            Debug.Assert(typeParameters.Length == typeArguments.Length,
-                "should have as many type parameters as type arguments");
-
-            (bool success, var conceptIndices, var associatedIndices, var fixedMap) =
-                PartitionTypeParameters(typeParameters, typeArguments);
-            if (!success)
-            {
-                // This instance has some unfixed non-witness/non-associated type
-                // parameters.  We can't infer these, so give up on this
-                // candidate instance.
-                return default;
-            }
-
-            return InferWithClassifiedParameters(conceptIndices, associatedIndices, typeParameters, existingFixedMap.Compose(fixedMap), chain);
-        }
-
         /// <summary>
-        /// Tries to infer a batch of concept witnesses given a fully
-        /// classified set of type parameters and a map of previous type
-        /// parameter fixings.
+        /// Tries to infer a batch of concept witnesses given parallel
+        /// arrays of type arguments and parameters.
         /// </summary>
-        /// <param name="conceptIndices">
-        /// An array containing the indices into
-        /// <paramref name="allTypeParameters"/> that have been marked as
-        /// witnesses to infer.
+        /// <param name="typeParams">
+        /// The entire set of type parameters in this inference round.
         /// </param>
-        /// <param name="associatedIndices">
-        /// The array of indices of unfixed associated types to infer.
-        /// </param>
-        /// <param name="allTypeParameters">
-        /// The entire set of type parameters in this inference round,
-        /// indexed by <paramref name="associatedIndices"/>
+        /// <param name="typeArguments">
+        /// An array, parallel to <paramref name="typeParams"/>,
+        /// containing the current fixings for type arguments before inference.
         /// </param>
         /// <param name="existingFixedMap">
         /// A fixed map containing any previous unifications made during
@@ -420,18 +439,71 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// The set of instances we've passed through recursively to get here,
         /// used to abort recursive calls if they will create cycles.
         /// </param>
+        /// <param name="useSiteDiagnostics">
+        /// An optional diagnostics bag used to report details on failing inference.
+        /// </param>
+        /// <returns>
+        /// The final unification map if inference succeeded; the default map otherwise.
+        /// </returns>
+        internal ImmutableTypeMap Infer(
+            ImmutableArray<TypeParameterSymbol> typeParams,
+            ImmutableArray<TypeSymbol> typeArguments,
+            ImmutableTypeMap existingFixedMap,
+            ImmutableHashSet<NamedTypeSymbol> chain,
+            ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            Debug.Assert(typeParams.Length == typeArguments.Length,
+                "should have as many type parameters as type arguments");
+
+            (bool success, var conceptParams, var associatedParams, var fixedMap) =
+                PartitionTypeParameters(typeParams, typeArguments);
+            if (!success)
+            {
+                // This instance has some unfixed non-witness/non-associated type
+                // parameters.  We can't infer these, so give up on this
+                // candidate instance.
+                return default;
+            }
+
+            return InferWithClassifiedParameters(conceptParams, associatedParams, existingFixedMap.Compose(fixedMap), chain, ref useSiteDiagnostics);
+        }
+
+        /// <summary>
+        /// Tries to infer a batch of concept witnesses given a fully
+        /// classified set of type parameters and a map of previous type
+        /// parameter fixings.
+        /// </summary>
+        /// <param name="conceptParams">
+        /// The concept type parameters to infer.
+        /// </param>
+        /// <param name="associatedParams">
+        /// The associated type parameters to infer.
+        /// </param>
+        /// <param name="existingFixedMap">
+        /// A fixed map containing any previous unifications made during
+        /// concept inference, as well as any fixed type
+        /// parameters on the parent instance, method or class of this
+        /// inference run.
+        /// </param>
+        /// <param name="chain">
+        /// The set of instances we've passed through recursively to get here,
+        /// used to abort recursive calls if they will create cycles.
+        /// </param>
+        /// <param name="useSiteDiagnostics">
+        /// An optional diagnostics bag used to report details on failing inference.
+        /// </param>
         /// <returns>
         /// The final unification map if inference succeeded; the default map otherwise.
         /// </returns>
         internal ImmutableTypeMap InferWithClassifiedParameters(
-            ImmutableArray<int> conceptIndices,
-            ImmutableArray<int> associatedIndices,
-            ImmutableArray<TypeParameterSymbol> allTypeParameters,
+            ImmutableArray<TypeParameterSymbol> conceptParams,
+            ImmutableArray<TypeParameterSymbol> associatedParams,
             ImmutableTypeMap existingFixedMap,
-            ImmutableHashSet<NamedTypeSymbol> chain)
+            ImmutableHashSet<NamedTypeSymbol> chain,
+            ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             // Early out: if we don't have any concept indices, we can't infer.
-            if (conceptIndices.IsEmpty)
+            if (conceptParams.IsEmpty)
             {
                 return existingFixedMap;
             }
@@ -468,14 +540,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             do
             {
                 bool conceptProgress = false;
-                if (!conceptIndices.IsEmpty)
+                if (!conceptParams.IsEmpty)
                 {
-                    var newConceptIndices = TryInferConceptWitnesses(conceptIndices, allTypeParameters, existingFixedMap, chain, ref currentSubstitution);
-                    conceptProgress = conceptProgress || (newConceptIndices.Length < conceptIndices.Length);
-                    conceptIndices = newConceptIndices;
+                    var newConceptParameters = TryInferConceptWitnesses(conceptParams, existingFixedMap, chain, ref currentSubstitution, ref useSiteDiagnostics);
+                    conceptProgress = conceptProgress || (newConceptParameters.Length < conceptParams.Length);
+                    conceptParams = newConceptParameters;
                 }
 
-                inferredAll = conceptIndices.IsEmpty;
+                inferredAll = conceptParams.IsEmpty;
 
                 // Stop if we made no progress whatsoever.
                 if (!conceptProgress && !inferredAll)
@@ -484,23 +556,31 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             } while (!inferredAll);
 
-            // Once we've inferred all concept witnesses, all associated types
-            // will either be fixed or not inferrable.  The parent can check
-            // for this.
+            /* Once we've inferred all concept witnesses, all associated types
+             * will either be fixed or not inferrable.  We double-check here.
+             *
+             * TODO: this is inefficient, as we do this substitution again
+             *       later at the top level.  Some more lightweight way of
+             *       checking to see if currentSubstitution has fixed
+             *       allTypeParameters[i] might be better.
+             */
+            for (int i = 0; i < associatedParams.Length; i++)
+            {
+                if (currentSubstitution.SubstituteType(associatedParams[i]).AsTypeSymbolOnly() == associatedParams[i])
+                {
+                    return default;
+                }
+            }
+
             return currentSubstitution;
         }
 
         /// <summary>
         /// Tries to infer a batch of concept witnesses.
         /// </summary>
-        /// <param name="conceptIndices">
-        /// An array containing the indices into
-        /// <paramref name="allTypeParameters"/> that have been marked as
+        /// <param name="conceptParameters">
+        /// An array containing all type parameters that have been marked as
         /// witnesses to infer.
-        /// </param>
-        /// <param name="allTypeParameters">
-        /// The entire set of type parameters in this inference round,
-        /// indexed by <paramref name="conceptIndices"/>
         /// </param>
         /// <param name="parentSubstitution">
         /// A substitution applying all of the unifications made in previous
@@ -518,77 +598,76 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// when fixing the current concept witnesses.  This is then used to
         /// fix associated type parameters.
         /// </param>
+        /// <param name="useSiteDiagnostics">
+        /// An optional diagnostics bag used to report details on failing inference.
+        /// </param>
         /// <returns>
-        /// An array of fixed concept witnesses.  If any are null, then
-        /// inference has not succeeded.
+        /// An array of all concept-witness type parameters that have
+        /// not been inferred this time.  These might become inferrable once
+        /// some associated types have been fixed.
         /// </returns>
-        private ImmutableArray<int> TryInferConceptWitnesses(
-            ImmutableArray<int> conceptIndices,
-            ImmutableArray<TypeParameterSymbol> allTypeParameters,
+        private ImmutableArray<TypeParameterSymbol> TryInferConceptWitnesses(
+            ImmutableArray<TypeParameterSymbol> conceptParameters,
             ImmutableTypeMap parentSubstitution,
             ImmutableHashSet<NamedTypeSymbol> chain,
-            ref ImmutableTypeMap currentSubstitution)
+            ref ImmutableTypeMap currentSubstitution,
+            ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
-            var resultsBuilder = ArrayBuilder<Candidate>.GetInstance();
+            Debug.Assert(currentSubstitution != null,
+                "shouldn't have a null substitution here");
 
-            foreach (int i in conceptIndices)
-            {
-                resultsBuilder.Add(InferOneWitness(allTypeParameters[i], parentSubstitution, chain));
-            }
-            var maybeFixed = resultsBuilder.ToImmutableAndFree();
+            var remainingConceptParameters = ArrayBuilder<TypeParameterSymbol>.GetInstance();
 
-            var newConceptIndices = ArrayBuilder<int>.GetInstance();
-            for (int i = 0; i < maybeFixed.Length; i++)
+            for (var i = 0; i < conceptParameters.Length; i++)
             {
-                if (maybeFixed[i].Instance == null)
+                var requiredConcepts = GetRequiredConceptsFor(conceptParameters[i], parentSubstitution);
+                var candidate = InferOneWitnessFromRequiredConcepts(requiredConcepts, parentSubstitution, chain);
+
+                if (!candidate.Viable)
                 {
-                    // Inference failed, so put this index back onto the list
-                    // for the next cycle.
-                    newConceptIndices.Add(conceptIndices[i]);
-                    continue;
-                };
+                    // Put this back on the inferring queue.
+                    // It might need some other concepts to be inferred first.
+                    remainingConceptParameters.Add(conceptParameters[i]);
 
-                Debug.Assert(maybeFixed[i].Instance.IsInstanceType() || maybeFixed[i].Instance.IsConceptWitness,
+                    // TODO: this diagnostics handling is almost certainly
+                    //       wrong.
+                    var diags = candidate.Diagnostics.AsImmutableOrNull();
+                    if (useSiteDiagnostics != null && !diags.IsDefaultOrEmpty)
+                    {
+                        for (int j = 0; j < diags.Length; j++)
+                        {
+                            useSiteDiagnostics.Add(diags[j]);
+                        }
+                    }
+
+                    continue;
+                }
+
+                // This concept has now been inferred, so we do two things.
+
+                Debug.Assert(candidate.Instance.IsInstanceType() || candidate.Instance.IsConceptWitness,
                     "Concept witness inference returned something other than a concept instance or witness");
 
-                // TODO: not a graceful way to handle errors from Merge...
-                currentSubstitution = currentSubstitution?.Compose(maybeFixed[i].Unification);
-                if (currentSubstitution == null) return conceptIndices;
-
-                // Finally, add the inferred concept into the substitution.
-                currentSubstitution = currentSubstitution.Add(allTypeParameters[conceptIndices[i]], new TypeWithModifiers(maybeFixed[i].Instance));
+                /* 1) Add the inferred concept itself into the substitution.
+                 *    This has to happen before we compose the unification,
+                 *    to avoid accidentally clobbering the witness's
+                 *    type parameter with any other like-named parameters
+                 *    coming from recursive calls.
+                 *    
+                 *    TODO: why?
+                 */
+                currentSubstitution = currentSubstitution.Add(conceptParameters[i], new TypeWithModifiers(candidate.Instance));
+                /* 2) Add its unification into our substitution, which will
+                 *    propagate any associated types fixed by the concept.
+                 *
+                 *    This is a sequential composition, so order matters.
+                 *    We must make sure that, if there are clashes on type
+                 *    parameters, the outermost assignment wins.
+                 */
+                currentSubstitution = currentSubstitution.Compose(candidate.Unification);
             }
-            return newConceptIndices.ToImmutableAndFree();
-        }
 
-        /// <summary>
-        /// Tries to infer a suitable instance for the given concept witness
-        /// type parameter.
-        /// </summary>
-        /// <param name="typeParam">
-        /// The type parameter that is the concept witness to infer.  This
-        /// must actually be a concept witness.
-        /// </param>
-        /// <param name="fixedMap">
-        /// The map from all of the fixed, non-witness type parameters in the
-        /// same type parameter list as <paramref name="typeParam"/>
-        /// to their arguments.
-        /// </param>
-        /// <param name="chain">
-        /// The set of instances we've passed through recursively to get here,
-        /// used to abort recursive calls if they will create cycles.
-        /// </param>
-        /// <returns>
-        /// Null if inference failed; else, the inferred concept instance and
-        /// its unification.
-        /// </returns>
-        internal Candidate InferOneWitness(TypeParameterSymbol typeParam, ImmutableTypeMap fixedMap, ImmutableHashSet<NamedTypeSymbol> chain = null)
-        {
-            Debug.Assert(typeParam.IsConceptWitness,
-                "Tried to do concept witness inference on a non-concept-witness type parameter");
-
-            var requiredConcepts = GetRequiredConceptsFor(typeParam, fixedMap);
-            return InferOneWitnessFromRequiredConcepts(requiredConcepts, fixedMap, chain);
+            return remainingConceptParameters.ToImmutableAndFree();
         }
 
         /// <summary>
@@ -614,7 +693,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Null if inference failed; else, the inferred concept instance and
         /// its unification.
         /// </returns>
-        internal Candidate InferOneWitnessFromRequiredConcepts(ImmutableArray<TypeSymbol> requiredConcepts, ImmutableTypeMap fixedMap, ImmutableHashSet<NamedTypeSymbol> chain = null)
+        internal Candidate InferOneWitnessFromRequiredConcepts(
+            ImmutableArray<TypeSymbol> requiredConcepts,
+            ImmutableTypeMap fixedMap,
+            ImmutableHashSet<NamedTypeSymbol> chain)
         {
             // Sometimes, required concepts will be empty.  This is usually when
             // a type parameter being inferred is erroneous, as we try to forbid
@@ -668,7 +750,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             // passes 2).
             if (firstPassInstances.IsDefaultOrEmpty)
             {
-                return default;
+                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
+                // CS8957: No instances in scope satisfy concept '0'.
+                var err = new CSDiagnosticInfo(ErrorCode.ERR_ConceptInstanceUnsatisfiable, conceptDisplay);
+                var errs = new HashSet<DiagnosticInfo>{ err };
+                return new Candidate(errs);
             }
             Debug.Assert(firstPassInstances.Length <= _allInstances.Length,
                 "First pass of concept witness inference should not grow the instance list");
@@ -676,7 +762,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             var secondPassInstances = ToSatisfiableInstances(firstPassInstances, chain);
             if (secondPassInstances.IsDefaultOrEmpty)
             {
-                return default;
+                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
+                // CS8957: No instances in scope satisfy concept '0'.
+                var err = new CSDiagnosticInfo(ErrorCode.ERR_ConceptInstanceUnsatisfiable, conceptDisplay);
+                var errs = new HashSet<DiagnosticInfo> { err };
+                return new Candidate(errs);
             }
             Debug.Assert(secondPassInstances.Length <= firstPassInstances.Length,
                 "Second pass of concept witness inference should not grow the instance list");
@@ -686,11 +776,21 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (1 < secondPassInstances.Length) thirdPassInstances = TieBreakInstances(secondPassInstances);
             Debug.Assert(thirdPassInstances.Length <= secondPassInstances.Length,
                 "Third pass of concept witness inference should not grow the instance list");
-
-            // Either ambiguity, or an outright lack of inference success.
-            if (thirdPassInstances.IsDefaultOrEmpty || thirdPassInstances.Length != 1)
+            Debug.Assert(!thirdPassInstances.IsDefaultOrEmpty,
+                "Third pass of concept witness inference should only break ties");
+            if (thirdPassInstances.Length != 1)
             {
-                return default;
+                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
+
+                // CS8958: Cannot infer a unique instance for concept '{0}'. For example, both '{1}' and '{2}' are valid instances.
+                var err =
+                    new CSDiagnosticInfo(
+                        ErrorCode.ERR_ConceptInstanceAmbiguous,
+                        conceptDisplay,
+                        thirdPassInstances[0].Instance.ToDisplayString(),
+                        thirdPassInstances[1].Instance.ToDisplayString());
+                var errs = new HashSet<DiagnosticInfo> { err };
+                return new Candidate(errs);
             }
             Debug.Assert(thirdPassInstances[0].Instance != null,
                 "Inference claims to have succeeded, but has returned a null instance");
@@ -921,7 +1021,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <returns>
         /// An array of candidate instances after the first pass.
         /// </returns>
-        private ImmutableArray<Candidate> ToSatisfiableInstances(ImmutableArray<Candidate> candidateInstances, ImmutableHashSet<NamedTypeSymbol> chain)
+        private ImmutableArray<Candidate> ToSatisfiableInstances(
+            ImmutableArray<Candidate> candidateInstances,
+            ImmutableHashSet<NamedTypeSymbol> chain)
         {
             // Remember: even if we have one instance left here, it could be
             // unsatisfiable, so we have to run this pass on it.
@@ -965,8 +1067,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // witness parameter, so we can do recursive inference in
                 // one pass.
 
-                Candidate fixedInstance = InferRecursively(nt, true, candidate.Unification, chain.Add(nt));
-                if (fixedInstance.Instance == null)
+                /* We need to pass the old fixed map into the new recursion.
+                 * Recursive inference using associated types seemingly
+                 * can't be driven entirely from the fixed parameters of the
+                 * candidate instance.
+                 *
+                 * TODO: understand exactly why this is.
+                 * TODO: maybe we only need to keep the fixed map around, not
+                 *       the whole unification?
+                 */
+                Candidate fixedInstance = InferRecursively(nt, candidate.Unification, chain.Add(nt));
+                if (!fixedInstance.Viable)
                 {
                     continue;
                 }
@@ -995,17 +1106,19 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         internal Candidate InferRecursively(
             NamedTypeSymbol unfixedInstance,
-            bool treatUnboundAsUnfixed,
             ImmutableTypeMap existingFixedMap,
             ImmutableHashSet<NamedTypeSymbol> chain)
         {
-            var unification = Infer(unfixedInstance.TypeParameters, unfixedInstance.TypeArguments, treatUnboundAsUnfixed, existingFixedMap, chain);
+            var diags = new HashSet<DiagnosticInfo>();
+            var unification = Infer(unfixedInstance.TypeParameters, unfixedInstance.TypeArguments, existingFixedMap, chain, ref diags);
             if (unification == null)
             {
-                return default;
+                // NB: diags might be empty at this stage (TODO: should it be?)
+                return new Candidate(diags);
             }
 
             var fixedInstance = unification.SubstituteType(unfixedInstance).AsTypeSymbolOnly();
+
             return new Candidate(fixedInstance, unification);
         }
 
@@ -1081,12 +1194,20 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // check will fail.
             }
 
-            return arb.ToImmutableAndFree();
+            /* @MattWindsor91 (Concept-C# 2017)
+             *
+             * The above check can return an empty set of candidates if
+             * each one fails to implement some concept another one has.
+             * In this case, we want to return the original set, to see if
+             * another tie-breaking approach works.
+             */
+            var ar = arb.ToImmutableAndFree();
+            return ar.IsDefaultOrEmpty ? candidateInstances : ar;
         }
 
         /// <summary>
         /// Checks whether one instance implements all of the concepts, either
-        /// directly or through sub-concepts, of a set of other concepts.
+        /// directly or through sub-concepts, of a set of other instances.
         /// </summary>
         /// <param name="instance">
         /// The instance to compare.
@@ -1271,19 +1392,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             // To infer the missing arguments, we need a full map from present
             // type parameters to the type arguments we _do_ have.  We can do
             // this at the same time as extending the arguments.
-            var conceptIndicesBuilder = ArrayBuilder<int>.GetInstance();
-            var associatedIndicesBuilder = ArrayBuilder<int>.GetInstance();
+            var conceptParamsBuilder = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+            var associatedParamsBuilder = ArrayBuilder<TypeParameterSymbol>.GetInstance();
             var fixedMap = new MutableTypeMap();
             int j = 0;
             for (int i = 0; i < typeParameters.Length; i++)
             {
                 if (typeParameters[i].IsConceptWitness)
                 {
-                    conceptIndicesBuilder.Add(i);
+                    conceptParamsBuilder.Add(typeParameters[i]);
                 }
                 else if (typeParameters[i].IsAssociatedType)
                 {
-                    associatedIndicesBuilder.Add(i);
+                    associatedParamsBuilder.Add(typeParameters[i]);
                 }
                 else
                 {
@@ -1293,10 +1414,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            var conceptIndices = conceptIndicesBuilder.ToImmutableAndFree();
-            var associatedIndices = associatedIndicesBuilder.ToImmutableAndFree();
+            var conceptParams = conceptParamsBuilder.ToImmutableAndFree();
+            var associatedParams = associatedParamsBuilder.ToImmutableAndFree();
 
-            var unification = InferWithClassifiedParameters(conceptIndices, associatedIndices, typeParameters, fixedMap.ToUnification(), ImmutableHashSet<NamedTypeSymbol>.Empty);
+            // TODO: pass in diagnostics
+            var ignore = new HashSet<DiagnosticInfo>();
+            var unification = InferWithClassifiedParameters(conceptParams, associatedParams, fixedMap.ToUnification(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref ignore);
             if (unification == null)
             {
                 // In certain cases, we allow part-inference to return a result
@@ -1313,26 +1436,25 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // TODO: ensure that this is sound---there might be places
                 // where we claim this is ok, but then don't go on to infer the
                 // concept and the result is a spurious type error or crash. 
-                if (!expandAssociatedIfFailed || !conceptIndices.IsEmpty)
+                if (!expandAssociatedIfFailed || !conceptParams.IsEmpty)
                 {
                     return ImmutableArray<TypeSymbol>.Empty;
-            }
-            foreach (var i in associatedIndices)
-                {
-                    allArguments[i] = typeParameters[i];
                 }
-                return allArguments.ToImmutableArray();
+
+                // This will just cause each unfixed type parameter to bubble
+                // through in the next section.
+                unification = new ImmutableTypeMap();
             }
 
             /* As in normal inference, it is not necessarily a bug for
                the map to map typeParameters[i] to typeParameters[i].
                This might be, eg., a recursive call. */
-            foreach (var i in conceptIndices)
+            for (int i = 0; i < typeParameters.Length; i++)
             {
-                allArguments[i] = unification.SubstituteType(typeParameters[i]).AsTypeSymbolOnly();
-            }
-            foreach (var i in associatedIndices)
-            {
+                if (allArguments[i] != null)
+                {
+                    continue;
+                }
                 allArguments[i] = unification.SubstituteType(typeParameters[i]).AsTypeSymbolOnly();
             }
 

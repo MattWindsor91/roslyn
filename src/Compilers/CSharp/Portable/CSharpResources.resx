@@ -4967,6 +4967,12 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_ConceptAttributesMissing" xml:space="preserve">
     <value>Cannot use concepts because the required attributes cannot be found. Are you missing a reference?</value>
   </data>
+  <data name="ERR_ConceptInstanceAmbiguous" xml:space="preserve">
+    <value>Cannot infer a unique instance for concept '{0}'. For example, both '{1}' and '{2}' are valid instances.</value>
+  </data>
+  <data name="ERR_ConceptInstanceUnsatisfiable" xml:space="preserve">
+    <value>No instances in scope satisfy concept '{0}'.</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>
