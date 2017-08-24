@@ -123,6 +123,16 @@ namespace TinyLinq
         S Where(S src, Func<T, bool> f);
     }
 
+    public struct Filtering<TEnum, TElem>
+    {
+        public TEnum source;
+        public Func<TElem, bool> filter;
+    }
+
+   /* public instance Where_Enumerable<TElem, [AssociatedType] TSrc, [AssociatedType] TDst, implicit E>
+        : CWhere<TElem, TProj, TSrc, Selection<TDst, TElem, TProj>>
+        where E : CEnumerable<TSrc, TElem, TDst> */
+
     instance ListWhere<T> : CWhere<T, List<T>>
     {
         List<T> Where(List<T> src, Func<T, bool> f)
@@ -177,6 +187,113 @@ namespace TinyLinq
                     vs.Add(resultSelector(t, u));
             }
             return vs.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Concept for enumerators whose length is known without enumerating.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The type of the enumerator.
+    /// </typeparam>
+    public concept CBounded<T>
+    {
+        /// <summary>
+        /// Gets the length of the enumerator.
+        /// </summary>
+        /// <param name="t">
+        /// The enumerator to query.
+        /// </param>
+        /// <returns>
+        /// The length of the enumerator (without enumerating it).
+        /// </returns>
+        int Bound(ref T t);
+    }
+
+    /// <summary>
+    /// Instance for O(1) length lookup of array cursors.
+    /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public instance CBounded_ArrayCursor<TElem> : CBounded<Instances.ArrayCursor<TElem>>
+    {
+        int Bound(ref Instances.ArrayCursor<TElem> t) => t.hi;
+    }
+
+    /// <summary>
+    /// Instance for O(1) length lookup of selections, when the selected-over
+    /// collection is itself bounded.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the source of the selection.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of the elements of <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of the projected elements of the selection.
+    /// </typeparam>
+    /// <typeparam name="B">
+    /// Instance of <see cref="CBounded{T}"/> for <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    public instance CBounded_Selection<TEnum, TElem, TProj, implicit B> : CBounded<Selection<TEnum, TElem, TProj>>
+        where B : CBounded<TEnum>
+    {
+        int Bound(ref Selection<TEnum, TElem, TProj> sel) => B.Bound(ref sel.source);
+    }
+
+    /// <summary>
+    /// Concept for types that can be converted to arrays.
+    /// </summary>
+    /// <typeparam name="TFrom">
+    /// Type that is being converted to an array.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public concept CToArray<TFrom, [AssociatedType] TElem>
+    {
+        /// <summary>
+        /// Converts the argument to an array.
+        /// </summary>
+        /// <param name="from">
+        /// The object from which we are converting.
+        /// </param>
+        /// <returns>
+        /// The array resulting from <paramref name="from"/>.
+        /// This may be the same object as <paramref name="from"/>.
+        /// </returns>
+        TElem[] ToArray(TFrom from);
+    }
+
+    /// <summary>
+    /// Instance for <see cref="CToArray{TFrom, TElem}"/> when the
+    /// source is, itself, an array.
+    /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public instance ToArray_SameArray<TElem> : CToArray<TElem[], TElem>
+    {
+        TElem[] ToArray(TElem[] from) => from;
+    }
+
+    public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit B, implicit E> : CToArray<TEnum, TElem>
+        where B : CBounded<TEnum>
+        where E : CEnumerator<TElem, TEnum>
+    {
+        TElem[] ToArray(TEnum e)
+        {
+            E.Reset(ref e);
+            var len = B.Bound(ref e);
+            var result = new TElem[len];
+            for (var i = 0; i < len; i++)
+            {
+                E.MoveNext(ref e);
+                result[i] = E.Current(ref e);
+            }
+            return result;
         }
     }
 }

@@ -18,6 +18,9 @@ namespace TinyLinq
 
         }
 
+        private static U[] ToArray<S, [AssociatedType]U, implicit TA>(this S This) where TA : CToArray<S, U>
+            => TA.ToArray(This);
+
         public static void Run()
         {
             int[] sample = { 1, 0, 0, 9, 7, 3, 2, 5, 3, 3, 7, 6, 5, 2, 0, 1, 3, 5, 8, 6, 3, 4, 6, 7, 3, 5, 4, 8, 7, 6, 8, 0, 9, 5, 9, 0, 9, 1, 1, 7, 3, 9, 2, 9, 2, 7, 4, 9, 4, 5, 3, 7, 5, 4, 2, 0, 4, 8, 0, 5, 6, 4, 8, 9, 4, 7, 4, 2, 9, 6, 2, 4, 8, 0, 5, 2, 4, 0, 3, 7, 2, 0, 6, 3, 6, 1, 0, 4, 0, 2, 0, 0, 8, 2, 2, 9, 1, 6, 6 };
@@ -37,6 +40,20 @@ namespace TinyLinq
             }
 
             Console.WriteLine("oOo");
+
+            var ary = sample.Select((int x) => x + 5).Select((int y) => y * 10);
+            Console.WriteLine(Helpers.String(ary.ToArray()));
+
+            Console.WriteLine("oOo");
+
+            var f3 = new List<int>(sample).Select((int x) => x + 5).Select((int y) => y * 10);
+            while (CEnumerator<int, Selection<List<int>.Enumerator, int, int>>.MoveNext(ref f3))
+            {
+                Console.WriteLine(CEnumerator<int, Selection<List<int>.Enumerator, int, int>>.Current(ref f3));
+            }
+
+            Console.WriteLine("oOo");
+
 
             var g = ((IEnumerable<int>)sample).Select(x => x + 5).GetEnumerator();
             while (g.MoveNext())
