@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Showable;
 using System.Linq;
 
 /// <summary>
@@ -126,7 +127,29 @@ namespace SerialPBT
                 };
         }
 
-        static void Main(string[] args)
+        static class ShowableHelpers
+        {
+
+            /// <summary>
+            /// Outputs a showable item to the console with a newline.
+            /// </summary>
+            /// <typeparam name="A">
+            /// Type of showable items.
+            /// </typeparam>
+            /// <typeparam name="ShowableA">
+            /// The CShowable instance for the item.
+            /// </typeparam>
+            /// <param name="a">
+            /// The item to show.
+            /// </param>
+            public static void WriteLine<A, implicit ShowableA>(A a)
+                where ShowableA : CShowable<A>
+            {
+                Console.WriteLine(Helpers.String(a));
+            }
+        }
+
+            static void Main(string[] args)
         {
             // TODO: the concept inferrer can't handle implicit conversions
             // so we have to add the type annotation for Check when we pass a

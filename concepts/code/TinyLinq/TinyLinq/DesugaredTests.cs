@@ -4,6 +4,7 @@ using System.Linq;
 using System.Concepts;
 using System.Concepts.Enumerable;
 using static System.Concepts.Enumerable.Instances;
+using System.Concepts.Showable;
 
 namespace TinyLinq
 {   

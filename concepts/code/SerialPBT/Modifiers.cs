@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Showable;
 
 // Special structs that can be slotted into a test to change its behaviour.
 

@@ -46,6 +46,7 @@
     <Compile Include="Monoid.cs" />
     <Compile Include="Prelude.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Showable.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ConceptAttributes\ConceptAttributes.csproj">
