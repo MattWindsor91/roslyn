@@ -10,13 +10,11 @@ namespace TinyLinq
 {   
     static class DesugaredTests
     {
-        private static D Select<[AssociatedType]T, [AssociatedType]U, S, [AssociatedType] D, implicit M>(this S This, Func<T, U> f) where M : CSelect<T, U, S, D>
+        private static D Select<T, [AssociatedType]U, S, [AssociatedType] D, implicit M>(this S This, Func<T, U> f) where M : CSelect<T, U, S, D> =>
+            M.Select(This, f);
 
-        {
-
-            return M.Select(This, f);
-
-        }
+        private static D Where<T, S, [AssociatedType]D, implicit M>(this S This, Func<T, bool> f) where M : CWhere<T, S, D> =>
+            M.Where(This, f);
 
         private static U[] ToArray<S, [AssociatedType]U, implicit TA>(this S This) where TA : CToArray<S, U>
             => TA.ToArray(This);
@@ -41,7 +39,14 @@ namespace TinyLinq
 
             Console.WriteLine("oOo");
 
-            var ary = sample.Select((int x) => x + 5).Select((int y) => y * 10);
+            var selsel = sample.Select((int x) => x * 10).Select((int y) => y + 5);
+            //Console.WriteLine(Helpers.String(selsel.ToArray()));
+
+            var goo = sample.Where((int x) => x % 3 == 0);
+            var bar = goo.Select((int y) => y * 6);
+            Console.WriteLine(Helpers.String(bar.ToArray()));
+
+            var ary = sample.Select((int x) => x + 5).Where((int z) => z % 3 == 0);
             Console.WriteLine(Helpers.String(ary.ToArray()));
 
             Console.WriteLine("oOo");

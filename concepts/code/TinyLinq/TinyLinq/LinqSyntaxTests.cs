@@ -16,7 +16,7 @@ namespace TinyLinq
             return M.Select(This, f);
         }
 
-        private static List<T> Where<[AssociatedType]T, implicit M>(this List<T> This, Func<T, bool> f) where M : CWhere<T, List<T>>
+        private static D Where<[AssociatedType]T, [AssociatedType]D, implicit M>(this List<T> This, Func<T, bool> f) where M : CWhere<T, List<T>, D>
         {
             return M.Where(This, f);
         }
@@ -34,7 +34,7 @@ namespace TinyLinq
             return M.Select(This, f);
         }
 
-        private static T[] Where<[AssociatedType]T, implicit M>(this T[] This, Func<T, bool> f) where M : CWhere<T, T[]>
+        private static D Where<[AssociatedType]T, [AssociatedType] D, implicit M>(this T[] This, Func<T, bool> f) where M : CWhere<T, T[], D>
         {
             return M.Where(This, f);
         }
@@ -50,20 +50,20 @@ namespace TinyLinq
             // List queries
             List<int> l = new List<int>(new int[] { 1, 2, 3 });
 
-            var l1 = from x in l where x % 2 == 0 select (double) x;
+            //var l1 = from x in l where x % 2 == 0 select (double) x;
 
             List<Tuple<int,int>> a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
 
             // Array queries
             int[] a = new int[] { 1, 2, 3 };
-            Selection<ArrayCursor<int>, int, double> a2 = from x in a where x % 2 == 0  select (double) x;
+            //Selection<ArrayCursor<int>, int, double> a2 = from x in a where x % 2 == 0  select (double) x;
 
             int[] b = new int[] { 1, 2, 3 };
 
             Tuple<int, int>[] a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
 
             int[] c = new int[] { 1, 2, 3 };
-            Selection<ArrayCursor<int>, int, double> a4 = from x in a where x % 2 == 0  select (double) x;
+            //Selection<ArrayCursor<int>, int, double> a4 = from x in a where x % 2 == 0  select (double) x;
         }
     }
 }
