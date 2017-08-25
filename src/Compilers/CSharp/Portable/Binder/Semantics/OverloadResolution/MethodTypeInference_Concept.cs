@@ -1206,6 +1206,42 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         /// <summary>
+        /// Decides whether one candidate can kick another candidate out of
+        /// consideration during tie-breaking.
+        /// </summary>
+        /// <param name="overlapper">
+        /// The candidate that is more favourable and will win if overlapping
+        /// is allowed.
+        /// </param>
+        /// <param name="overlappee">
+        /// The candidate that is being overlapped.
+        /// </param>
+        /// <returns>
+        /// True if the overlap is permitted (by overlapping-instance
+        /// attributes); false otherwise.
+        /// </returns>
+        private static bool OverlapAllowed(Candidate overlapper, Candidate overlappee)
+        {
+            /* Overlap is permitted if:
+             *
+             * 1) the overlapping type is marked [Overlapping]; or
+             * 2) the overlapped type is marked [Overlappable].
+             *
+             * TODO: type parameters?
+             */
+            var r = overlapper.Instance;
+            var rOverlapping = r.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)r).IsOverlapping;
+            if (rOverlapping)
+            {
+                return true;
+            }
+
+            var e = overlappee.Instance;
+            var eOverlappable = e.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)e).IsOverlappable;
+            return eOverlappable;
+        }
+
+        /// <summary>
         /// Checks whether one instance implements all of the concepts, either
         /// directly or through sub-concepts, of a set of other instances.
         /// </summary>
@@ -1235,7 +1271,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 foreach (var iface in otherInstance.Instance.AllInterfacesNoUseSiteDiagnostics)
                 {
                     if (!iface.IsConcept) continue;
-                    if (!instance.Instance.ImplementsInterface(iface, ref ignore)) return false;
+                    var conceptNotImplemented = !instance.Instance.ImplementsInterface(iface, ref ignore);
+                    if (conceptNotImplemented && OverlapAllowed(overlapper: otherInstance, overlappee: instance))
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -1323,7 +1363,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var otherInstance in otherInstances)
             {
-                if (instance.Instance == otherInstance.Instance) continue;
+                if (instance.Instance == otherInstance.Instance)
+                {
+                    continue;
+                }
 
                 // TODO: cache this per instance?
                 bool otherHasNonWitnesses = false;
@@ -1339,7 +1382,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // An instance is more specific if it has no non-witness type
                 // parameters, but the other instance does.  Flip this logic to
                 // get an early less-specific result.
-                if (instanceHasNonWitnesses && !otherHasNonWitnesses) return true;
+                if (instanceHasNonWitnesses && !otherHasNonWitnesses)
+                {
+                    return OverlapAllowed(overlapper: otherInstance, overlappee: instance);
+                }
             }
 
             return false;

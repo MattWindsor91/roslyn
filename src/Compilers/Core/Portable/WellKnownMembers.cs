@@ -2921,7 +2921,25 @@ namespace Microsoft.CodeAnalysis
                 (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_ConceptDefaultAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
                 0,                                                                                                          // Arity
                     0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                //
+                // @MattWindsor91 (Concept-C# 2017)
+                // Instance overlap attributes
+                //
+                // System_Concepts_OverlappingAttribute__ctor
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_OverlappingAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                // System_Concepts_OverlappableAttribute__ctor
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_OverlappableAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void
+
+                // End instance overlap attributes
             };
 
             string[] allNames = new string[(int)WellKnownMember.Count]
@@ -3288,6 +3306,16 @@ namespace Microsoft.CodeAnalysis
                 ".ctor",                                    // System_Concepts_ConceptInstanceAttribute_ctor @t-mawind
                 ".ctor",                                    // System_Concepts_AssociatedTypeAttribute_ctor @t-mawind
                 ".ctor",                                    // System_Concepts_ConceptDefaultAttribute_ctor @t-mawind
+
+                //
+                // @MattWindsor91 (Concept-C# 2017)
+                // Instance overlap attributes
+                //
+
+                ".ctor",                                    // System_Concepts_OverlappingAttribute__ctor
+                ".ctor"                                     // System_Concepts_OverlappableAttribute__ctor
+
+                // End instance overlap attributes
             };
 
             s_descriptors = MemberDescriptor.InitializeFromStream(new System.IO.MemoryStream(initializationBytes, writable: false), allNames);

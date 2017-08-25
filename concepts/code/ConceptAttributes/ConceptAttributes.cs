@@ -53,4 +53,24 @@ namespace System.Concepts
     /// </summary>
     [AttributeUsage(AttributeTargets.GenericParameter, AllowMultiple = false, Inherited = true)]
     public class AssociatedTypeAttribute : Attribute { }
+
+    /// <summary>
+    /// Attribute marking concept instances as overlapping.
+    /// <para>
+    /// Overlapping instances can override any less suitable instance
+    /// for concept inference purposes.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
+    public class OverlappingAttribute : Attribute { }
+
+    /// <summary>
+    /// Attribute marking concept instances as overlappable.
+    /// <para>
+    /// Overlappable instances can be overridden for concept inference
+    /// purposes by any other instance that is more suitable.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
+    public class OverlappableAttribute : Attribute { }
 }

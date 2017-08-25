@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts;
 using System.Concepts.OpPrelude;
 using static System.Concepts.OpPrelude.Verbose;
 
@@ -42,6 +43,7 @@ namespace OpBeautifulDifferentiation.FuncInstances
     /// <typeparam name="B">
     ///     The range of the function; must be <c>Fractional</c>.
     /// </typeparam>
+    [Overlapping]
     instance FracF<A, B, implicit FracB> : Fractional<Func<A, B>>
         where FracB : Fractional<B>
     {
@@ -68,6 +70,7 @@ namespace OpBeautifulDifferentiation.FuncInstances
     /// <typeparam name="B">
     ///     The range of the function; must be <c>Floating</c>.
     /// </typeparam>
+    [Overlapping]
     instance FloatF<A, B, implicit FloatB> : Floating<Func<A, B>>
         where FloatB : Floating<B>
     {

@@ -6,6 +6,7 @@ using static System.Concepts.OpPrelude.Verbose;
 /// </summary>
 namespace OpBeautifulDifferentiation.Mark1
 {
+    using System.Concepts;
     using static NumUtils;
 
     instance NumDA<A, implicit NumA> : Num<D<A>>
@@ -27,6 +28,7 @@ namespace OpBeautifulDifferentiation.Mark1
         D<A> Abs(D<A> x) => new D<A>(Abs(x.X), x.DX * Signum(x.X));
     }
 
+    [Overlapping]
     instance FractionalDA<A, implicit FracA> : Fractional<D<A>>
         where FracA : Fractional<A>
     {
@@ -50,6 +52,7 @@ namespace OpBeautifulDifferentiation.Mark1
                );
     }
 
+    [Overlapping]
     instance FloatingDA<A, implicit FloatA> : Floating<D<A>>
         where FloatA : Floating<A>
     {

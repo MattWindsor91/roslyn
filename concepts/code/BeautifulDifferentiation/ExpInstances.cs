@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts;
 using System.Concepts.Prelude;
 
 using ExpressionUtils;
@@ -24,6 +25,7 @@ namespace BeautifulDifferentiation.ExpInstances
            Prim(d => Math.Abs(d), e1);
     }
 
+    [Overlapping]
     public instance ExpDouble : Floating<Exp<double>>
     {
         //

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts;
 using System.Concepts.OpPrelude;
 using static System.Concepts.OpPrelude.Verbose;
 
@@ -31,6 +32,7 @@ namespace OpBeautifulDifferentiation.Mark2
         D<A> Abs(D<A> x) => D<A>.Chain(Abs, Signum)(x);
     }
 
+    [Overlapping]
     instance FractionalDA<A, implicit FracA> : Fractional<D<A>>
         where FracA : Fractional<A>
     {
@@ -53,6 +55,7 @@ namespace OpBeautifulDifferentiation.Mark2
                );
     }
 
+    [Overlapping]
     instance FloatingDA<A, implicit FloatA> : Floating<D<A>>
         where FloatA : Floating<A>
     {

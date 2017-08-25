@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts;
 using System.Concepts.Prelude;
 
 /// <summary>
@@ -43,6 +44,7 @@ namespace BeautifulDifferentiation.FuncInstances
     /// <typeparam name="B">
     ///     The range of the function; must be <c>Fractional</c>.
     /// </typeparam>
+    [Overlapping]
     instance FracF<A, B, implicit FracB> : Fractional<Func<A, B>>
         where FracB : Fractional<B>
     {
@@ -71,6 +73,7 @@ namespace BeautifulDifferentiation.FuncInstances
     /// <typeparam name="B">
     ///     The range of the function; must be <c>Floating</c>.
     /// </typeparam>
+    [Overlapping]
     instance FloatF<A, B, implicit FloatB> : Floating<Func<A, B>>
         where FloatB : Floating<B>
     {

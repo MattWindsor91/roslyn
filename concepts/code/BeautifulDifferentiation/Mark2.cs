@@ -6,6 +6,7 @@ using System.Concepts.Prelude;
 /// </summary>
 namespace BeautifulDifferentiation.Mark2
 {
+    using System.Concepts;
     using FuncInstances;
     using static NumUtils;
 
@@ -30,6 +31,7 @@ namespace BeautifulDifferentiation.Mark2
         D<A> Abs(D<A> x) => D<A>.Chain(Abs, Signum)(x);
     }
 
+    [Overlapping]
     instance FractionalDA<A, implicit FracA> : Fractional<D<A>>
         where FracA : Fractional<A>
     {
@@ -52,6 +54,7 @@ namespace BeautifulDifferentiation.Mark2
                );
     }
 
+    [Overlapping]
     instance FloatingDA<A, implicit FloatA> : Floating<D<A>>
         where FloatA : Floating<A>
     {

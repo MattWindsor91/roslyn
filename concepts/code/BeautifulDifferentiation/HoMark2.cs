@@ -6,6 +6,7 @@ using System.Concepts.Prelude;
 /// </summary>
 namespace BeautifulDifferentiation.HoMark2
 {
+    using System.Concepts;
     using FuncInstances;
     using static NumUtils;
 
@@ -30,6 +31,7 @@ namespace BeautifulDifferentiation.HoMark2
         HoD<A> Abs(HoD<A> x) => HoD<A>.Chain(Abs, this.Signum)(x);
     }
 
+    [Overlapping]
     instance FractionalDA<A, implicit FracA> : Fractional<HoD<A>>
         where FracA : Fractional<A>
     {
@@ -52,6 +54,7 @@ namespace BeautifulDifferentiation.HoMark2
                );
     }
 
+    [Overlapping]
     instance FloatingDA<A, implicit FloatA> : Floating<HoD<A>>
         where FloatA : Floating<A>
     {

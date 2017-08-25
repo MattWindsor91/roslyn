@@ -97,6 +97,7 @@ namespace System.Concepts.Enumerable
         /// <see cref="CEnumerable{C, E, S}"/> instance for arrays,
         /// using array cursors.
         /// </summary>
+        [Overlapping]  // intended to overlap Enumerator_ArrayCursor
         public instance Enumerable_Array<TElem> : CEnumerable<TElem[], TElem, ArrayCursor<TElem>>
         {
             ArrayCursor<TElem> GetEnumerator(TElem[] array) => new ArrayCursor<TElem> { source = array, lo = -1, hi = array.Length };
@@ -124,6 +125,7 @@ namespace System.Concepts.Enumerable
         /// <see cref="CEnumerable{C, E, S}"/> instance for lists,
         /// using list enumerators.
         /// </summary>
+        [Overlapping]  // intended to overlap Enumerator_ArrayCursor
         public instance Enumerable_List<TElem> : CEnumerable<List<TElem>, TElem, List<TElem>.Enumerator>
         {
             List<TElem>.Enumerator GetEnumerator(List<TElem> list) => list.GetEnumerator();

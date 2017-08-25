@@ -404,6 +404,16 @@ namespace Microsoft.CodeAnalysis
         private static readonly byte[][] s_signaturesOfAssociatedTypeAttribute = { s_signature_HasThis_Void };
         private static readonly byte[][] s_signaturesOfConceptDefaultAttribute = { s_signature_HasThis_Void };
 
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Instance overlap attributes
+        //
+
+        private static readonly byte[][] s_signaturesOfOverlappingAttribute = { s_signature_HasThis_Void };
+        private static readonly byte[][] s_signaturesOfOverlappableAttribute = { s_signature_HasThis_Void };
+
+        // End instance overlap attributes
+
         // early decoded attributes:
         internal static readonly AttributeDescription OptionalAttribute = new AttributeDescription("System.Runtime.InteropServices", "OptionalAttribute", s_signaturesOfOptionalAttribute);
         internal static readonly AttributeDescription ComImportAttribute = new AttributeDescription("System.Runtime.InteropServices", "ComImportAttribute", s_signaturesOfComImportAttribute);
@@ -520,5 +530,15 @@ namespace Microsoft.CodeAnalysis
         internal static readonly AttributeDescription ConceptInstanceAttribute = new AttributeDescription("System.Concepts", "ConceptInstanceAttribute", s_signaturesOfConceptInstanceAttribute);
         internal static readonly AttributeDescription AssociatedTypeAttribute = new AttributeDescription("System.Concepts", "AssociatedTypeAttribute", s_signaturesOfAssociatedTypeAttribute);
         internal static readonly AttributeDescription ConceptDefaultAttribute = new AttributeDescription("System.Concepts", "ConceptDefaultAttribute", s_signaturesOfConceptDefaultAttribute);
+
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Instance overlap attributes
+        //
+
+        internal static readonly AttributeDescription OverlappingAttribute = new AttributeDescription("System.Concepts", "OverlappingAttribute", s_signaturesOfOverlappingAttribute);
+        internal static readonly AttributeDescription OverlappableAttribute = new AttributeDescription("System.Concepts", "OverlappableAttribute", s_signaturesOfOverlappableAttribute);
+
+        // End instance overlap attributes
     }
 }

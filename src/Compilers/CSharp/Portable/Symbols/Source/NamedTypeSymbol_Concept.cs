@@ -114,6 +114,49 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return null;
         }
 
+        private enum OverlapType
+        {
+            Initialized = 0x1,
+            Overlapping = 0x2,
+            Overlappable = 0x4
+        }
+        private int _overlap = 0;
+        private OverlapType GetOverlap()
+        {
+            if ((_overlap & (int)OverlapType.Initialized) == 0)
+            {
+                OverlapType o = OverlapType.Initialized;
+
+                // Only instances can be overlapping or overlappable.
+                if (IsInstance)
+                {
+                    foreach (var attribute in GetAttributes())
+                    {
+                        if (attribute.IsTargetAttribute(this, AttributeDescription.OverlappableAttribute))
+                        {
+                            o |= OverlapType.Overlappable;
+                        }
+                        else if (attribute.IsTargetAttribute(this, AttributeDescription.OverlappingAttribute))
+                        {
+                            o |= OverlapType.Overlapping;
+                        }
+                    }
+                }
+                Interlocked.CompareExchange(ref _overlap, (int)o, 0);
+            }
+            return (OverlapType)_overlap;
+        }
+
+        /// <summary>
+        /// True if this type is an overlapping instance; false otherwise.
+        /// </summary>
+        internal bool IsOverlapping => ((GetOverlap() & OverlapType.Overlapping) != 0);
+
+        /// <summary>
+        /// True if this type is an overlappable instance; false otherwise.
+        /// </summary>
+        internal bool IsOverlappable => ((GetOverlap() & OverlapType.Overlappable) != 0);
+
         private ImmutableArray<TypeParameterSymbol> _conceptWitnesses;
         private ImmutableArray<TypeParameterSymbol> _associatedTypes;
         private int _implicitTypeParameterCount = -1;
