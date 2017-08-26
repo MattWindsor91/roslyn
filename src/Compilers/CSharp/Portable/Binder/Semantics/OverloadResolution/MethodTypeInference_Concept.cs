@@ -1198,6 +1198,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                         overlapped = true;
                         break;
                     }
+
+                    if (MoreWitnessMentions(moreMentions: you, fewerMentions: me))
+                    {
+                        overlapped = true;
+                        break;
+                    }
                 }
 
                 if (!overlapped)
@@ -1346,6 +1352,120 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return true;
+        }
+
+        private static bool MoreWitnessMentions(Candidate moreMentions, Candidate fewerMentions)
+        {
+            void RecordTyparUsage(ref SmallDictionary<TypeParameterSymbol, int> counts, TypeSymbol witness)
+            {
+                if (witness.Kind != SymbolKind.TypeParameter)
+                {
+                    return;
+                }
+                var w = (TypeParameterSymbol)witness;
+
+                foreach (var c in w.AllEffectiveInterfacesNoUseSiteDiagnostics)
+                {
+                    if (!c.IsConcept || c.Kind != SymbolKind.NamedType)
+                    {
+                        continue;
+                    }
+
+                    foreach (var t in ((NamedTypeSymbol)c).TypeArguments)
+                    {
+                        if (t.Kind == SymbolKind.TypeParameter)
+                        {
+                            var tp = (TypeParameterSymbol)t;
+                            counts[tp] = counts.ContainsKey(tp) ? counts[tp] + 1 : 1;
+                        }
+                    }
+                }
+            }
+
+            // For this heuristic to work, both candidates must be named types
+            // (so that they have type parameters).
+            if (moreMentions.Instance.Kind != SymbolKind.NamedType ||
+                fewerMentions.Instance.Kind != SymbolKind.NamedType)
+            {
+                return false;
+            }
+
+            // We're comparing the base instances here, not their fully fixed
+            // forms.
+            var mt = (NamedTypeSymbol)moreMentions.Instance.OriginalDefinition;
+            var ft = (NamedTypeSymbol)fewerMentions.Instance.OriginalDefinition;
+
+            var moreOnAtLeastOne = false;
+
+            // Count the number of references each typar gets on each
+            // side in a concept witness.
+            // Overlap only occurs if, for _all_ concepts, for _all_
+            // type parameters, 'more' gets more.
+            var mcounts = new SmallDictionary<TypeParameterSymbol, int>();
+            var fcounts = new SmallDictionary<TypeParameterSymbol, int>();
+
+            for (var i = 0; i < mt.TypeArguments.Length; i++)
+            {
+                if (!mt.TypeParameters[i].IsConceptWitness)
+                {
+                    continue;
+                }
+                RecordTyparUsage(ref mcounts, mt.TypeArguments[i]);
+            }
+            for (var i = 0; i < ft.TypeArguments.Length; i++)
+            {
+                if (!ft.TypeParameters[i].IsConceptWitness)
+                {
+                    continue;
+                }
+                RecordTyparUsage(ref fcounts, ft.TypeArguments[i]);
+            }
+
+            // TODO: is it ok to look only at ft here?
+            foreach (var fc in ft.AllInterfacesNoUseSiteDiagnostics)
+            {
+                if (!fc.IsConcept)
+                {
+                    continue;
+                }
+
+                foreach (var mc in mt.AllInterfacesNoUseSiteDiagnostics)
+                {
+                    if (fc.OriginalDefinition != mc.OriginalDefinition)
+                    {
+                        continue;
+                    }
+
+                    for (var j = 0; j < fc.TypeParameters.Length; j++)
+                    {
+                        // TODO: should we be handling named types specially?
+                        if (mc.TypeArguments[j].Kind != SymbolKind.TypeParameter ||
+                            fc.TypeArguments[j].Kind != SymbolKind.TypeParameter)
+                        {
+                            continue;
+                        }
+
+                        if (!mcounts.TryGetValue((TypeParameterSymbol)mc.TypeArguments[j], out var mtc))
+                        {
+                            mtc = 0;
+                        }
+                        if (!fcounts.TryGetValue((TypeParameterSymbol)fc.TypeArguments[j], out var ftc))
+                        {
+                            ftc = 0;
+                        }
+                        if (mtc < ftc)
+                        {
+                            return false;
+                        }
+                        if (ftc < mtc)
+                        {
+                            moreOnAtLeastOne = true;
+                        }
+                    }
+                }
+            }
+
+            return moreOnAtLeastOne;
         }
 
         #endregion Third pass
