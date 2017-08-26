@@ -1149,59 +1149,50 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // We now perform an array of 'better concept witness' checks to
             // try to narrow the list of instances to zero or one.
-
-            var mostSpecificConceptInstances = FilterToMostSpecificConceptInstances(candidateInstances);
-            Debug.Assert(mostSpecificConceptInstances.Length <= candidateInstances.Length,
-                "Filtering to most-specific-concept instances should not grow the instance list");
-            if (mostSpecificConceptInstances.Length <= 1) return mostSpecificConceptInstances;
-
-            var mostSpecificParamInstances = FilterToMostSpecificParamInstances(mostSpecificConceptInstances);
-            Debug.Assert(mostSpecificParamInstances.Length <= mostSpecificConceptInstances.Length,
-                "Filtering to most-specific-param instances should not grow the instance list");
-
-            return mostSpecificParamInstances;
-        }
-
-        /// <summary>
-        /// Filters a set of candidate instances to those that implement at
-        /// least all of the concepts of every other candidate instance.
-        /// </summary>
-        /// <param name="candidateInstances">
-        /// The set of instances to filter.
-        /// </param>
-        /// <returns>
-        /// <paramref name="candidateInstances"/>, filtered to contain only
-        /// those instances that implement every concept of every other
-        /// instance in <paramref name="candidateInstances"/>.
-        /// </returns>
-        private static ImmutableArray<Candidate> FilterToMostSpecificConceptInstances(ImmutableArray<Candidate> candidateInstances)
-        {
-            Debug.Assert(1 < candidateInstances.Length,
-                "Filtering to most-specific-concept instances is pointless if we have zero or one instances");
-
             var arb = new ArrayBuilder<Candidate>();
-
-            // TODO: This can invariably be made more efficient.
-            foreach (var instance in candidateInstances)
+            foreach (var me in candidateInstances)
             {
-                if (!ImplementsConceptsOfOtherInstances(instance, candidateInstances)) continue;
-                arb.Add(instance);
+                bool overlapped = false;
+                foreach (var you in candidateInstances)
+                {
+                    if (me.Instance == you.Instance)
+                    {
+                        // An instance can't overlap itself!
+                        continue;
+                    }
 
-                // Note that this will only break ties if one instance
-                // implements effectively sub-concepts of all other
-                // instances: if two instances implement precisely the
-                // same concept set, both will be added to arb and the
-                // check will fail.
+                    if (!OverlapAllowed(overlapper: you, overlappee: me))
+                    {
+                        continue;
+                    }
+
+                    if (!ImplementsConceptsOf(implementee: you, implementor: me))
+                    {
+                        overlapped = true;
+                        break;
+                    }
+
+                    if (ParamsLessSpecific(moreSpecific: you, lessSpecific: me))
+                    {
+                        overlapped = true;
+                        break;
+                    }
+                }
+
+                if (!overlapped)
+                {
+                    arb.Add(me);
+                }
             }
-
+            var ar = arb.ToImmutableAndFree();
             /* @MattWindsor91 (Concept-C# 2017)
              *
-             * The above check can return an empty set of candidates if
-             * each one fails to implement some concept another one has.
-             * In this case, we want to return the original set, to see if
-             * another tie-breaking approach works.
+             * Sometimes, the above can eliminate _all_ instances.
+             * In this case, we want to return the original set, since
+             * no winners is the same as everyone winning.
+             *
+             * TODO: stop the elimination?
              */
-            var ar = arb.ToImmutableAndFree();
             return ar.IsDefaultOrEmpty ? candidateInstances : ar;
         }
 
@@ -1243,110 +1234,67 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         /// <summary>
         /// Checks whether one instance implements all of the concepts, either
-        /// directly or through sub-concepts, of a set of other instances.
+        /// directly or through sub-concepts, of another instance.
         /// </summary>
-        /// <param name="instance">
-        /// The instance to compare.
+        /// <param name="implementor">
+        /// The instance that must implement all concepts of
+        /// <paramref name="implementee"/>.
         /// </param>
-        /// <param name="otherInstances">
-        /// A list of other instances to which this instance should be compared.
-        /// This may include <paramref name="instance"/>, in which case it will
-        /// be ignored.
+        /// <param name="implementee">
+        /// The instance whose concepts must be implemented.
         /// </param>
         /// <returns>
-        /// True if, and only if, <paramref name="instance"/> implements all of
-        /// the concepts of instances in <paramref name="otherInstances"/>.
+        /// True if, and only if, <paramref name="implementor"/> implements all of
+        /// the concepts of <paramref name="implementee"/>.
         /// </returns>
-        private static bool ImplementsConceptsOfOtherInstances(Candidate instance, ImmutableArray<Candidate> otherInstances)
+        private static bool ImplementsConceptsOf(Candidate implementor, Candidate implementee)
         {
-            Debug.Assert(!otherInstances.IsEmpty,
-                "Trying to check whether an instance implements concepts of zero other instances is pointless");
+            Debug.Assert(implementor.Instance != implementee.Instance,
+                "Shouldn't be checking an instance against itself!");
 
             var ignore = new HashSet<DiagnosticInfo>();
 
-            foreach (var otherInstance in otherInstances)
+            foreach (var iface in implementee.Instance.AllInterfacesNoUseSiteDiagnostics)
             {
-                if (otherInstance.Instance == instance.Instance) continue;
-
-                foreach (var iface in otherInstance.Instance.AllInterfacesNoUseSiteDiagnostics)
+                if (!iface.IsConcept)
                 {
-                    if (!iface.IsConcept) continue;
-                    var conceptNotImplemented = !instance.Instance.ImplementsInterface(iface, ref ignore);
-                    if (conceptNotImplemented && OverlapAllowed(overlapper: otherInstance, overlappee: instance))
-                    {
-                        return false;
-                    }
+                    continue;
+                }
+
+                var conceptImplemented = implementor.Instance.ImplementsInterface(iface, ref ignore);
+                if (!conceptImplemented)
+                {
+                    return false;
                 }
             }
 
             return true;
         }
 
+
         /// <summary>
-        /// Filters a set of candidate instances to those whose type parameters
-        /// are no less specific than those of any other instance.
-        /// <para>
-        /// If any instance is more specific than the others, then the others
-        /// are less specific and removed, returning the one 'best' instance.
-        /// </para>
-        /// <para>
-        /// Currently, we only rule that one instance is more specific than the
-        /// other if it has non-witness type parameters whereas the other does
-        /// not.  This is probably overly conservative, however.
-        /// </para>
+        /// Decides whether an instance is strictly less specific than another.
         /// </summary>
-        /// <param name="candidateInstances">
-        /// The set of instances to filter.
+        /// <param name="moreSpecific">
+        /// The instance to compare against.
         /// </param>
-        /// <returns>
-        /// <paramref name="candidateInstances"/>, filtered to contain only
-        /// those instances whose type parameters are more specific than those
-        /// of any other instance in <paramref name="candidateInstances"/>.
-        /// </returns>
-        private static ImmutableArray<Candidate> FilterToMostSpecificParamInstances(ImmutableArray<Candidate> candidateInstances)
-        {
-            Debug.Assert(1 < candidateInstances.Length,
-                "Filtering to most-specific-param instances is pointless if we have zero or one instances");
-
-            var arb = new ArrayBuilder<Candidate>();
-
-            // TODO: This can invariably be made more efficient.
-            foreach (var instance in candidateInstances)
-            {
-                if (ParamsLessSpecific(instance, candidateInstances)) continue;
-                arb.Add(instance);
-            }
-
-            return arb.ToImmutableAndFree();
-        }
-
-        /// <summary>
-        /// Decides whether an instance is strictly less specific than at least
-        /// one other instance.
-        /// </summary>
-        /// <param name="instance">
+        /// <param name="lessSpecific">
         /// The instance to compare.
         /// </param>
-        /// <param name="otherInstances">
-        /// A list of other instances to which this instance should be compared.
-        /// This may include <paramref name="instance"/>, in which case it will
-        /// be ignored.
-        /// </param>
         /// <returns>
-        /// True if, and only if, <paramref name="instance"/> is strictly less
-        /// specific than any of the other instances in
-        /// <paramref name="otherInstances"/>.
+        /// True if, and only if, <paramref name="lessSpecific"/> is strictly less
+        /// specific than <paramref name="moreSpecific"/>.
         /// </returns>
-        private static bool ParamsLessSpecific(Candidate instance, ImmutableArray<Candidate> otherInstances)
+        private static bool ParamsLessSpecific(Candidate moreSpecific, Candidate lessSpecific)
         {
-            Debug.Assert(!otherInstances.IsEmpty,
-                "Trying to check whether an instance has less specific params than zero other instances is pointless");
+            Debug.Assert(moreSpecific.Instance != lessSpecific.Instance,
+                "Shouldn't be checking an instance against itself!");
 
             // Currently, we do a very basic check based on non-witness type
             // parameter counts.  This could be much more sophisticated.
 
             bool instanceHasNonWitnesses = false;
-            foreach (var typeParam in GetTypeParametersOf(instance.Instance))
+            foreach (var typeParam in GetTypeParametersOf(lessSpecific.Instance))
             {
                 if (!typeParam.IsConceptWitness)
                 {
@@ -1357,38 +1305,26 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // No need to do the below check if we don't have non-witness type
             // params: the only way something can be more specific than us at
-            // the moment is if we weren't.
+            // the moment is if we do.
             // This will need to go if we do something more sophisticated.
-            if (!instanceHasNonWitnesses) return false;
-
-            foreach (var otherInstance in otherInstances)
+            if (!instanceHasNonWitnesses)
             {
-                if (instance.Instance == otherInstance.Instance)
-                {
-                    continue;
-                }
+                return false;
+            }
 
-                // TODO: cache this per instance?
-                bool otherHasNonWitnesses = false;
-                foreach (var typeParam in GetTypeParametersOf(otherInstance.Instance))
+            // An instance is more specific if it has no non-witness type
+            // parameters, but the other instance does.
+            // So, we are less specific if we get through this check and see no
+            // non-witnesses.
+            foreach (var typeParam in GetTypeParametersOf(moreSpecific.Instance))
+            {
+                if (!typeParam.IsConceptWitness)
                 {
-                    if (!typeParam.IsConceptWitness)
-                    {
-                        otherHasNonWitnesses = true;
-                        break;
-                    }
-                }
-
-                // An instance is more specific if it has no non-witness type
-                // parameters, but the other instance does.  Flip this logic to
-                // get an early less-specific result.
-                if (instanceHasNonWitnesses && !otherHasNonWitnesses)
-                {
-                    return OverlapAllowed(overlapper: otherInstance, overlappee: instance);
+                    return false;
                 }
             }
 
-            return false;
+            return true;
         }
 
         #endregion Third pass
