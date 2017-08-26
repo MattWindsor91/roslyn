@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.PooledObjects;
+using System.Text;
 
 namespace Microsoft.CodeAnalysis.CSharp
 {
@@ -102,6 +103,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// A candidate instance and its unification.
         /// </summary>
+        [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
         internal struct Candidate
         {
             /// <summary>
@@ -153,6 +155,25 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Unification = null;
                 Diagnostics = errors;
                 Viable = false;
+            }
+
+            private string GetDebuggerDisplay()
+            {
+                var result = new StringBuilder("[");
+                result.Append(GetType().Name);
+
+                result.Append(" (");
+                if (Viable)
+                {
+                    result.Append("viable: ");
+                    result.Append(Instance.GetDebuggerDisplay());
+
+                }
+                else
+                {
+                    result.Append("not viable");
+                }
+                return result.Append(")]").ToString();
             }
         }
 
