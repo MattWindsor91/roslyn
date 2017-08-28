@@ -55,41 +55,79 @@ namespace TinyLinq
         D Select(S src, Func<T, U> f);
     }
 
-    public struct Selection<TEnum, TElem, TProj>
+    /// <summary>
+    /// Enumerator representing an unspecialised Select.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the enumerator we are selecting over.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of the element <typeparamref name="TEnum"/> returns.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of the projected element the selection returns.
+    /// </typeparam>
+    public struct Select<TEnum, TElem, TProj>
     {
         public TEnum source;
         public Func<TElem, TProj> projection;
         public TProj current;
     }
 
-    public instance Enumerator_Selection<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, Selection<TEnum, TElem, TProj>>
+    /// <summary>
+    /// Enumerator instance for <see cref="Select{TEnum, TElem, TProj}"/>.
+    /// </summary>
+    public instance Enumerator_Select<TEnum, [AssociatedType] TElem, TProj, implicit E>
+        : CEnumerator<TProj, Select<TEnum, TElem, TProj>>
         where E : CEnumerator<TElem, TEnum>
     {
-        void Reset(ref Selection<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
+        void Reset(ref Select<TEnum, TElem, TProj> s) => E.Reset(ref s.source);
 
-        bool MoveNext(ref Selection<TEnum, TElem, TProj> enumerator)
+        bool MoveNext(ref Select<TEnum, TElem, TProj> s)
         {
-            if (!E.MoveNext(ref enumerator.source))
+            if (!E.MoveNext(ref s.source))
             {
                 return false;
             }
 
-            enumerator.current = enumerator.projection(E.Current(ref enumerator.source));
+            s.current = s.projection(E.Current(ref s.source));
             return true;
         }
 
-        TProj Current(ref Selection<TEnum, TElem, TProj> enumerator) => enumerator.current;
+        TProj Current(ref Select<TEnum, TElem, TProj> s) => s.current;
 
-        void Dispose(ref Selection<TEnum, TElem, TProj> enumerator) { }
+        void Dispose(ref Select<TEnum, TElem, TProj> s) { }
     }
 
+    /// <summary>
+    /// Unspecialised instance for selecting over an enumerator, producing
+    /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
+    /// </summary>
+    [Overlappable]
+    public instance Select_Enumerator<TElem, TProj, TEnum, implicit E>
+        : CSelect<TElem, TProj, TEnum, Select<TEnum, TElem, TProj>>
+        where E : CEnumerator<TElem, TEnum>
+    {
+        Select<TEnum, TElem, TProj> Select(TEnum t, Func<TElem, TProj> projection) =>
+            new Select<TEnum, TElem, TProj>
+            {
+                source = t,
+                projection = projection,
+                current = default
+            };
+    }
+
+    /// <summary>
+    /// Unspecialised instance for selecting over an enumerable, producing
+    /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
+    /// </summary>
+    [Overlappable]
     public instance Select_Enumerable<TElem, TProj, [AssociatedType] TSrc, [AssociatedType] TDst, implicit E>
-        : CSelect<TElem, TProj, TSrc, Selection<TDst, TElem, TProj>>
+        : CSelect<TElem, TProj, TSrc, Select<TDst, TElem, TProj>>
         where E : CEnumerable<TSrc, TElem, TDst>
     {
-        Selection<TDst, TElem, TProj> Select(TSrc t, Func<TElem, TProj> projection) =>
-            new Selection<TDst, TElem, TProj>
+        Select<TDst, TElem, TProj> Select(TSrc t, Func<TElem, TProj> projection) =>
+            new Select<TDst, TElem, TProj>
             {
                 source = E.GetEnumerator(t),
                 projection = projection,
@@ -98,13 +136,13 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Instance reducing chained Select queries to a single Selection on a
-    /// composed projection.
+    /// Instance reducing chained unspecialised Select queries to a single
+    /// <see cref="Select{TEnum, TElem, TProj}"/> on a composed projection.
     /// </summary>
-    public instance Select_Selection<TElem, TProj1, TProj2, TDest> : CSelect<TProj1, TProj2, Selection<TDest, TElem, TProj1>, Selection<TDest, TElem, TProj2>>
+    public instance Select_Select<TElem, TProj1, TProj2, TDest> : CSelect<TProj1, TProj2, Select<TDest, TElem, TProj1>, Select<TDest, TElem, TProj2>>
     {
-        Selection<TDest, TElem, TProj2> Select(Selection<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
-            new Selection<TDest, TElem, TProj2>
+        Select<TDest, TElem, TProj2> Select(Select<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
+            new Select<TDest, TElem, TProj2>
             {
                 source = t.source,
                 projection = x => projection(t.projection(x)),
@@ -117,46 +155,152 @@ namespace TinyLinq
         D Where(S src, Func<T, bool> f);
     }
 
-    public struct Filtering<TEnum, TElem>
+    /// <summary>
+    /// Enumerator representing an unspecialised Where.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the enumerator we are filtering over.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of the element <typeparamref name="TEnum"/> returns.
+    /// </typeparam>
+    public struct Where<TEnum, TElem>
     {
         public TEnum source;
         public Func<TElem, bool> filter;
         public TElem current;
     }
 
-    public instance Enumerator_Filtering<TEnum, [AssociatedType] TElem, implicit E>
-        : CEnumerator<TElem, Filtering<TEnum, TElem>>
+    /// <summary>
+    /// Enumerator instance for <see cref="Where{TEnum, TElem, TProj}"/>.
+    /// </summary>
+    public instance Enumerator_Where<TEnum, [AssociatedType] TElem, implicit E>
+        : CEnumerator<TElem, Where<TEnum, TElem>>
         where E : CEnumerator<TElem, TEnum>
     {
-        void Reset(ref Filtering<TEnum, TElem> enumerator) => E.Reset(ref enumerator.source);
+        void Reset(ref Where<TEnum, TElem> w) => E.Reset(ref w.source);
 
-        bool MoveNext(ref Filtering<TEnum, TElem> enumerator)
+        bool MoveNext(ref Where<TEnum, TElem> w)
         {
             do
             {
-                if (!E.MoveNext(ref enumerator.source))
+                if (!E.MoveNext(ref w.source))
                 {
                     return false;
                 }
-                enumerator.current = E.Current(ref enumerator.source);
-            } while (!enumerator.filter(enumerator.current));
+                w.current = E.Current(ref w.source);
+            } while (!w.filter(w.current));
 
             return true;
         }
 
-        TElem Current(ref Filtering<TEnum, TElem> enumerator) => enumerator.current;
+        TElem Current(ref Where<TEnum, TElem> w) => w.current;
 
-        void Dispose(ref Filtering<TEnum, TElem> enumerator) => E.Dispose(ref enumerator.source);
+        void Dispose(ref Where<TEnum, TElem> w) => E.Dispose(ref w.source);
     }
 
+    /// <summary>
+    /// Unspecialised instance for filtering over an enumerator, producing
+    /// a basic <see cref="Where{TEnum, TElem}"/>.
+    /// </summary>
+    [Overlappable]
+    public instance Where_Enumerator<TElem, TEnum, implicit E>
+        : CWhere<TElem, TEnum, Where<TEnum, TElem>>
+        where E : CEnumerator<TElem, TEnum>
+    {
+        Where<TEnum, TElem> Where(TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter, current = default };
+    }
+
+    /// <summary>
+    /// Unspecialised instance for filtering over an enumerable, producing
+    /// a basic <see cref="Where{TEnum, TElem}"/>.
+    /// </summary>
+    [Overlappable]
     public instance Where_Enumerable<TElem, TSrc, [AssociatedType] TEnum, implicit E>
-        : CWhere<TElem, TSrc, Filtering<TEnum, TElem>>
+        : CWhere<TElem, TSrc, Where<TEnum, TElem>>
         where E : CEnumerable<TSrc, TElem, TEnum>
     {
-        Filtering<TEnum, TElem> Where(TSrc src, Func<TElem, bool> filter) => new Filtering<TEnum, TElem> { source = E.GetEnumerator(src), filter = filter, current = default };
+        Where<TEnum, TElem> Where(TSrc src, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = E.GetEnumerator(src), filter = filter, current = default };
     }
 
-    public struct FilteredSelection<TEnum, TElem, TProj>
+    /// <summary>
+    /// Specialised enumerator for executing Where queries on an array.
+    /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public struct ArrayWhere<TElem>
+    {
+        public TElem[] source;
+        public Func<TElem, bool> filter;
+        public int lo;
+        public int hi;
+    }
+
+    /// <summary>
+    /// Enumerator instance for filtered arrays.
+    /// </summary>
+    public instance Enumerator_ArrayWhere<TElem> : CEnumerator<TElem, ArrayWhere<TElem>>
+    {
+        void Reset(ref ArrayWhere<TElem> enumerator)
+        {
+            enumerator.lo = -1;
+        }
+
+        bool MoveNext(ref ArrayWhere<TElem> enumerator)
+        {
+            if (enumerator.hi <= enumerator.lo)
+            {
+                return false;
+            }
+
+            enumerator.lo++;
+            while (enumerator.lo < enumerator.hi)
+            {
+                if (enumerator.filter(enumerator.source[enumerator.lo]))
+                {
+                    return true;
+                }
+                enumerator.lo++;
+            }
+
+            return false;
+        }
+
+        TElem Current(ref ArrayWhere<TElem> enumerator)
+        {
+            if (enumerator.lo == -1)
+            {
+                return default;
+            }
+            return enumerator.source[enumerator.lo];
+        }
+
+        void Dispose(ref ArrayWhere<TElem> enumerator) { }
+    }
+
+    /// <summary>
+    /// Specialised instance for executing Where queries on an array.
+    /// </summary>
+    public instance Where_Array<TElem> : CWhere<TElem, TElem[], ArrayWhere<TElem>>
+    {
+        ArrayWhere<TElem> Where(TElem[] src, Func<TElem, bool> f) =>
+            new ArrayWhere<TElem> { source = src, filter = f, lo = -1, hi = src.Length };
+    }
+
+    /// <summary>
+    /// Fused Where query on an unspecialised Select.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the enumerator being selected over.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of elements leaving <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of elements being selected and filtered.
+    /// </typeparam>
+    public struct WhereOfSelect<TEnum, TElem, TProj>
     {
         public TEnum source;
         public Func<TElem, TProj> projection;
@@ -164,13 +308,16 @@ namespace TinyLinq
         public TProj current;
     }
 
-    public instance Enumerator_FilteredSelection<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, FilteredSelection<TEnum, TElem, TProj>>
+    /// <summary>
+    /// Enumerator instance for fused Wheres on unspecialised Selects.
+    /// </summary>
+    public instance Enumerator_WhereSelect<TEnum, [AssociatedType] TElem, TProj, implicit E>
+        : CEnumerator<TProj, WhereOfSelect<TEnum, TElem, TProj>>
         where E : CEnumerator<TElem, TEnum>
     {
-        void Reset(ref FilteredSelection<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
+        void Reset(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
 
-        bool MoveNext(ref FilteredSelection<TEnum, TElem, TProj> enumerator)
+        bool MoveNext(ref WhereOfSelect<TEnum, TElem, TProj> enumerator)
         {
             do
             {
@@ -184,15 +331,19 @@ namespace TinyLinq
             return true;
         }
 
-        TProj Current(ref FilteredSelection<TEnum, TElem, TProj> enumerator) => enumerator.current;
+        TProj Current(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => enumerator.current;
 
-        void Dispose(ref FilteredSelection<TEnum, TElem, TProj> enumerator) => E.Dispose(ref enumerator.source);
+        void Dispose(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Dispose(ref enumerator.source);
     }
 
-    public instance Where_Selection<TEnum, TElem, TProj> : CWhere<TProj, Selection<TEnum, TElem, TProj>, FilteredSelection<TEnum, TElem, TProj>>
+    /// <summary>
+    /// Instance reducing a Where on a Select to a single composed
+    /// qyery.
+    /// </summary>
+    public instance Where_Select<TEnum, TElem, TProj> : CWhere<TProj, Select<TEnum, TElem, TProj>, WhereOfSelect<TEnum, TElem, TProj>>
     {
-        FilteredSelection<TEnum, TElem, TProj> Where(Selection<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
-            new FilteredSelection<TEnum, TElem, TProj>
+        WhereOfSelect<TEnum, TElem, TProj> Where(Select<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
+            new WhereOfSelect<TEnum, TElem, TProj>
             {
                 source = selection.source,
                 projection = selection.projection,
@@ -201,7 +352,19 @@ namespace TinyLinq
             };
     }
 
-    public struct SelectedFiltering<TEnum, TElem, TProj>
+    /// <summary>
+    /// Fused Select query on an unspecialised Where.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the enumerator being selected over.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of elements leaving <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of elements being selected and filtered.
+    /// </typeparam>
+    public struct SelectOfWhere<TEnum, TElem, TProj>
     {
         public TEnum source;
         public Func<TElem, bool> filter;
@@ -209,45 +372,112 @@ namespace TinyLinq
         public TProj current;
     }
 
-    public instance Enumerator_SelectedFiltering<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, SelectedFiltering<TEnum, TElem, TProj>>
+    public instance Enumerator_SelectWhere<TEnum, [AssociatedType] TElem, TProj, implicit E>
+        : CEnumerator<TProj, SelectOfWhere<TEnum, TElem, TProj>>
         where E : CEnumerator<TElem, TEnum>
     {
-        void Reset(ref SelectedFiltering<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
+        void Reset(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Reset(ref sw.source);
 
-        bool MoveNext(ref SelectedFiltering<TEnum, TElem, TProj> enumerator)
+        bool MoveNext(ref SelectOfWhere<TEnum, TElem, TProj> sw)
         {
-            TElem c = default;
+            TElem c;
+            ref var s = ref sw.source;
+
             do
             {
-                if (!E.MoveNext(ref enumerator.source))
+                if (!E.MoveNext(ref s))
                 {
                     return false;
                 }
-                c = E.Current(ref enumerator.source);
-            } while (!enumerator.filter(c));
+                c = E.Current(ref s);
+            } while (!sw.filter(c));
 
-            enumerator.current = enumerator.projection(c);
+            sw.current = sw.projection(c);
             return true;
         }
 
-        TProj Current(ref SelectedFiltering<TEnum, TElem, TProj> enumerator) => enumerator.current;
+        TProj Current(ref SelectOfWhere<TEnum, TElem, TProj> sw) => sw.current;
 
-        void Dispose(ref SelectedFiltering<TEnum, TElem, TProj> enumerator) => E.Dispose(ref enumerator.source);
+        void Dispose(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Dispose(ref sw.source);
     }
 
     /// <summary>
     /// Instance reducing a Select on a Where to a single composed
-    /// SelectedFiltering.
+    /// query.
     /// </summary>
-    public instance Select_Filtering<TElem, TProj, TDest> : CSelect<TElem, TProj, Filtering<TDest, TElem>, SelectedFiltering<TDest, TElem, TProj>>
+    public instance Select_Where<TElem, TProj, TDest> : CSelect<TElem, TProj, Where<TDest, TElem>, SelectOfWhere<TDest, TElem, TProj>>
     {
-        SelectedFiltering<TDest, TElem, TProj> Select(Filtering<TDest, TElem> t, Func<TElem, TProj> projection) =>
-            new SelectedFiltering<TDest, TElem, TProj>
+        SelectOfWhere<TDest, TElem, TProj> Select(Where<TDest, TElem> t, Func<TElem, TProj> projection) =>
+            new SelectOfWhere<TDest, TElem, TProj>
             {
                 source = t.source,
                 filter = t.filter,
                 projection = projection,
+                current = default
+            };
+    }
+
+    public struct ArraySelectOfWhere<TElem, TProj>
+    {
+        public TElem[] source;
+        public Func<TElem, bool> filter;
+        public Func<TElem, TProj> projection;
+        public int lo;
+        public int hi;
+        public TProj current;
+    }
+
+    /// <summary>
+    /// Enumerator instance for selections of filtered arrays.
+    /// </summary>
+    public instance Enumerator_ArraySelectOfWhere<TElem, TProj> : CEnumerator<TProj, ArraySelectOfWhere<TElem, TProj>>
+    {
+        void Reset(ref ArraySelectOfWhere<TElem, TProj> sw)
+        {
+            sw.lo = -1;
+            sw.current = default;
+        }
+
+        bool MoveNext(ref ArraySelectOfWhere<TElem, TProj> sw)
+        {
+            if (sw.hi <= sw.lo)
+            {
+                return false;
+            }
+
+            sw.lo++;
+            while (sw.lo < sw.hi)
+            {
+                if (sw.filter(sw.source[sw.lo]))
+                {
+                    sw.current = sw.projection(sw.source[sw.lo]);
+                    return true;
+                }
+                sw.lo++;
+            }
+
+            return false;
+        }
+
+        TProj Current(ref ArraySelectOfWhere<TElem, TProj> sw) => sw.current;
+
+        void Dispose(ref ArraySelectOfWhere<TElem, TProj> enumerator) { }
+    }
+
+    /// <summary>
+    /// Instance reducing a Select on a filtered array cursor to a single
+    /// composed <see cref="SelectedFilteredArrayCursor{TElem, TProj}"/>.
+    /// </summary>
+    public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhere<TElem>, ArraySelectOfWhere<TElem, TProj>>
+    {
+        ArraySelectOfWhere<TElem, TProj> Select(ArrayWhere<TElem> t, Func<TElem, TProj> projection) =>
+            new ArraySelectOfWhere<TElem, TProj>
+            {
+                source = t.source,
+                filter = t.filter,
+                projection = projection,
+                lo = -1,
+                hi = t.hi,
                 current = default
             };
     }
@@ -334,10 +564,10 @@ namespace TinyLinq
     /// <typeparam name="B">
     /// Instance of <see cref="CBounded{T}"/> for <typeparamref name="TEnum"/>.
     /// </typeparam>
-    public instance CBounded_Selection<TEnum, TElem, TProj, implicit B> : CBounded<Selection<TEnum, TElem, TProj>>
+    public instance CBounded_Select<TEnum, TElem, TProj, implicit B> : CBounded<Select<TEnum, TElem, TProj>>
         where B : CBounded<TEnum>
     {
-        int Bound(ref Selection<TEnum, TElem, TProj> sel) => B.Bound(ref sel.source);
+        int Bound(ref Select<TEnum, TElem, TProj> sel) => B.Bound(ref sel.source);
     }
 
     /// <summary>

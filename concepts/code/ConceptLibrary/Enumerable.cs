@@ -61,10 +61,15 @@ namespace System.Concepts.Enumerable
         }
 
         /// <summary>
-        /// <see cref="CEnumerator{E, S}"/> instance for array cursors.
+        /// <see cref="CEnumerable{C, E, S}"/> instance for arrays,
+        /// using array cursors.
+        /// Also serves as a <see cref="CEnumerator{E, S}"/> instance for
+        /// array cursors, because it has the same types.
         /// </summary>
-        public instance Enumerator_ArrayCursor<TElem> : CEnumerator<TElem, ArrayCursor<TElem>>
+        public instance Enumerable_Array<TElem> : CEnumerable<TElem[], TElem, ArrayCursor<TElem>>
         {
+            ArrayCursor<TElem> GetEnumerator(TElem[] array) => new ArrayCursor<TElem> { source = array, lo = -1, hi = array.Length };
+
             void Reset(ref ArrayCursor<TElem> enumerator)
             {
                 enumerator.lo = -1;
@@ -73,12 +78,13 @@ namespace System.Concepts.Enumerable
             bool MoveNext(ref ArrayCursor<TElem> enumerator)
             {
                 // hi always points to one index beyond the end of the array slice
-                if (enumerator.hi <= enumerator.lo + 1)
+                if (enumerator.hi <= enumerator.lo)
                 {
                     return false;
                 }
+
                 enumerator.lo++;
-                return true;
+                return (enumerator.lo < enumerator.hi);
             }
 
             TElem Current(ref ArrayCursor<TElem> enumerator)
@@ -91,20 +97,6 @@ namespace System.Concepts.Enumerable
             }
 
             void Dispose(ref ArrayCursor<TElem> enumerator) { }
-        }
-
-        /// <summary>
-        /// <see cref="CEnumerable{C, E, S}"/> instance for arrays,
-        /// using array cursors.
-        /// </summary>
-        [Overlapping]  // intended to overlap Enumerator_ArrayCursor
-        public instance Enumerable_Array<TElem> : CEnumerable<TElem[], TElem, ArrayCursor<TElem>>
-        {
-            ArrayCursor<TElem> GetEnumerator(TElem[] array) => new ArrayCursor<TElem> { source = array, lo = -1, hi = array.Length };
-            void Reset(ref ArrayCursor<TElem> enumerator) => Enumerator_ArrayCursor<TElem>.Reset(ref enumerator);
-            bool MoveNext(ref ArrayCursor<TElem> enumerator) => Enumerator_ArrayCursor<TElem>.MoveNext(ref enumerator);
-            TElem Current(ref ArrayCursor<TElem> enumerator) => Enumerator_ArrayCursor<TElem>.Current(ref enumerator);
-            void Dispose(ref ArrayCursor<TElem> enumerator) => Enumerator_ArrayCursor<TElem>.Dispose(ref enumerator);
         }
 
         #endregion Arrays
