@@ -1,0 +1,525 @@
+% This is "sig-alternate.tex" V2.1 April 2013
+% This file should be compiled with V2.5 of "sig-alternate.cls" May 2012
+%
+% This example file demonstrates the use of the 'sig-alternate.cls'
+% V2.5 LaTeX2e document class file. It is for those submitting
+% articles to ACM Conference Proceedings WHO DO NOT WISH TO
+% STRICTLY ADHERE TO THE SIGS (PUBS-BOARD-ENDORSED) STYLE.
+% The 'sig-alternate.cls' file will produce a similar-looking,
+% albeit, 'tighter' paper resulting in, invariably, fewer pages.
+%
+% ----------------------------------------------------------------------------------------------------------------
+% This .tex file (and associated .cls V2.5) produces:
+%       1) The Permission Statement
+%       2) The Conference (location) Info information
+%       3) The Copyright Line with ACM data
+%       4) NO page numbers
+%
+% as against the acm_proc_article-sp.cls file which
+% DOES NOT produce 1) thru' 3) above.
+%
+% Using 'sig-alternate.cls' you have control, however, from within
+% the source .tex file, over both the CopyrightYear
+% (defaulted to 200X) and the ACM Copyright Data
+% (defaulted to X-XXXXX-XX-X/XX/XX).
+% e.g.
+% \CopyrightYear{2007} will cause 2007 to appear in the copyright line.
+% \crdata{0-12345-67-8/90/12} will cause 0-12345-67-8/90/12 to appear in the copyright line.
+%
+% ---------------------------------------------------------------------------------------------------------------
+% This .tex source is an example which *does* use
+% the .bib file (from which the .bbl file % is produced).
+% REMEMBER HOWEVER: After having produced the .bbl file,
+% and prior to final submission, you *NEED* to 'insert'
+% your .bbl file into your source .tex file so as to provide
+% ONE 'self-contained' source file.
+%
+% ================= IF YOU HAVE QUESTIONS =======================
+% Questions regarding the SIGS styles, SIGS policies and
+% procedures, Conferences etc. should be sent to
+% Adrienne Griscti (griscti@acm.org)
+%
+% Technical questions _only_ to
+% Gerald Murray (murray@hq.acm.org)
+% ===============================================================
+%
+% For tracking purposes - this is V2.0 - May 2012
+
+\documentclass{elsarticle}
+
+
+
+
+%\usepackage{color}
+\usepackage{url}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{longtable} % or pandoc
+\usepackage{booktabs}
+\definecolor{StringRed}{rgb}{.637,0.082,0.082}
+\definecolor{CommentGreen}{rgb}{0,0.5,0}
+\definecolor{KeywordBlue}{rgb}{0,0,1}
+\definecolor{UserTypeTeal}{rgb}{0.1679,0.5664,0.6836}
+
+\lstdefinelanguage{threeextensions}%
+  {morekeywords={var,from,select,where,orderby,yield,let,join,on,into,Equal,group,by,ascending,descending,
+                 try,catch,finally},
+   sensitive,
+  }[keywords]%
+
+\lstdefinelanguage{fourextensions}
+   {morekeywords={dynamic},
+    sensitive
+   }[keywords]
+
+\lstdefinelanguage{fiveextensions}
+   {morekeywords={await,async},
+    sensitive
+   }[keywords]
+
+\lstdefinelanguage{CSharpLatest}
+                         {language=[Sharp]{C}, %
+                          alsolanguage=threeextensions,
+                          alsolanguage=fourextensions,
+					alsolanguage=fiveextensions,
+                          basicstyle=\color{black}\ttfamily\small,
+                          showstringspaces=false,
+                          keywordstyle=\color{KeywordBlue},
+                          commentstyle=\color{CommentGreen},
+                          stringstyle=\color{StringRed},
+rangebeginprefix=\#region\ ,
+rangeendprefix=\#endregion\ ,
+includerangemarker=false,
+                          columns=flexible
+                         }
+
+\lstdefinelanguage{conceptextensions}
+   {morekeywords={instance,concept,interface,member,Witness,Trait,abstract,struct},
+    sensitive
+   }[keywords]
+\lstdefinelanguage{FSharp}
+                         {language={Caml}, %
+                          alsolanguage=conceptextensions,
+                          basicstyle=\color{black}\ttfamily\small,
+                          showstringspaces=false,
+                          keywordstyle=\color{KeywordBlue},
+                          commentstyle=\color{CommentGreen},
+                          stringstyle=\color{StringRed},
+                          columns=flexible
+                         }
+
+
+\lstset{moredelim=[is][\color{UserTypeTeal}]{|}{|}}
+
+\newif\ifclassic
+\classicfalse
+
+\begin{document}
+
+%\setcopyright{none}
+% Copyright
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\setcopyright{usgov}
+%\setcopyright{usgovmixed}
+%\setcopyright{cagov}
+%\setcopyright{cagovmixed}
+
+%
+% --- Author Metadata here ---
+%\conferenceinfo{ML Workshop 2016}{Japan}
+%\CopyrightYear{2007} % Allows default copyright year (20XX) to be over-ridden - IF NEED BE.
+%\crdata{0-12345-67-8/90/01}  % Allows default copyright data (0-89791-88-6/97/05) to be over-ridden - IF NEED BE.
+% --- End of Author Metadata ---
+
+\begin{frontmatter}
+\title{Classes for the Masses (Extended Abstract)  }   
+\author{Claudio V. Russo}
+\address{Microsoft Research Ltd, Cambridge, U.K.}
+\author{Matthew Windsor}
+\address{University of York}
+ 
+%\titlenote{A full version of this paper is available as
+%\textit{Author's Guide to Preparing ACM SIG Proceedings Using
+%\LaTeX$2_\epsilon$\ and BibTeX} at
+%\texttt{www.acm.org/eaddress.htm}}}
+%
+% You need the command \numberofauthors to handle the 'placement
+% and alignment' of the authors beneath the title.
+%
+% For aesthetic reasons, we recommend 'three authors at a time'
+% i.e. three 'name/affiliation blocks' be placed beneath the title.
+%
+% NOTE: You are NOT restricted in how many 'rows' of
+% "name/affiliations" may appear. We just ask that you restrict
+% the number of 'columns' to three.
+%
+% Because of the available 'opening page real-estate'
+% we ask you to refrain from putting more than six authors
+% (two rows with three columns) beneath the article title.
+% More than six makes the first-page appear very cluttered indeed.
+%
+% Use the \alignauthor commands to handle the names
+% and affiliations for an 'aesthetic maximum' of six authors.
+% Add names, affiliations, addresses for
+% the seventh etc. author(s) as the argument for the
+% \additionalauthors command.
+% These 'additional authors' will be output/set for you
+% without further effort on your part as the last section in
+% the body of your article BEFORE References or any Appendices.
+
+%\numberofauthors{5} %  in this sample file, there are a *total*
+% of EIGHT authors. SIX appear on the 'first-page' (for formatting
+% reasons) and the remaining two appear in the \additionalauthors section.
+%
+%\author{
+% You can go ahead and credit any number of authors here,
+% e.g. one 'row of three' or two rows (consisting of one row of three
+% and a second row of one, two or three).
+%
+% The command \alignauthor (no curly braces needed) should
+% precede each author name, affiliation/snail-mail address and
+% e-mail address. Additionally, tag each line of
+% affiliation/address with \affaddr, and tag the
+% e-mail address with \email.
+%
+% 1st. author
+%\alignauthor
+%Claudio Russo\\ \affaddr{(Microsoft Research)}
+%% 2nd. author
+%\alignauthor
+%Matt Windsor\\ \affaddr{(University of York)}
+%\and
+%\alignauthor
+%Don Syme\\  \affaddr{(Microsoft Research)}
+%\alignauthor
+%Rupert Horlick\\   \affaddr{(University of Cambridge)}
+%\alignauthor
+%James Clarke\\ \affaddr{(University of Cambridge)}
+%}
+%\alignauthor
+%Claudio Russo\\
+%% 2nd. author
+%\alignauthor
+%Matt Windsor\\
+%\alignauthor
+%Don Syme\\
+%\alignauthor
+%Rupert Horlick\\
+%\alignauthor
+%James Clarke\\
+%% 2nd. author
+%\and
+%\alignauthor
+% \affaddr{(Microsoft Research)}\\
+%\alignauthor
+%  \affaddr{(University of Cambridge)}\\
+%\alignauthor
+% \affaddr{(University of Cambridge)}\\
+%}
+
+
+
+\begin{abstract}
+Type classes are an immensely popular and productive feature of Haskell. They have since been adopted in, and adapted to, numerous other languages, including theorem provers.
+We show that type classes have a natural and efficient representation in .NET that paves the way for the extension of F\#, C\# and other .NET languages with type classes. 
+Our encoding  is type preserving and promises easy and safe cross-language inter-operation.
+We have extended the open source C\# compiler and language service, Roslyn, with pervasive support for type classes and  have prototyped a more minimalist design  for F\#.
+\end{abstract}
+\end{frontmatter}
+
+% We no longer use \terms command
+%\terms{Theory}
+
+%\renewcommand{\subsection}{1}{}
+
+\section{Introduction}
+
+Haskell's \emph{type classes} \cite{peytonjones:h98,WadlerBlott} are a powerful abstraction mechanism for describing generic algorithms applicable to types that have different representations but common interfaces.
+A \emph{type class} is a predicate on types that specifies a set of required operations by their type signatures with  optional, default code.
+A type may be declared to be an \emph{instance} of a type class, and must supply an implementation for each of the class' operations. 
+Type classes may be arranged hierarchically, permitting subsumption and inheritance. 
+%A default implementation may also be associated with an operation. % allowing its implementations to be omitted.
+
+Many modern languages have adopted features inspired
+by type classes, with different implementation techniques.  Scala has
+\emph{implicits}\cite{scalaimplicits}, implicit method arguments denoting dictionaries, that
+are inferred by the compiler but represented, at run-time, as additional
+heap-allocated arguments to methods (with commensurate overhead).  C++ came very
+close to adopting \emph{concepts}\cite{cppconcepts}, a rather different extension of the template mechanism, 
+directly inspired by Haskell's type classes but enforcing  compile-time code specialization for performance. Rust has \emph{traits}\cite{Rust}. Swift has
+\emph{protocols}\cite{Swift}.
+
+{\bf Contribution} We describe a simple encoding that allows us to add type classes to
+any .NET language, allowing interoperable definitions of type
+classes. Our encoding relies on the CLR's distinctive approach to
+representing and compiling generic code\cite{genericspldi,genericspopl}. Unlike, for example, the JVM, the CLR
+byte-code format is fully generic (all source level type information,
+including class and method type parameters, are represented in the
+metadata and virtual instruction set).  Parameterized code is JIT-compiled to type passing code,
+with type parameters having run-time representations as (second-order)
+values.  The JIT compiler uses the reified types to generate
+specialized memory representations (for instantiated generic types)
+and specialized (and thus more efficient) code for generic
+methods. For example, scalar types and compounds of scalars called
+structs have natural unboxed representations familiar to C(++)
+programmers; generic array manipulating code will manipulate array
+elements without boxing when instantiated at scalar types.  This run-time
+specialization allows the JIT to avoid the uniform (i.e.\ lowest-common-denominator) representations adopted by many implementations of ML, 
+Haskell, the JVM and most dynamic languages.
+
+Haskell compilers typically compile type classes using the so-called
+\emph{dictionary translation}.  The translation, guided by source
+types, inserts evidence terms that justify type class constraints. The evidence terms are dictionaries (i.e.\ records) of functions that provide implementations (and thus proofs) for all of the constraint's methods. Although similar to
+object-oriented virtual method tables, dictionaries are not attached to
+objects, but passed separately as function arguments.  Because type
+classes are resolved statically, aggressive in-lining can remove most,
+but not all, indirection through dictionary parameters. This leads to
+efficient code with fewer indirect calls and leaner representations of values than full-blown objects. Objects, in contrast, must lug their method-tables wherever they go.
+
+Given the obvious similarity between type passing and dictionary
+passing, it is perhaps not surprising that type passing forms an
+excellent implementation technique for Haskell's dictionary passing. 
+This talk will give on overview of the technique that we are applying to provide
+efficient, inter-operable type class implementations to both C\# and F\#.
+
+
+\section{The Representation}
+
+This section sketches our representation of the Haskell'98 type classes on .NET by example.
+For each example, we give the Haskell code, underlying .NET code in vanilla C\#, and proposed F\# syntax.
+We use vanilla C\# as a more readable proxy for .NET intermediate bytecode and metadata.
+
+\subsection{Haskell Type Classes}
+
+A Haskell type class, for example:
+\lstset{language={CSharpLatest}}
+
+{
+\small
+\lstset{language={Haskell}}
+\begin{lstlisting}
+  class Eq a where 
+    (==) :: a -> a -> Bool
+\end{lstlisting}}
+\noindent is naturally represented in C\# as:
+\lstset{language={CSharpLatest}}
+\begin{lstlisting}
+  interface Eq<A> {  bool Equal(A a, A b);  }
+\end{lstlisting}
+
+\ifclassic
+For new F\# syntax we adopt the keyword \lstinline{concept} (\lstinline{class} is already taken):
+
+\lstset{language={FSharp}}
+\begin{lstlisting}
+concept Eq 'a where 
+    (==): 'a -> 'a -> bool
+\end{lstlisting}
+\else
+\noindent\ For F\#, we use a  \lstinline{Trait}-attributed interface declaration:
+\lstset{language={FSharp}}
+\begin{lstlisting}
+ [<Trait>] 
+ type Eq<'A> = (* an interface *)
+   abstract equal: 'A -> 'A -> bool
+\end{lstlisting}
+\fi
+ 
+\subsection{Haskell Overloads}
+%{\bf  Haskell Overloads}
+ Haskell's declaration of class \lstinline{Eq a} implicitly declares its members as overloaded 
+operations:
+
+\lstset{language={Haskell}}
+\begin{lstlisting}
+    (==) :: (Eq a) => a -> a -> Bool 
+\end{lstlisting}
+Observe that the overloaded operation has a more general constrained type \lstinline{(Eq a) => ...}.
+
+This generic operation is captured in C\# by the method:
+\lstset{language={CSharpLatest}}
+\begin{lstlisting}
+static bool Equal<A,EqA>(A a, A b)   EqA: struct, Eq<A>
+               =>  default(EqA).Equal(a, b);
+\end{lstlisting}
+This method has not one, but \emph{two}, type parameters. The first, \lstinline{A}, is just the type parameter from the declaration.
+The second, \lstinline{EqA}, is a type parameter that is constrained to be a struct and is evidence for the constraint that \lstinline{A} supports interface \lstinline{Eq<A>}.
+
+The use of the \lstinline{struct} constraint on \lstinline{EqA} is significant and subtle. Structs are stack-allocated so essentially free to create, especially when they contain no fields.
+Moreover, every struct type, including a type parameter \lstinline{T} of kind struct, has a default (all-zero) value denoted by
+ expression \lstinline{default(T)}.
+Invoking a method on a default value of reference type would simply raise a null-reference exception because the receiver is \lstinline{null}.
+However, methods on structs (including interface methods) can always be properly invoked
+by calling the method on the struct's default value. 
+
+Thus an operation over some class can be represented as a static generic method, 
+parameterized by an additional dictionary type parameter (here \lstinline{EqA}).
+Derived operations with type class constraints can be represented by generic methods with suitably constrained type parameters.
+Finally, Haskell dictionary \emph{values} correspond to  C\# dictionary \emph{types}.
+
+For F\#, we do not overload a top-level \lstinline{Equal} binding but, instead, allow qualifed access to trait members (e.g.\ \lstinline{Eq.equal}), as in:
+\lstset{language={FSharp}}
+\begin{lstlisting}
+ let equal = Eq.equal  (* defines overloaded equal *)
+\end{lstlisting}
+
+
+%The dictionary type parameter is marked \lstinline{struct} (so stack allocated):
+%we can access its operations through a default value (no need to pass dictionary values).
+
+
+\subsection{Haskell Instances}
+%{\bf Instances}
+A Haskell instance declaration is represented by the declaration of an empty (field-less) .NET  struct that implements the associated type class (itself an interface).
+This gives us a cheap representation of Haskell instances. 
+%A Haskell instance declaration can be represented by the declaration of a C\# struct type.
+%Moreover, the dictionary parameter corresponding to a Haskell type constraint can just be represented by a C\# type parameter; in particular, by a type parameter that is both a struct and implements the corresponding C\# interface.
+
+For example, the Haskell instance declaration:
+
+
+\lstset{language={Haskell}}
+{\small
+\begin{lstlisting}
+instance Eq Integer where 
+  x == y  =  x `integerEq` y
+\end{lstlisting}
+}
+can be represented by the C\# structure:
+\lstset{language={CSharpLatest}}
+\begin{lstlisting}
+struct EqInt : Eq<int>  
+{  public bool Equal(int a, int b)  => a == b;   }
+\end{lstlisting}
+
+\ifclassic
+For F\#, we introduce the shorter \lstinline{instance} declaration:
+
+\lstset{language={FSharp}}
+\begin{lstlisting}
+instance Eq int where 
+  Equal (a, b) = a = b
+\end{lstlisting}
+
+Note that the F\# syntax, like Haskell, elides the name of the instance in the more explicit C\# representation.
+In Haskell, instances are anonymous.
+
+\else
+For F\#, we use a \lstinline{Witness}-attributed struct declaration:
+
+\lstset{language={FSharp}}
+\begin{lstlisting}
+ [<Witness>] 
+ type EqInt = (* a struct *)
+   interface Eq<int> with  member equal a b = a = b
+\end{lstlisting}
+
+Note that the F\# syntax, unlike Haskell, names the instance as in the  C\# representation.
+In Haskell, instances are anonymous but names are useful for explicit disambiguation and interoperation with languages that cannot always rely on type argument inference (such as C\#).
+\fi
+
+\subsection{Derived Instances}
+
+%{\bf Derived Instances}
+This Haskell code defines a family of derived instances: given an equality  type \lstinline{a}, it defines equality over lists of \lstinline{a}.
+\lstset{language={Haskell}}
+{\small
+\begin{lstlisting}
+instance (Eq a) => Eq ([a]) where 
+    nil == nil   = true
+   a:as == b:bs  = (a == b) && (as == bs)
+      _ == _     = false
+\end{lstlisting}
+}
+
+We can represent such a Haskell parameterized instance as a \emph{generic} struct:
+
+%\lstset{language={CSharpLatest}}
+%\begin{lstlisting}
+%struct EqList<A, EqA> : Eq<List<A>>
+%       where EqA : struct, Eq<A>  {
+%  public bool Equal(List<A> a, List<A> b) {
+%    if (a.IsNull != b.IsNull) return true;
+%    else if (a.IsCons & b.IsCons) 
+%         return default(EqA).Equal(a.Head,b.Head) 
+%                && Equal(a.Tail,b.Tail);
+%         else false;
+%  }}
+%\end{lstlisting}
+
+\lstset{language={CSharpLatest}}
+\begin{lstlisting}
+struct EqList<A, EqA> : Eq<List<A>>
+  where EqA : struct, Eq<A>  {
+    public bool Equal(List<A> a, List<A> b)  =>
+          (a.IsNull && b.IsNull)
+      || (a.IsCons && b.IsCons 
+           && default(EqA).Equal(a.Head,b.Head) 
+           && Equal(a.Tail,b.Tail)); }
+\end{lstlisting}
+
+This struct implements the interface \lstinline{Eq<List<A>>}, but only when instantiated with a suitable type argument and evidence for constraint \lstinline{Eq<A>}.
+Notice that \lstinline{EqList} has, once again, an additional evidence type parameter  \lstinline{EqA} for constraint \lstinline{Eq<A>}.
+Instantiations of the generic struct \lstinline{EqList<->}, in turn, construct evidence for \lstinline{Eq<List<A>>}.
+
+\ifclassic
+For F\# we adopt the more concise, nameless declaration:
+
+\lstset{language={FSharp}}
+\begin{lstlisting}
+instance Eq 'a => Eq (List 'a) where 
+  Equal(a,b) = match a,b with
+    | (a::l),(b::m) -> Equal(a,b) && Equal(l,m)
+    | [],[] -> true | _,_ -> false
+\end{lstlisting}
+\else
+For F\# we use a parameterized \lstinline{Witness}-declaration:
+\lstset{language={FSharp}}
+\begin{lstlisting}
+ [<Witness>] 
+ type EqList<'A,'EqA when 'EqA :> Eq<'A>> =  (* a struct *)
+   interface Eq<'A list> with
+     member equal a b =  match a,b with
+       | a::l,b::m -> Eq.equal a b && Eq.equal l m
+       | [],[] -> true | _,_ -> false
+\end{lstlisting}
+
+\fi
+
+\subsection{Other features}
+%{\bf Other features}
+
+We do not have space to describe the representations of other features but suffice to say that we can encode \cite{natural}:
+type class operations that themselves have constrained types in their signatures (using interface methods that are generic);
+type class hierarchies  using interface inheritance; default operations using shared static methods; instances requiring 
+polymorphic recursion; instances as data (to constrained term constructors) and multi-parameter type classes. Moreover, choosing to provide named rather than anonymous instances would allow us to selectively support
+explicit as well as implicit evidence when preferable. 
+We cannot support  higher-kinded type classes (like \lstinline{Monad}), because .NET lacks higher-kinded abstraction.
+First-order associated types are in reach.
+
+Much of the concision of Haskell comes not only from the declaration of type class hierarchies but from the implicit solution of constraints during type inference.
+For C\#, evidence inference is a mild generalization of type argument inference, with instantiations derived from the pervasive and locally assumed concept hierarchy.
+For F\#, we have adapted Haskell's more elaborate techniques for propagating inferred type class constraints, by extension of F\#'s existing constraint system.
+
+\section{Implementation}
+%{\bf Implementations}
+ 
+We prioritized our efforts on designing and implementing type classes for C\# in a fork\cite{Roslynfork}  of  Microsoft's open source Roslyn compiler\cite{Roslyn}, adopting a dedicated syntax loosely inspired  by C++ concepts\cite{cppconcepts}.
+%This is primarily because of interest from the C\# team, because C\# still has wider reach than F\# and because C\# is arguably in greater need of abstraction facilities.
+The F\# design and implementation~\cite{fshack} was the result of a 3-day hackathon aiming for a minimal viable product (with suboptimal syntax).
+Performance results are promising - we anticipated  .NET's code specialization to turn virtual calls to dictionary members into direct calls, but the JIT exceeded expectations and aggressively inlined those calls. 
+The JIT failed to eliminate  dictionary arguments that became dead after inlining; hoist dictionary allocations out of loops or do CSE on dictionary values. Fortunately, the latter two are suitable compiler optimizations.
+
+\newcommand{\tightlist}{}
+\newcommand{\sout}[1]{{#1}}
+\input{csconcepts}
+
+\section*{References}
+
+\bibliographystyle{elsarticle-num}
+
+\bibliography{sigproc} 
+\end{document}

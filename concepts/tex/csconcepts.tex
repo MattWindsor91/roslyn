@@ -1,0 +1,1355 @@
+
+
+\section{Concept C\#: Type Classes for the
+Masses}\label{concept-c-type-classes-for-the-masses}
+
+\emph{(A natural representation for type classes in .NET)}
+
+\begin{itemize}
+\tightlist
+\item
+  Claudio Russo (MSR)
+\item
+  Matt Windsor (York) (the amazing intern who did most of the hard C\#
+  work!)
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Haskell trumps C\#!}\label{haskell-trumps-c}
+
+\includegraphics{./images/comparison.png}
+
+--
+
+\subsection{\texorpdfstring{\textbf{How
+annoying!}}{How annoying!}}\label{how-annoying}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Introduction}\label{introduction}
+
+Type classes are an immensely popular and productive feature of Haskell.
+
+(Almost as good as modules, sometimes better!)
+
+So good, other languages have stolen them:
+
+\begin{itemize}
+\tightlist
+\item
+  \sout{C++ concepts} (for perf!)
+\item
+  Scala \emph{implicits}
+\item
+  Rust \emph{traits}
+\item
+  Swift \emph{protocols}
+\item
+  Coq (2 variants),Agda, Clean\ldots{}.
+\end{itemize}
+
+--
+
+But not C\# or F\#.
+
+--
+
+\includegraphics{./images/wecandoit.png}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{This talk:}\label{this-talk}
+
+We add type classes to C\# using a cheap coding trick that is
+
+\begin{itemize}
+\tightlist
+\item
+  type preserving (no yucky erasure)
+\item
+  efficient (thanks to .NET's run-time code specialiation)
+\item
+  essentially free (zero VM modifications required)
+\item
+  modular
+\end{itemize}
+
+The same technique works interoperably for F\# etc.
+
+For C\#, we call a type class a \emph{concept} and an instance an
+\emph{instance}.
+
+(In F\#, a type class is called \emph{trait} and an instance
+\emph{witness}).
+
+\emph{Concept C\#}\\
+and \emph{Trait F\#}\\
+are implemented as open source prototypes.
+
+\url{https://github.com/MattWindsor91/roslyn/blob/master/README.md}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Recap: Haskell Type
+Classes}\label{recap-haskell-type-classes}
+
+Type classes are an abstraction mechanism for describing generic
+algorithms.
+
+A \emph{type class} is a predicate on types that specifies a set of
+required operations by signature.
+
+A \emph{class instance} declares class membership of a type by
+implementing each operation.
+
+Type classes form hierarchies with \emph{inheritance} and
+\emph{subsumption}.
+
+A \emph{generic instance} defines \emph{families} of instances,
+predicated on class membership.
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Why should .NET care?}\label{why-should-.net-care}
+
+Instance declarations are decoupled from their types (unlike an OO
+class' interfaces).
+
+Type classes can have less overhead than OO abstractions. Even zero
+overhead.
+
+Type classes allow efficient abstraction over numeric types (sorely
+missing in .NET).
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\texorpdfstring{\sout{``Static Interface Methods for the
+CLR''}}{Static Interface Methods for the CLR}}\label{static-interface-methods-for-the-clr}
+
+.NET team previously proposed and prototyped ``Static Interface Methods
+for the CLR'',\\
+driven by customer demand for \emph{efficient} abstraction over numeric
+types.
+
+Why didn't this proposal make it?
+
+\begin{itemize}
+\tightlist
+\item
+  It required both runtime \& framework changes (too expensive).
+\item
+  It has soundness issues (too risky).
+\end{itemize}
+
+Our approach:
+
+\begin{itemize}
+\tightlist
+\item
+  requires \emph{no} changes to the runtime or frameworks.
+\item
+  Is \emph{sound by construction} (due to evidence passing).
+\end{itemize}
+
+\includegraphics{./images/staticinterfaces.png}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Generics Recap}\label{generics-recap}
+
+define \emph{Generics}: object-oriented lingo for \emph{F-bounded
+parametric polymorphism}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Java/JVM Generics}\label{javajvm-generics}
+
+Java generics are a fiction of the compiler's imagination.
+
+Compiled by ``erasing type parameters to their bounds or
+\lstinline!object!''.
+
+\emph{Erasure Semantics} means the Java VM knows nothing about type
+parameters, let alone their instantiations .
+
+All instantiations of generic type must have the same least common
+denominator representation (a heaper pointer).
+
+Because of erasure, Java has to rule out certain (arguably useful!)
+constructs:
+
+\begin{lstlisting}[language=Java]
+new T()         // illegal Java allocation
+new T[100]      // illegal Java array construction
+(T) o           // illegal Java cast 
+(List<Int>) o   // illegal Java cast
+List<Int>       // legal, but boxes every entry (fat and slow)
+List<int>       // illegal, instantiation not pointer sized 
+sizeof(List<Int>) == sizeof(List<Bool)) == sizeof(List<String>) 
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{C\#/F\#/.NET Generics}\label{cf.net-generics}
+
+In C\#, Generics are built into the vm (dedicated bytecodes \&\\
+type metadata).
+
+Compiled by ``passing types at runtime''.
+
+\emph{Type Passing} means the virtual machine knows about type
+parameters and their instantiations at runtime.
+
+The runtime is free to choose different sized representations for
+different types, even when used as type arguments.
+
+\begin{lstlisting}
+new T()         // legal C#
+new T[100]      // legal C#
+(T)o            // legal C#
+(List<int>) o   // legal C#
+List<byte>       // legal, note instantiation not pointer sized 
+sizeof(List<int>) =/= sizeof(List<bool>) =/= sizeof(List<String>)
+// even THIS is ok (though it arguably isn't...)
+if (typeof<T> == typeof<int>) 
+   Write("I just broke parametericity!");  
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Code Specialization}\label{code-specialization}
+
+Importantly, for performance, the CLR generates specialised code for
+particular instantiations (Kennedy \& Syme, 2001)
+
+Types comes in two flavours:
+
+\begin{itemize}
+\tightlist
+\item
+  \emph{value types} (scalar primitives \& user defined structures).\\
+  Cheaply stack-allocated, passed by value.
+\item
+  \emph{reference types} (objects \& arrays).\\
+  Expensively heap-allocated, passed by reference.
+\end{itemize}
+
+Type parameters range over/can be instantiated with both flavours.
+
+Code instantiated at \emph{reference} (ie. heap) types
+(\lstinline!object!,\lstinline!string!, \lstinline!int[]!) is
+\emph{shared} between all reference type instantiations (with some
+indirection\\
+for type specific operations) (to avoid code bloat).
+
+Code instantiated at \emph{value} types (\lstinline!int16!,
+\lstinline!int32!, \lstinline!point!) is \emph{specialized} for each
+instantiation.
+
+Code instantiated at mixtures of reference and non-reference types is
+``partially'' specialized (it's complicated).
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Benefits of
+Specialization}\label{benefits-of-specialization}
+
+Specialization typically happens \emph{just-in-time} (i.e.~at run time,
+at first unseen instantiation).
+
+Specialization replaces statically unknown representation sizes by
+dynamically known ones.
+
+Like static inlining, type specialization can turn indirect calls (to
+\emph{unknown} functions) into faster, direct calls to \emph{known}
+functions.
+
+Futhermore, \emph{known} functions can be \emph{inlined}, removing
+function call overhead altogether and exposing yet more optimizations.
+
+(An run time version of C++'s compile time type specialization.)
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\includegraphics{./images/CheapTrick.png}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Haskell Type Classes}\label{haskell-type-classes}
+
+We represent a Haskell type class, e.g.
+
+\begin{lstlisting}[language=Haskell]
+  class Eq a where 
+    (==) :: a -> a -> Bool
+\end{lstlisting}
+
+as a \emph{generic} C\# \emph{interface}:
+
+\begin{lstlisting}
+  interface Eq<A>
+  {
+    bool Equal(A a, A b);
+  }
+\end{lstlisting}
+
+\emph{Concept C\#} just adds a distinctive \lstinline!concept! keyword.
+
+\begin{lstlisting}
+  concept Eq<A>
+  {
+    bool Equal(A a, A b);
+  }
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Haskell Overloads}\label{haskell-overloads}
+
+The Haskell declaration of class \lstinline!Eq a! implicitly declares
+the overload:
+
+\begin{lstlisting}[language=Haskell]
+    (==) :: (Eq a) => a -> a -> Bool  -- note the added constraint!
+\end{lstlisting}
+
+In C\#, an overload can be encoded as a generic static method,
+parameterized by an additional type parameter \lstinline!'EqA!.
+
+C\#
+
+\begin{lstlisting}
+static class Overloads {
+  public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
+    default(EqA).Equal(a, b);
+}
+\end{lstlisting}
+
+The ordinary type parameter \lstinline!EqA! is:
+
+\begin{itemize}
+\tightlist
+\item
+  constrained to be a \lstinline!struct! (allocable on the stack);
+\item
+  bounded by its interface (\lstinline!EqA: Eq<A>!);
+\item
+  a named \emph{witness} for the constraint \lstinline!Eq<A>!.
+\end{itemize}
+
+(think \lstinline!Equal!:
+\lstinline!forall A, EqA : Eq<A>. A -> A -> bool!)
+
+\begin{quote}
+\emph{Haskell dictionary value \textasciitilde{} C\# witness type}
+\end{quote}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Types as Dictionaries}\label{types-as-dictionaries}
+
+Haskell's dictionary translation compiles == to a function with a
+implicit \emph{dictionary} argument
+
+\begin{lstlisting}[language=Haskell]
+    (==) :: (Eq a) => a -> a -> Bool  -- note the added constraint!
+    == (d::Eq A) (a::a) (b::a) = d.== a b  
+    --  ^ d is an implicit dictionary parameter providing d.==
+\end{lstlisting}
+
+Look closely at the C\# encoding of Haskell's (==)
+
+\begin{lstlisting}
+  public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
+    default(EqA).Equal(a, b);
+\end{lstlisting}
+
+Where is the \emph{value} parameter for the ``dictionary'' \lstinline!d!
+that Haskell would insert?
+
+--
+
+We don't need to pass dictionary values - just dictionary \emph{types}!
+
+In C\#, primitive \lstinline!default(T)! has type \lstinline!T! and
+returns a default value.
+
+Using \lstinline!default(T)!, we can always create a dictionary value
+from the corresponding dictionary type!
+
+(The \lstinline!struct! constraint ensures dictionary value are
+non-\lstinline!null!; no call can fail.)
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\ldots{} Types as
+Dictionaries}\label{types-as-dictionaries-1}
+
+Calling `default(T)' is gross (esp. when `T' is large)!
+
+Instead of the C\#:
+
+\begin{lstlisting}
+public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
+  default(EqA).Equal(a, b);
+\end{lstlisting}
+
+Concept C\# allows methods with `implicit' type parameters introducing
+static methods:
+
+\begin{lstlisting}
+public static bool Equal<A,implicit EqA>(A a,A b) where EqA:Eq<A> =>
+  Equal(a, b); 
+\end{lstlisting}
+
+and instead of \lstinline!default(EqA).Equal(a, b)! we can just write
+\lstinline!Equal(a,b)!.
+
+The \lstinline!implicit! keyword declares a dictionary type parameter
+whose:
+
+\begin{itemize}
+\tightlist
+\item
+  methods are available sans qualification;
+\item
+  instantiations are inferred from the user's concept/instance
+  hierarchy.
+\end{itemize}
+
+(NB \lstinline!EqA.Equal(a, b)! is ok too).
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Haskell Instances}\label{haskell-instances}
+
+A Haskell ground instance, eg.
+
+\begin{lstlisting}[language=Haskell]
+  instance Eq Integer where 
+    x == y                =  x `integerEq` y
+\end{lstlisting}
+
+is translated to a C\# \emph{struct} implementing a concept
+(i.e.~interface).
+
+\begin{lstlisting}
+  struct EqInt : Eq<int>  {
+    public bool Equal(int a, int b)  => a == b; 
+  }
+\end{lstlisting}
+
+The struct is empty (think \lstinline!unit!) but (!) has associated
+code.
+
+In Concept C\#, we use the instance keyword instead:
+
+\begin{lstlisting}
+  instance EqInt : Eq<int> {
+    public bool Equal(int a, int b)  => a == b; 
+  }
+\end{lstlisting}
+
+Altough they compile to struct declarations, instances are used
+specially, to instantiate\\
+\lstinline!implicit! type parameters.
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Generic Instances\ldots{}}\label{generic-instances}
+
+Haskell's generic instances define \emph{families} of instances.
+
+E.g.
+
+Given an equality type \lstinline!a!, we can define an equality\\
+on \emph{lists} of \lstinline!a! (written \lstinline![a]!):
+
+\begin{lstlisting}[language=Haskell]
+  instance (Eq a) => Eq [a] where 
+       nil == nil      = true
+    (a:as) == (b:bs)   = (a == b) && (as == bs)
+         _ == _        = false
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\ldots{}Generic Instances}\label{generic-instances-1}
+
+We can represent a Haskell \emph{parameterized instance} as a
+\emph{generic struct},\\
+implementing an interface but parameterized by constrained type
+parameters.
+
+Substituting, for simplicity, arrays for lists in CS we can write:
+
+\begin{lstlisting}
+struct EqArray<A, EqA> : Eq<A[]> where EqA : struct, Eq<A> {
+  public bool Equal(A[] a, A[] b) {
+    if (a.Length != b.Length) return false;
+    for (int i = 0; i < a.Length; i++)
+      if (!(default(EqA).Equal(a[i], b[i]))) return false;
+    return true;
+  }
+}
+\end{lstlisting}
+
+Concept C\#:
+
+\begin{lstlisting}
+instance EqArray<A, implicit EqA> : Eq<A[]> where EqA : Eq<A> {
+  bool Equal(A[] a, A[] b) {
+    if (a.Length != b.Length) return false;
+    for (int i = 0; i < a.Length; i++)
+      if (!Equal(a[i], b[i])) return false;
+    return true;
+  }
+}
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Constructing Evidence}\label{constructing-evidence}
+
+Derived instances allow Haskell to automatically construct instances as
+evidence for constraints:
+
+\begin{lstlisting}[language=Haskell]
+  --- Since Eq Integer and Eq a => Eq (List a),
+  --- we have Eq (List Integer) hence Eq (List (List Integer))
+   
+   [[1],[2,2],[3,3,3]] == [[3,3,3],[2,2],[1]]  -- typechecks!
+\end{lstlisting}
+
+In C\#, \lstinline!EqInt:Eq<int>! so
+\lstinline!EqArray<int,EqInt>:Eq<int[]>! so
+\lstinline!EqArray<int[],EqArray<int,EqInt>>:Eq<int[][]>!.
+
+In C\#, dictionary type arguments cannot be inferred\ldots{} they
+usually don't occur elsewhere in the type!
+
+\begin{lstlisting}
+   bool Equal<A,EqA>(A a, A b) where EqA: struct, Eq<A>;
+
+   Equal( {{1},{1,2},{1,2,3}}, {{1,2,3},{1,2},{1}} ) 
+     // type error, C# can't infer type arguments!
+   
+   Equal<int[][], EqArray<int[],EqArray<int,EqInt>> >
+    ( {{1},{1,2},{1,2,3}}, {{1,2,3},{1,2},{1}} ) 
+     // typechecks (but kills the programmer)
+\end{lstlisting}
+
+Programming in the encoding requires an intolerable amount of explicit
+type instantiation.
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Instance Inference}\label{instance-inference}
+
+No programmer should write this crap!
+
+In Concept C\#, we extend type argument inference so:
+
+\begin{itemize}
+\tightlist
+\item
+  ordinary and implicit type arguments can be omitted and inferred;
+\item
+  ordinary type arguments can be provided but implicit type arguments
+  can be omitted and inferred;
+\item
+  ordinary and implicit type arguments can be provided (when necessary).
+\end{itemize}
+
+Concept C\#:
+
+\begin{lstlisting}
+  bool Equal<A,implicit EqA>(A a, A b) where EqA:Eq<A>;
+
+  Equal({{1},{1,2},{1,2,3}},{{1,2,3},{1,2},{1}}) 
+   // type checks: implicit parameter inferrable from argument type
+
+  Equal< int[][] >({{1},{1,2},{1,2,3}},{{1,2,3},{1,2},{1}}) 
+   // also checks(used when C# type inference fails)
+
+  Equal< int[][], EqArray<int[],EqArray<int,EqInt>> >
+       ({{1},{1,2},{1,2,3}},{{1,2,3},{1,2},{1}})
+   // also checks (used when implicit inference fails).
+\end{lstlisting}
+
+\subsection{\texorpdfstring{`implicit' type parameters are inferred
+using instance driven backchaining, similar to
+Haskell.}{implicit type parameters are inferred using instance driven backchaining, similar to Haskell.}}\label{implicit-type-parameters-are-inferred-using-instance-driven-backchaining-similar-to-haskell.}
+
+\subsection{Derived Operations}\label{derived-operations}
+
+We translate Haskell's qualified types as extra, bounded type parameters
+denoting witness parameters.
+
+For example, equality based list membership in Haskell is defined as
+follows:
+
+\begin{lstlisting}[language=Haskell]
+  elem :: Eq a => a -> [a] -> bool
+  elem x []      = False
+  elem x (y:ys)  = x==y || (elem x ys)  
+\end{lstlisting}
+
+In C\#, we can define:
+
+\begin{lstlisting}
+static bool Elem<A,EqA>(A x, A[] ys) where EqA : struct, Eq<A> {
+  for (int i = 0; i < ys.Length; i++)  
+    if default(EqA).Equal(x, ys[i])) return true;
+  return false;
+}
+\end{lstlisting}
+
+Concept C\#:
+
+\begin{lstlisting}
+static bool Elem<A,implicit EqA>(A x, A[] ys) where EqA : Eq<A> {
+  for (int i = 0; i < ys.Length; i++) 
+    if (Equal(x, ys[i])) return true;
+  return false;
+}
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Example: Numeric types}\label{example-numeric-types}
+
+Haskell has a rich numeric hierarchy (think \lstinline!IArithmetic!)
+
+\begin{lstlisting}[language=Haskell]
+  class Num a where
+    Add: a -> a -> a
+    Mult: a -> a -> a
+    Neg: a -> a
+  
+  instance Num Integer where
+    Add a b = a + b
+    Mult a b = a * b
+    Neg a  = -a
+  
+  instance Num Float where 
+    ...
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\ldots{} Example: Numeric
+types}\label{example-numeric-types-1}
+
+C\#:
+
+\begin{lstlisting}
+interface Num<A> {
+    A Add(A a, A b);
+    A Mult(A a, A b);
+    A Neg(A a);
+  }
+struct NumInt : Num<int> {
+    public int Add(int a, int b) => a + b; 
+    public int Mult(int a, int b) => a * b; 
+    public int Neg(int a) => -a;
+}
+\end{lstlisting}
+
+Concept C\#:
+
+\begin{lstlisting}
+concept Num<A> {
+    A Add(A a, A b);
+    A Mult(A a, A b);
+    A Neg(A a);
+}
+instance NumInt : Num<int> {
+    int Add(int a, int b) => a + b; 
+    int Mult(int a, int b) => a * b; 
+    int Neg(int a) => -a;
+ }      
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Type Class Inheritance}\label{type-class-inheritance}
+
+Haskell supports (multiple) inheritance of super classes.
+
+\begin{lstlisting}[language=Haskell]
+  class (Eq a) => Num a where
+    Add: a -> a -> a
+    Mult: a -> a -> a
+    Neg: a -> a
+\end{lstlisting}
+
+\begin{itemize}
+\tightlist
+\item
+  Forall types \lstinline!a!, \lstinline!Num a! derives from
+  \lstinline!Eq a!.
+\end{itemize}
+
+(Is it just me or is Haskell's \lstinline!=>! the wrong-way round?).
+
+In C\#, we instead use (multiple) interface inheritance C\#:
+
+\begin{lstlisting}
+interface Num<A> : Eq<A> {
+  A Add(A a, A b);
+  A Mult(A a, A b);
+  A Neg(A a);
+}
+struct NumInt : Num<int> {
+  public bool Equal(int a, int b) => default(EqInt).Equal(a, b);
+  public int Add(int a, int b) => a + b;
+  public int Mult(int a, int b) => a * b; 
+  public int Neg(int a) => -a;
+}
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\ldots{} Inheritance}\label{inheritance}
+
+Concept C\#:
+
+\begin{lstlisting}
+concept Num<A> : Eq<A> {
+  A Add(A a, A b);
+  A Mult(A a, A b);
+  A Neg(A a);
+}
+instance NumInt : Num<int> {
+  bool Equal(int a, int b) => EqInt.Equal(a, b); 
+       // named instance EqInt useful here (c.f. Haskell)
+  int Add(int a, int b) => a + b;
+  int Mult(int a, int b) => a * b; 
+  int Neg(int a) => -a;
+}
+\end{lstlisting}
+
+\begin{itemize}
+\tightlist
+\item
+  Haskell class inheritance \textasciitilde{} C\# interface inheritance
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Subsumption \ldots{}}\label{subsumption}
+
+Subsumption derives (evidence for) a class from (evidence for) its
+subclasses.
+
+\begin{lstlisting}[language=Haskell]
+    equal :: (Eq a) => a -> a -> Bool
+
+    square :: (Num a) => a -> a 
+    square a = a * a
+
+    memsq :: (Num a) => [a] -> a -> Bool
+    memsq nil a = false
+    memsq (h:t) a =     equal h (square a) 
+                     -- ^^^^ legal coz Num a |= Eq a 
+                     || memsq h t
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{\ldots{} Subsumption}\label{subsumption-1}
+
+C\#:
+
+\begin{lstlisting}
+static bool Equal<EqA, A>(A a, A b) where EqA : struct, Eq<A> 
+  => default(EqA).Equal(a, b);
+static A Square<A,NumA>(A a) where NumA : struct, Num<A> 
+  => default(NumA).Mult(a, a);
+static bool MemSq<A,NumA>(A[] a_s, A a) where NumA: struct, Num<A>
+{ for (int i = 0; i < a_s.Length; i++) 
+    if (Equal<A,NumA>(a_s[i], Square<NumA, A>(a))) return true;
+             /*  ^^^^ legal only because NumA : Num<A> : Eq<A> */
+  return false;
+}
+\end{lstlisting}
+
+Concept C\#:
+
+\begin{lstlisting}
+static bool Equal<A,implicit EqA>(A a, A b) where EqA : Eq<A> 
+  => Equal(a, b);
+static A Square<A,implicit NumA>(A a) where NumA: Num<A> 
+  => Mult(a, a);
+static bool MemSq<A,implicit NumA>(A[] a_s, A a) where NumA: Num<A>
+{ for (int i = 0; i < a_s.Length; i++) 
+    if (Equal(a_s[i], Square(a))) return true;
+     /*  ^^^^ legal only because  NumA : Num<A> : Eq<A> */
+  return false;
+}
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{The logical perspective}\label{the-logical-perspective}
+
+\begin{itemize}
+\tightlist
+\item
+  concepts define \emph{predicates}
+\item
+  instances define \emph{axioms} \& \emph{inference rules}
+\item
+  well-formed types are \emph{proofs} of predicates
+\item
+  proof defines semantics
+\item
+  (choice of proof \textasciitilde{}\textasciitilde{} choice of
+  semantics)
+\end{itemize}
+
+\begin{lstlisting}
+concept Eq<A>                          Eq: Type -> Prop
+
+instance EqInt : Eq<int>               ------- (EqInt)
+                                       Eq<int>
+  
+instance EqArray<A,implicit EqA>       EqA:Eq<A>
+         where EqA:Eq<A>               --------- (EqArray<A,EqA>)
+         : Eq<A>                       Eq<A[]>
+\end{lstlisting}
+
+Haskell imposes restrictions that ensures proofs are unique and provide
+unambiguous \sout{code} semantics.
+
+Concept C\# could do this too \emph{or} be more flexible:
+
+\begin{itemize}
+\tightlist
+\item
+  insist on unambiguous inferences
+\item
+  but allow explicit disambiguation by instantiation (when inference
+  fails)
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\section{Perf}\label{perf}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{MSIL ByteCode}\label{msil-bytecode}
+
+\begin{lstlisting}
+public static bool Equal<A,EqA>(A a,A b) where EqA:struct,Eq<A> =>
+  default(EqA).Equal(a, b);
+\end{lstlisting}
+
+Compiles to (something like) CIL generic bytecode:
+
+\begin{lstlisting}[language=C]
+.method public static bool Equal<A, 
+                                 struct .ctor(class Eq<!!A>) EqA> 
+   (!!A a,!!A b) 
+   cil managed {
+   .locals init ([0] !!EqA loc1)
+   ldloca.s loc1      // stack allocate dictionary
+   initobj !!EqA      // initialize (empty) dictionary
+   ldloca.s loc1      // load address of dictionary onto stack
+   ldarg.0            // load argument 1   
+   ldarg.1            // load argument 2
+   constrained. !!EqA // pseudo virtual call through dictionary
+   callvirt instance bool class Eq<!!A>::Equal(!0, !0) 
+   ret
+}
+\end{lstlisting}
+
+The \lstinline!callvirt! instruction is typically used for an indirect
+call to a virtual method.
+
+When actual type \lstinline!EqA! is a struct, due to specialization, the
+callee is always known and often inlined.
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Performance}\label{performance}
+
+Evaluating a polynomial \lstinline!f(x:T) = x*x + x + (T)666! (in C\#),
+
+where \lstinline!T!=\lstinline!int!, \lstinline!double!,
+\lstinline!Class3D!, \lstinline!Struct3D!.
+
+(We evaluate \lstinline!f(x)! at \lstinline!1m! values of \lstinline!x!
+using the BenchmarkDotNet harness.)
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\begin{lstlisting}
+T ConceptGenericOpt<T, NumT>() where NumT : struct, Num<T> {
+  NumT NI = default(NumT);
+  T y = NI.FromInteger(0);
+  T c = NI.FromInteger(666);
+  for (int i = 0; i < n; i++) {
+    T x = NI.FromInteger(i);
+    y = NI.Plus(NI.Plus(NI.Mult(x,x),x), c);
+  }
+  return y;
+}
+\end{lstlisting}
+
+Competing implementations:
+
+\begin{itemize}
+\tightlist
+\item
+  Baseline: non generic, hand-specialized code (one per T)
+\item
+  AbstractClass: generic class based (OOP style)
+\item
+  Interface: generic interface based (OOP style)
+\item
+  Delegate: generic, first-class function based (OOP/FP style)
+\item
+  Instance: concept based (one dictionary value per call)
+\item
+  OptimizedInstance: optimized concept based (CSE on dictionaries)
+  (shown above)
+\item
+  OptimizedInstanceInlined: optimized concept based (CSE on
+  dictionaries) with C\# static operator definitions inlined in witness
+  declaration.
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Relative Performance at Scalar
+types}\label{relative-performance-at-scalar-types}
+
+\includegraphics{./images/perf1.png}
+
+(lower is better - ideally leftmost baseline (non-generic,
+hand-specialized code) equals rightmost generic concept code.
+
+At scalar primitive value type instantiations, concept performance is:
+
+\begin{itemize}
+\tightlist
+\item
+  as good as hand specialised code,
+\item
+  at least \emph{8-14x faster} than standard OO abstractions.
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Relative Performance at Compound
+Types}\label{relative-performance-at-compound-types}
+
+\includegraphics{./images/perf2.png}
+
+(lower is better - ideally leftmost baseline equals rightmost generic,
+concept code.
+
+At 3-field class and struct instantiations, performance can be competive
+with hand specialised code,\\
+1.4-8x faster than OO abstractions (if we are careful to inline).
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{x86 (DEBUG)}\label{x86-debug}
+
+This, in outline, is the x86 code jitted at
+\lstinline!NumInt:Num<int>!:\\
+The real code is \emph{64 lines} of suboptimal masm (yuck).
+
+\begin{lstlisting}
+    696:             NumT NI = default(NumT);
+    01140628  lea         eax,[ebp-10h]  
+    0114062B  mov         byte ptr [eax],0  
+    697:             T y = NI.FromInteger(0);
+... 01140633  call        dword ptr ds:[0C65E78h]   ...
+    698:             T c = NI.FromInteger(666);
+... 0114064A  call        dword ptr ds:[0C65E78h]   ...  
+    699:             for (int i = 0; i < n; i++) {
+    700:                 T x = NI.FromInteger(i);
+... 01140668  call        dword ptr ds:[0C65E78h]  ...
+    701:                 y = NI.Plus(NI.Plus(NI.Mult(x,x),x), c);
+... 0114068C  call        dword ptr ds:[0C65E8Ch]  ... 
+... 0114069E  call        dword ptr ds:[0C65EA0h]  ...  
+... 011406B0  call        dword ptr ds:[0C65EA0h]  ...
+    702:             }
+    703:             return y;
+    704:         }
+    011406E4  mov         eax,dword ptr [ebp-28h]  ... 
+... 011406ED  ret  
+\end{lstlisting}
+
+Notice this still has 4 \emph{call} instructions in the inner loop - the
+cost of abstraction!
+
+But this is debug code, the \emph{optimizing} JIT does \emph{much}
+better \ldots{}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{x86 (RELEASE)}\label{x86-release}
+
+This is the optimised code jitted at \lstinline!NumInt:Num<int>!.
+
+\begin{lstlisting}
+   696:             NumT NI = default(NumT);
+00007FFD8BF85110  sub         rsp,8  
+00007FFD8BF85114  xor         eax,eax  
+00007FFD8BF85116  mov         qword ptr [rsp],rax  
+00007FFD8BF8511A  mov         byte ptr [rsp],0  
+00007FFD8BF8511E  xor         eax,eax  
+   699:             for (int i = 0; i < n; i++) {
+00007FFD8BF85120  xor         edx,edx  
+00007FFD8BF85122  mov         ecx,dword ptr [7FFD8BFC3B38h]  
+00007FFD8BF85128  test        ecx,ecx  
+00007FFD8BF8512A  jle         00007FFD8BF8513E  
+00007FFD8BF8512C  mov         eax,edx  
+00007FFD8BF8512E  imul        eax,edx  
+00007FFD8BF85131  add         eax,edx  
+00007FFD8BF85133  add         eax,29Ah  
+00007FFD8BF85138  inc         edx  
+00007FFD8BF8513A  cmp         edx,ecx  
+00007FFD8BF8513C  jl          00007FFD8BF8512C  
+00007FFD8BF8513E  add         rsp,8  
+00007FFD8BF85142  ret  
+\end{lstlisting}
+
+\begin{itemize}
+\tightlist
+\item
+  Notice this is straight-up arithmetic code! Just 18 lines of masm (was
+  64 lines)
+\item
+  \emph{No} function calls/stack manipulation remain! \emph{Way faster}
+  than debug code.
+\item
+  Dictionary initialization remains but the dictionary is dead and could
+  be deleted)
+\item
+  Otherwise, code quality as good as hand-specialized code.
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Sugar: Operator
+Overloading}\label{sugar-operator-overloading}
+
+Even if efficient, few will write generic arithmetic code if they can't
+use numeric syntax, i.e.~operators.
+
+\begin{lstlisting}
+public A F<A,implicit NumA>(x) where NumA:Num<A> =>            
+   Plus( Plus( Mult(x,x), x),FromInteger(666)); // x*x + x + 666
+\end{lstlisting}
+
+Concept C\# supports natural operator declarations and definitions:
+
+\begin{lstlisting}
+concept Num<A> {
+        A operator +(A a, A b);
+        A operator *(A a, A b);
+        A operator -(A a);
+        implicit operator A(int i); //NYI
+}
+instance NumInt : Num<int> {
+        int operator +(int a, int b) => a + b;
+        int operator *(int a, int b) => a * b;
+        int operator -(int a) => -a;
+        implicit operator int(int i) => i;
+}
+public A F<A,implicit NumA>(x) where NumA:Num<A> =>         
+     x*x + x + 666; // much nicer!
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Syntactic Design Space}\label{syntactic-design-space}
+
+Option 1: Haskell-like - anonymous instances, anonymous dictionary
+parameters (never implemented)
+
+\begin{lstlisting}
+instance Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equals<A>(A a, A b) where Eq<A> => a == b;
+\end{lstlisting}
+
+Concise, but \ldots{}
+
+\begin{itemize}
+\tightlist
+\item
+  anonymous instances prevent explicit instantiation
+\item
+  MSIL needs a name for the instance, so do other languages
+\item
+  bad for interop
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{.. Syntactic Design
+Space\ldots{}}\label{syntactic-design-space-1}
+
+Option 2: Named instances with undeclared dictionary parameters
+
+\begin{lstlisting}
+instance EqInt : Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equal<A>(A a, A b) where EqA:Eq<A> => a == b;
+\end{lstlisting}
+
+\begin{itemize}
+\tightlist
+\item
+  \lstinline!EqA! only occurs in constraint, not type parameters
+\item
+  what if we need to instantiate \lstinline!EqA! at call sites? What is
+  \lstinline!Equal!'s true method signature?
+\item
+  better for interop
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{.. Syntactic Design Space}\label{syntactic-design-space-2}
+
+Option 3: Named instances, declared dictionary type parameters, marked
+\lstinline!implicit!
+
+\begin{lstlisting}
+instance EqInt : Eq<int> {
+    int Equal(int a, int b) => a == b;
+}
+static bool Equals<A,implicit EqA>(A a, A b) where EqA:Eq<A> =>
+    a == b;
+\end{lstlisting}
+
+\begin{itemize}
+\tightlist
+\item
+  unambiguous method signatures
+\item
+  best for interop
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Proposed Case Studies (In
+Progress)}\label{proposed-case-studies-in-progress}
+
+\begin{itemize}
+\tightlist
+\item
+  Micro-benchmarks for perf (sorting \& arithmetic)
+\item
+  Automatic Differentiation in C\#/F\#, overloading arithmetic to
+  compute function derivatives {[}1{]}
+\item
+  C\#, F\# renditions of Haskell Prelude, including numeric tower
+\item
+  C\# Generic QuickHull (one convex hull algorithm for generic vector
+  spaces)
+\end{itemize}
+
+Future:
+
+\begin{itemize}
+\tightlist
+\item
+  C\# Generic Graph Library - Haskell used to trump C\#, does it still?
+\item
+  Pickling
+\item
+  Normalization by Evaluation
+\item
+  \ldots{} any suggestions?
+\end{itemize}
+
+{[}1{]}{[}``Conal Elliot, Beautiful Differentiation''{]}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Summary}\label{summary}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule
+\begin{minipage}[b]{0.14\columnwidth}\raggedright\strut
+Haskell\strut
+\end{minipage} & \begin{minipage}[b]{0.11\columnwidth}\raggedright\strut
+C\#\strut
+\end{minipage} & \begin{minipage}[b]{0.11\columnwidth}\raggedright\strut
+Concept C\#\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+type class\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+generic interface\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+generic concept\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+instance\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+struct\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+instance\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+derived instance\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+generic struct\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+generic instance\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+type class inheritance\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+interface inheritance\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+concept inheritance\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+overloaded operation\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+constrained generic method\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+generic method with implicit type parameters\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+implicit dictionary construction\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+explicit type construction\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+implicit instance construction with explicit fallback\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+implicit dictionary passing\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+explicit type passing\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+implicit type passing with explicit fallback\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.14\columnwidth}\raggedright\strut
+constraint inference \& propagation\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+NA\strut
+\end{minipage} & \begin{minipage}[t]{0.11\columnwidth}\raggedright\strut
+NA\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Take Home}\label{take-home}
+
+\begin{itemize}
+\tightlist
+\item
+  Haskell 98's type classes have a type preserving .NET representation.
+\item
+  Dictionaries can be manually constructed and provided or, better,
+  inferred.
+\item
+  Generated code is efficient:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Dictionaries are empty (stack-allocated) structs.
+  \item
+    Dictionary allocation has zero runtime cost.
+  \item
+    CLR's code specialization ensures all dictionary calls are direct
+    calls at runtime. Many are in-lined.
+  \end{itemize}
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Future work:}\label{future-work}
+
+\begin{itemize}
+\tightlist
+\item
+  Exploit variance in interfaces (no Haskell analog).
+\item
+  Associated Types/Poor Man's Modules
+\item
+  JIT/Compiler comptimizations (sharing dictionary values, hoisting
+  stack initialization out of loops).
+\item
+  Tech transfer (hearts and minds)
+\item
+  Justified, pluggable Types
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Links \& References}\label{links-references}
+
+Concept C\#
+
+\begin{itemize}
+\tightlist
+\item
+  This document
+  \url{https://github.com/MattWindsor91/roslyn/blob/master/concepts/docs/csconcepts.md}
+\item
+  C\# fork \url{https://github.com/MattWindsor91/roslyn}
+\item
+  Roslyn \url{https://github.com/dotnet/roslyn}.
+\end{itemize}
+
+Trait F\#
+
+\begin{itemize}
+\tightlist
+\item
+  F\# version
+  \url{https://github.com/MattWindsor91/visualfsharp/blob/hackathon-vs/examples/fsconcepts.md}
+\item
+  F\# fork
+  \url{https://github.com/MattWindsor91/visualfsharp/tree/hackathon-vs}
+\end{itemize}
+
+Papers (tiny subset)
+
+\begin{itemize}
+\tightlist
+\item
+  D. Gregor, J. Jarvi, J. Siek, B. Stroustrup, G. Dos Reis, and A.
+  Lumsdaine. \emph{Concepts: Linguistic support for generic programming
+  in C++}, OOPSLA'06.\\
+  A. Kennedy and D. Syme. Design and implementation of generics for the
+  .net common language\\
+  runtime, PLDI 2001.
+\item
+  B. C. Oliveira, A. Moors, and M. Odersky. \emph{Type classes as
+  objects and implicits}, OOPSLA '10.
+\item
+  S . Peyton Jones. \emph{Haskell 98 language and libraries : the
+  revised report}. Cambridge University Press, May 2003.\\
+  P. Wadler and S. Blott. \emph{How to make ad-hoc polymorphism less ad
+  hoc}. POPL '89
+\item
+  D. Yu, A. Kennedy, and D. Syme. \emph{Formalization of generics for
+  the .Net Common language Runtime.}, POPL 2004.
+\end{itemize}
