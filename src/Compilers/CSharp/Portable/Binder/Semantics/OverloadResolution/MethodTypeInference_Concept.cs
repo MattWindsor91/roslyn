@@ -1298,6 +1298,65 @@ namespace Microsoft.CodeAnalysis.CSharp
             return true;
         }
 
+        private static ImmutableArray<(NamedTypeSymbol, NamedTypeSymbol)> ProvidedMutualNamedConcepts(NamedTypeSymbol x, NamedTypeSymbol y)
+        {
+            var arb = ArrayBuilder<(NamedTypeSymbol, NamedTypeSymbol)>.GetInstance();
+            foreach (var xc in x.AllInterfacesNoUseSiteDiagnostics)
+            {
+                if (xc.IsConcept)
+                {
+                    foreach (var yc in y.AllInterfacesNoUseSiteDiagnostics)
+                    {
+                        if (xc.OriginalDefinition == yc.OriginalDefinition)
+                        {
+                            arb.Add((xc, yc));
+                        }
+                    }
+                }
+            }
+            return arb.ToImmutableAndFree();
+        }
+
+        /// <summary>
+        /// Heuristically compares two type symbols to see if one is more
+        /// 'specific' than the other as a concept type argument.
+        /// </summary>
+        /// <param name="x">The first symbol to compare.</param>
+        /// <param name="y">The second symbol to compare.</param>
+        /// <returns>
+        /// A negative integer if <paramref name="x"/> is more specific;
+        /// a positive integer if <paramref name="y"/> is more specific;
+        /// zero if we can't make a decision either way.
+        /// </returns>
+        private static int CompareSpecificness(TypeSymbol x, TypeSymbol y)
+        {
+            // Named types are always more specific than type parameters.
+            if (x.Kind == SymbolKind.NamedType && y.Kind == SymbolKind.TypeParameter)
+            {
+                return -1;
+            }
+            if (x.Kind == SymbolKind.TypeParameter && y.Kind == SymbolKind.NamedType)
+            {
+                return 1;
+            }
+            // We don't (currently) report on things other than NTs and params.
+            // (TODO: tuples, etc)
+            if (x.Kind != SymbolKind.NamedType || y.Kind != SymbolKind.NamedType)
+            {
+                return 0;
+            }
+
+            var xn = (NamedTypeSymbol)x;
+            var yn = (NamedTypeSymbol)y;
+
+            // Non-generic named types are always more specific than generic ones.
+            var xg = xn.Arity == 0 ? -1 : 0;
+            var yg = xn.Arity == 0 ? 1 : 0;
+
+            // If x is generic, and y is not, the result will be -1 + 0 = -1.
+            // If y is generic, and x is not, the result will be  0 + 1 =  1.
+            return (xg + yg);
+        }
 
         /// <summary>
         /// Decides whether an instance is strictly less specific than another.
@@ -1317,41 +1376,37 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(moreSpecific.Instance != lessSpecific.Instance,
                 "Shouldn't be checking an instance against itself!");
 
-            // Currently, we do a very basic check based on non-witness type
-            // parameter counts.  This could be much more sophisticated.
-
-            bool instanceHasNonWitnesses = false;
-            foreach (var typeParam in GetTypeParametersOf(lessSpecific.Instance))
-            {
-                if (!typeParam.IsConceptWitness)
-                {
-                    instanceHasNonWitnesses = true;
-                    break;
-                }
-            }
-
-            // No need to do the below check if we don't have non-witness type
-            // params: the only way something can be more specific than us at
-            // the moment is if we do.
-            // This will need to go if we do something more sophisticated.
-            if (!instanceHasNonWitnesses)
+            var moreI = moreSpecific.Instance;
+            if (moreI.Kind != SymbolKind.NamedType)
             {
                 return false;
             }
+            var moreN = (NamedTypeSymbol)moreI;
 
-            // An instance is more specific if it has no non-witness type
-            // parameters, but the other instance does.
-            // So, we are less specific if we get through this check and see no
-            // non-witnesses.
-            foreach (var typeParam in GetTypeParametersOf(moreSpecific.Instance))
+            var lessI = lessSpecific.Instance;
+            if (lessI.Kind != SymbolKind.NamedType)
             {
-                if (!typeParam.IsConceptWitness)
+                return false;
+            }
+            var lessN = (NamedTypeSymbol)lessI;
+
+            bool atLeastOne = false;
+            foreach (var (xc, yc) in ProvidedMutualNamedConcepts(lessN.OriginalDefinition, moreN.OriginalDefinition))
+            {
+                for (var i = 0; i < xc.Arity; i++)
                 {
-                    return false;
+                    var cmp = CompareSpecificness(xc.TypeArguments[i], yc.TypeArguments[i]);
+                    if (cmp < 0) // xc more specific
+                    {
+                        return false;
+                    }
+                    if (cmp > 0) // yc more specific
+                    {
+                        atLeastOne = true;
+                    }
                 }
             }
-
-            return true;
+            return atLeastOne;
         }
 
         /// <summary>
