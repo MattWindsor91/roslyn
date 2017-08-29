@@ -66,6 +66,25 @@ namespace TinyLinq.SpecialisedInstances
     }
 
     /// <summary>
+    /// Count instance for filtered arrays.
+    /// </summary>
+    instance Count_ArrayWhere<TElem> : CCount<ArrayWhere<TElem>>
+    {
+        int Count(ref ArrayWhere<TElem> aw)
+        {
+            var count = 0;
+            foreach (var s in aw.source)
+            {
+                if (aw.filter(s))
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
+    /// <summary>
     /// Specialised instance for executing Where queries on an array.
     /// </summary>
     public instance Where_Array<TElem> : CWhere<TElem, TElem[], ArrayWhere<TElem>>

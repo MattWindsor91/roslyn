@@ -95,14 +95,14 @@ namespace TinyLinq
     }
 
     [Overlappable]
-    public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit B, implicit E> : CToArray<TEnum, TElem>
-        where B : CBounded<TEnum>
+    public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit S, implicit E> : CToArray<TEnum, TElem>
+        where S : CStaticCount<TEnum>
         where E : CEnumerator<TElem, TEnum>
     {
         TElem[] ToArray(TEnum e)
         {
             E.Reset(ref e);
-            var len = B.Bound(ref e);
+            var len = S.Count(ref e);
             var result = new TElem[len];
             for (var i = 0; i < len; i++)
             {

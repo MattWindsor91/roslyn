@@ -13,7 +13,7 @@ namespace TinyLinq
 {
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
     [LegacyJitX86Job, RyuJitX64Job]
-    public class Benchmarks
+    public class WarrenSumBenchmarks
     {
         public Func<int, bool> pred = item => item % 10 == 0;
         public Func<int, int> proj = item => item + 5;
@@ -23,7 +23,7 @@ namespace TinyLinq
 
         private static readonly int[] items = Enumerable.Range(0, 1000).ToArray();
 
-        [Benchmark(Baseline = true)]
+        [Benchmark(Baseline = true, Description = "Iterative")]
         public int Iterative()
         {
             var counter = 0;
@@ -34,7 +34,7 @@ namespace TinyLinq
             return counter;
         }
 
-        [Benchmark]
+        [Benchmark(Description = "Iterative (boxed)")]
         public int Iterative_Funcs()
         {
             var counter = 0;
@@ -45,7 +45,7 @@ namespace TinyLinq
             return counter;
         }
 
-        [Benchmark]
+        [Benchmark(Description = "LINQ")]
         public int Linq()
         {
             var results = items.Where(i => i % 10 == 0).Select(i => i + 5);
@@ -58,8 +58,7 @@ namespace TinyLinq
             return counter;
         }
 
-
-        [Benchmark]
+        [Benchmark(Description = "TinyLINQ (Unspec)")]
         public int TinyLinq_Unspecialised()
         {
             var results =
@@ -76,8 +75,7 @@ namespace TinyLinq
             return counter;
         }
 
-
-        [Benchmark]
+        [Benchmark(Description = "TinyLINQ (Spec)")]
         public int TinyLinq()
         {
             var results = items.CWhere((int i) => i % 10 == 0).CSelect((int i) => i + 5);
@@ -92,27 +90,69 @@ namespace TinyLinq
         }
     }
 
+    [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
+    [LegacyJitX86Job, RyuJitX64Job]
+    public class WarrenCountBenchmarks
+    {
+        private static readonly int[] items = Enumerable.Range(0, 1000).ToArray();
+        public Func<int, bool> pred = item => item % 10 == 0;
+
+        [Benchmark(Baseline = true, Description = "Iterative")]
+        public int Iterative()
+        {
+            var i = 0;
+            foreach (var item in items)
+            {
+                if (item % 10 == 0)
+                {
+                    i++;
+                }
+            }
+            return i;
+        }
+
+        [Benchmark(Description = "Iterative (boxed)")]
+        public int Iterative_Funcs()
+        {
+            var i = 0;
+            foreach (var item in items)
+            {
+                if (pred(i))
+                {
+                    i++;
+                }
+            }
+            return i;
+        }
+
+        [Benchmark(Description = "LINQ")]
+        public int Linq()
+        {
+            return items.Where(i => i % 10 == 0).Count();
+        }
+
+        [Benchmark(Description = "TinyLINQ (Unspec)")]
+        public int TinyLinq_Unspecialised()
+        {
+            return
+                items
+                .CWhere<int, int[], Where<ArrayCursor<int>, int>, Where_Enumerable<int, int[], ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .CCount();
+        }
+
+        [Benchmark(Description = "TinyLINQ (Spec)")]
+        public int TinyLinq()
+        {
+            return items.CWhere((int i) => i % 10 == 0).CCount();
+        }
+    }
 
     class Program
     {
         static void Main(string[] args)
         {
-            Benchmarks b = new Benchmarks();
-            Console.WriteLine(b.Iterative());
-            Console.WriteLine(b.Linq());
-            Console.WriteLine(b.TinyLinq());
-            /*System.Diagnostics.Debugger.Launch();
-            var b = new Benchmarks();
-            for (var i = 0; i < 100_000; i++)
-            {
-                b.TinyLinq();
-            }
-
-            
-            LinqSyntaxTests.Run();
-            DesugaredTests.Run();*/
-            BenchmarkRunner.Run<Benchmarks>();
-            
+            BenchmarkRunner.Run<WarrenSumBenchmarks>();
+            BenchmarkRunner.Run<WarrenCountBenchmarks>();    
         }
     }
 }
