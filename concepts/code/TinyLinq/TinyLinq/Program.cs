@@ -7,6 +7,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Attributes.Exporters;
+using TinyLinq.SpecialisedInstances;
 
 namespace TinyLinq
 {

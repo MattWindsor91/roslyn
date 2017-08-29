@@ -136,11 +136,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Concepts.cs" />
+    <Compile Include="Select.cs" />
+    <Compile Include="SelectMany.cs" />
+    <Compile Include="SpecialisedInstances\Array.cs" />
+    <Compile Include="Bounded.cs" />
+    <Compile Include="ToArray.cs" />
     <Compile Include="DesugaredTests.cs" />
     <Compile Include="LinqSyntaxTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SpecialisedInstances\Fusion.cs" />
+    <Compile Include="Where.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

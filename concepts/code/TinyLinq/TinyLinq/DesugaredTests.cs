@@ -5,6 +5,7 @@ using System.Concepts;
 using System.Concepts.Enumerable;
 using static System.Concepts.Enumerable.Instances;
 using System.Concepts.Showable;
+using TinyLinq.SpecialisedInstances;
 
 namespace TinyLinq
 {   
