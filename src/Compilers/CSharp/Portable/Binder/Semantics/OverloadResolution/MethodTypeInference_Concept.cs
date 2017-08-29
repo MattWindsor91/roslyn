@@ -1354,8 +1354,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             return true;
         }
 
+        /// <summary>
+        /// Decides whether one candidate mentions concept type arguments in
+        /// its witness constraints more than another.
+        /// </summary>
+        /// <param name="moreMentions">
+        /// The candidate that should be getting more mentions.
+        /// </param>
+        /// <param name="fewerMentions">
+        /// The candidate that should be getting fewer mentions (and will be
+        /// removed from tie-breaking if it does).
+        /// </param>
+        /// <returns>
+        /// True if <paramref name="moreMentions"/> mentions at least one
+        /// concept type argument more in its witness constraints than
+        /// <paramref name="fewerMentions"/>, and no argument less.
+        /// </returns>
         private static bool MoreWitnessMentions(Candidate moreMentions, Candidate fewerMentions)
         {
+            // NOTE: This is not a very robust heuristic.
+            //       Consider replacing with something more complete.
+
             void RecordTyparUsage(ref SmallDictionary<TypeParameterSymbol, int> counts, TypeSymbol witness)
             {
                 if (witness.Kind != SymbolKind.TypeParameter)
@@ -1371,7 +1390,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         continue;
                     }
 
-                    foreach (var t in ((NamedTypeSymbol)c).TypeArguments)
+                    foreach (var t in c.TypeArguments)
                     {
                         if (t.Kind == SymbolKind.TypeParameter)
                         {

@@ -269,6 +269,51 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return type.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)type).IsInstance;
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        // Type parameter getters
+
+        /// <summary>
+        /// If this symbol is a named type, gets its concept witness type
+        /// parameters.
+        /// </summary>
+        /// <param name="type">The type to investigate.</param>
+        /// <returns>
+        /// If this symbol is a named type, its concept witness type
+        /// parameters.
+        /// Otherwise, the empty array.
+        /// </returns>
+        public static ImmutableArray<TypeParameterSymbol> ConceptWitnessTypeParameters(this TypeSymbol type)
+        {
+            if (type.Kind != SymbolKind.NamedType)
+            {
+                return new ImmutableArray<TypeParameterSymbol>();
+            }
+
+            return ((NamedTypeSymbol)type).ConceptWitnesses;
+        }
+
+        /// <summary>
+        /// If this symbol is a named type, gets its associated type
+        /// parameters.
+        /// </summary>
+        /// <param name="type">The type to investigate.</param>
+        /// <returns>
+        /// If this symbol is a named type, its associated type
+        /// parameters.
+        /// Otherwise, the empty array.
+        /// </returns>
+        public static ImmutableArray<TypeParameterSymbol> AssociatedTypeParameters(this TypeSymbol type)
+        {
+            if (type.Kind != SymbolKind.NamedType)
+            {
+                return new ImmutableArray<TypeParameterSymbol>();
+            }
+
+            return ((NamedTypeSymbol)type).AssociatedTypes;
+        }
+
+        // End type parameter getters
+
         public static bool IsClassType(this TypeSymbol type)
         {
             Debug.Assert((object)type != null);
