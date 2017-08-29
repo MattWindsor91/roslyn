@@ -14,7 +14,8 @@ namespace TinyLinq
     [LegacyJitX86Job, RyuJitX64Job]
     public class Benchmarks
     {
-
+        public Func<int, bool> pred = item => item % 10 == 0;
+        public Func<int, int> proj = item => item + 5;
 
         // Original source:
         // https://gist.github.com/mattwarren/e528bc7c43864baad93ff33eb038005b
@@ -28,6 +29,17 @@ namespace TinyLinq
             foreach (var item in items)
             {
                 if (item % 10 == 0) counter += item + 5;
+            }
+            return counter;
+        }
+
+        [Benchmark]
+        public int Iterative_Funcs()
+        {
+            var counter = 0;
+            foreach (var item in items)
+            {
+                if (pred(item)) counter += proj(item);
             }
             return counter;
         }
