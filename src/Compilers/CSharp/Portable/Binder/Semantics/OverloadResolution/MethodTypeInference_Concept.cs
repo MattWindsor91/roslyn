@@ -101,6 +101,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         private readonly ImmutableHashSet<TypeParameterSymbol> _boundParams;
 
         /// <summary>
+        /// The available conversions in scope.
+        /// </summary>
+        private readonly ConversionsBase _conversions;
+
+        /// <summary>
         /// A candidate instance and its unification.
         /// </summary>
         [DebuggerDisplay("{GetDebuggerDisplay(), nq}")]
@@ -187,10 +192,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// The set of all type parameters in scope that are bound, and
         /// cannot be substituted out in unification.
         /// </param>
-        public ConceptWitnessInferrer(ImmutableArray<TypeSymbol> allInstances, ImmutableHashSet<TypeParameterSymbol> boundParams)
+        /// <param name="conversions">
+        /// The conversions in scope at the point where we are doing inference.
+        /// </param>
+        public ConceptWitnessInferrer(ImmutableArray<TypeSymbol> allInstances, ImmutableHashSet<TypeParameterSymbol> boundParams, ConversionsBase conversions)
         {
             _allInstances = allInstances;
             _boundParams = boundParams;
+            _conversions = conversions;
         }
 
         #region Setup from binder
@@ -216,7 +225,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // TODO: Ideally this should be cached at some point, perhaps on the
             // compilation or binder.
             (var allInstances, var boundParams) = SearchScopeForInstancesAndParams(binder);
-            return new ConceptWitnessInferrer(allInstances, boundParams);
+            return new ConceptWitnessInferrer(allInstances, boundParams, binder.Conversions);
         }
 
         /// <summary>
@@ -1102,6 +1111,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     continue;
                 }
+
+                // Finally, check constraints on the fully fixed instance.
+                // We do this here in case the constraint satisfaction depends
+                // on the recursive inference.
+                if (!fixedInstance.Instance.CheckAllConstraints(_conversions))
+                {
+                    continue;
+                }
+
                 secondPassInstanceBuilder.Add(fixedInstance);
             }
             return secondPassInstanceBuilder.ToImmutableAndFree();
