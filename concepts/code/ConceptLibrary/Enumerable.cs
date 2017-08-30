@@ -45,6 +45,17 @@ namespace System.Concepts.Enumerable
     /// </summary>
     public static class Instances
     {
+        [Overlappable]
+        public instance Enumerable_IEnumerable<TColl, TElem> : CEnumerable<TColl, TElem, IEnumerator<TElem>>
+            where TColl : IEnumerable<TElem>
+        {
+            IEnumerator<TElem> GetEnumerator(TColl coll) => coll.GetEnumerator();
+            void Reset(ref IEnumerator<TElem> e) => e.Reset();
+            bool MoveNext(ref IEnumerator<TElem> e) => e.MoveNext();
+            TElem Current(ref IEnumerator<TElem> e) => e.Current;
+            void Dispose(ref IEnumerator<TElem> e) => e.Dispose();
+        }
+
         #region Arrays
 
         /// <summary>
@@ -103,28 +114,17 @@ namespace System.Concepts.Enumerable
         #region Generic collections
 
         /// <summary>
-        /// <see cref="CEnumerator{E, S}"/> instance for list enumerators.
-        /// </summary>
-        public instance Enumerator_ListEnumerator<TElem> : CEnumerator<TElem, List<TElem>.Enumerator>
-        {
-            void Reset(ref List<TElem>.Enumerator enumerator) => ((IEnumerator<TElem>) enumerator).Reset();
-            bool MoveNext(ref List<TElem>.Enumerator enumerator) => enumerator.MoveNext();
-            TElem Current(ref List<TElem>.Enumerator enumerator) => enumerator.Current;
-            void Dispose(ref List<TElem>.Enumerator enumerator) => enumerator.Dispose();
-        }
-
-        /// <summary>
         /// <see cref="CEnumerable{C, E, S}"/> instance for lists,
         /// using list enumerators.
         /// </summary>
-        [Overlapping]  // intended to overlap Enumerator_ArrayCursor
         public instance Enumerable_List<TElem> : CEnumerable<List<TElem>, TElem, List<TElem>.Enumerator>
         {
             List<TElem>.Enumerator GetEnumerator(List<TElem> list) => list.GetEnumerator();
-            void Reset(ref List<TElem>.Enumerator enumerator) => Enumerator_ListEnumerator<TElem>.Reset(ref enumerator);
-            bool MoveNext(ref List<TElem>.Enumerator enumerator) => Enumerator_ListEnumerator<TElem>.MoveNext(ref enumerator);
-            TElem Current(ref List<TElem>.Enumerator enumerator) => Enumerator_ListEnumerator<TElem>.Current(ref enumerator);
-            void Dispose(ref List<TElem>.Enumerator enumerator) => Enumerator_ListEnumerator<TElem>.Dispose(ref enumerator);
+
+            void Reset(ref List<TElem>.Enumerator enumerator) => ((IEnumerator<TElem>)enumerator).Reset();
+            bool MoveNext(ref List<TElem>.Enumerator enumerator) => enumerator.MoveNext();
+            TElem Current(ref List<TElem>.Enumerator enumerator) => enumerator.Current;
+            void Dispose(ref List<TElem>.Enumerator enumerator) => enumerator.Dispose();
         }
 
         #endregion Generic collections
