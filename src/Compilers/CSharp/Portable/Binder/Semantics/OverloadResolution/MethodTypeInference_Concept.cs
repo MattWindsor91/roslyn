@@ -572,9 +572,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 bool conceptProgress = false;
                 if (!conceptParams.IsEmpty)
                 {
-                    var newConceptParameters = TryInferConceptWitnesses(conceptParams, existingFixedMap, chain, ref currentSubstitution, ref useSiteDiagnostics);
+                    (var newConceptParameters, var newSubstitution) = TryInferConceptWitnesses(conceptParams, currentSubstitution, chain, ref useSiteDiagnostics);
                     conceptProgress = conceptProgress || (newConceptParameters.Length < conceptParams.Length);
                     conceptParams = newConceptParameters;
+                    currentSubstitution = newSubstitution;
                 }
 
                 inferredAll = conceptParams.IsEmpty;
@@ -622,12 +623,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// The set of instances we've passed through recursively to get here,
         /// used to abort recursive calls if they will create cycles.
         /// </param>
-        /// <param name="currentSubstitution">
-        /// The current set of substitutions that have been made in this round
-        /// of inference, to which this method will add any unifications made
-        /// when fixing the current concept witnesses.  This is then used to
-        /// fix associated type parameters.
-        /// </param>
         /// <param name="useSiteDiagnostics">
         /// An optional diagnostics bag used to report details on failing inference.
         /// </param>
@@ -635,18 +630,20 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// An array of all concept-witness type parameters that have
         /// not been inferred this time.  These might become inferrable once
         /// some associated types have been fixed.
+        /// Also, the resulting new substitution after fixing the concept parameters.
         /// </returns>
-        private ImmutableArray<TypeParameterSymbol> TryInferConceptWitnesses(
+        private (ImmutableArray<TypeParameterSymbol>, ImmutableTypeMap) TryInferConceptWitnesses(
             ImmutableArray<TypeParameterSymbol> conceptParameters,
             ImmutableTypeMap parentSubstitution,
             ImmutableHashSet<NamedTypeSymbol> chain,
-            ref ImmutableTypeMap currentSubstitution,
             ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
-            Debug.Assert(currentSubstitution != null,
+            Debug.Assert(parentSubstitution != null,
                 "shouldn't have a null substitution here");
 
             var remainingConceptParameters = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+
+            var currentSubstitution = parentSubstitution;
 
             for (var i = 0; i < conceptParameters.Length; i++)
             {
@@ -697,7 +694,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 currentSubstitution = currentSubstitution.Compose(candidate.Unification);
             }
 
-            return remainingConceptParameters.ToImmutableAndFree();
+            return (remainingConceptParameters.ToImmutableAndFree(), currentSubstitution);
         }
 
         /// <summary>

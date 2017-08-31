@@ -32,12 +32,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal ImmutableTypeMap ToUnification()
         {
             /* @MattWindsor91 (Concept-C# 2017)
-             *
+             * 
              * We can't just take 'Mapping' directly, as it might not be
              * in a normal form.  For example, it might map E to char, and
              * S to (int, string, E).  Do a quick pass of normalisation to fix
              * this.
-             *
+             * 
              * CONSIDER: performance impact.
              * CONSIDER: pushing this sort of normalisation up into the stack.
              */
@@ -122,7 +122,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             foreach (var theirKey in dict.Keys)
             {
-                // This means the other mapping contained this, 
+                // This means the other mapping contained this.
                 if (result.Mapping.ContainsKey(theirKey))
                 {
                     continue;
