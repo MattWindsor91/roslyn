@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -28,7 +29,34 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <returns>
         /// The unification corresponding to this type map.
         /// </returns>
-        internal ImmutableTypeMap ToUnification() => new ImmutableTypeMap(Mapping);
+        internal ImmutableTypeMap ToUnification()
+        {
+            /* @MattWindsor91 (Concept-C# 2017)
+             *
+             * We can't just take 'Mapping' directly, as it might not be
+             * in a normal form.  For example, it might map E to char, and
+             * S to (int, string, E).  Do a quick pass of normalisation to fix
+             * this.
+             *
+             * CONSIDER: performance impact.
+             * CONSIDER: pushing this sort of normalisation up into the stack.
+             */
+            var prev = SmallDictionary<TypeParameterSymbol, TypeWithModifiers>.Empty;
+            var next = Mapping;
+            var progress = true;
+            while (progress)
+            {
+                prev = next;
+                next = new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>();
+                progress = false;
+                foreach (var mapping in prev)
+                {
+                    next[mapping.Key] = mapping.Value.SubstituteType(this);
+                    progress |= (next[mapping.Key] != prev[mapping.Key]);
+                }
+            };
+            return new ImmutableTypeMap(next);
+        }
     }
 
     /// <summary>
@@ -53,6 +81,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal ImmutableTypeMap(SmallDictionary<TypeParameterSymbol, TypeWithModifiers> dict)
             : base(new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>(dict, EqualityComparer<TypeParameterSymbol>.Default))
         {
+            Debug.Assert(IsNormalised, "map should be normalised on construction");
         }
 
         /// <summary>
@@ -76,6 +105,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal ImmutableTypeMap ComposeDict(SmallDictionary<TypeParameterSymbol, TypeWithModifiers> dict)
         {
+            Debug.Assert(IsNormalised, "map should be normalised before composition");
+
             // TODO: efficiency
             var dictM = new ImmutableTypeMap(dict);
 
@@ -87,15 +118,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // 2) For all mappings in dict, add them back in if they are not already in the new mapping.
             foreach (var ourKey in Mapping.Keys)
             {
-                result.Mapping.Add(ourKey, Mapping[ourKey].CustomModifiers.IsEmpty ? dictM.SubstituteType(Mapping[ourKey].AsTypeSymbolOnly()) : Mapping[ourKey]);
+                result.Mapping.Add(ourKey, Mapping[ourKey].SubstituteType(dictM));
             }
             foreach (var theirKey in dict.Keys)
             {
                 // This means the other mapping contained this, 
-                if (result.Mapping.ContainsKey(theirKey)) continue;
+                if (result.Mapping.ContainsKey(theirKey))
+                {
+                    continue;
+                }
                 result.Mapping.Add(theirKey, dict[theirKey]);
             }
 
+            Debug.Assert(IsNormalised, "map should be normalised after composition");
             return result;
         }
 
@@ -118,6 +153,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var sd = new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>();
             sd.Add(key, value);
             return ComposeDict(sd);
+        }
+
+        /// <summary>
+        /// Returns true if the type map is in a normal form, eg. its values
+        /// do not change under other substitutions in the type map.
+        /// </summary>
+        private bool IsNormalised
+        {
+            get
+            {
+                foreach (var map in Mapping)
+                {
+                    if (map.Value.SubstituteType(this) != map.Value)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
         }
     }
 }
