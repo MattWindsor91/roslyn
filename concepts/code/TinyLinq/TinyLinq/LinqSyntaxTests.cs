@@ -17,7 +17,7 @@ namespace TinyLinq
             return M.Select(This, f);
         }
 
-        private static D Where<[AssociatedType]T, [AssociatedType]D, implicit M>(this List<T> This, Func<T, bool> f) where M : CWhere<T, List<T>, D>
+        private static D Where<[AssociatedType]T, [AssociatedType]D, implicit M>(this List<T> This, Func<T, bool> f) where M : CWhere<List<T>, T, D>
         {
             return M.Where(This, f);
         }
@@ -35,7 +35,7 @@ namespace TinyLinq
             return M.Select(This, f);
         }
 
-        private static D Where<[AssociatedType]T, [AssociatedType] D, implicit M>(this T[] This, Func<T, bool> f) where M : CWhere<T, T[], D>
+        private static D Where<[AssociatedType]T, [AssociatedType] D, implicit M>(this T[] This, Func<T, bool> f) where M : CWhere<T[], T, D>
         {
             return M.Where(This, f);
         }

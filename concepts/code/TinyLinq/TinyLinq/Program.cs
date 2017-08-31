@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Prelude;
 using System.Concepts.Enumerable;
 using static System.Concepts.Enumerable.Instances;
 using System.Linq;
@@ -63,13 +64,13 @@ namespace TinyLinq
         {
             var results =
                 items
-                .CWhere<int, int[], Where<ArrayCursor<int>, int>, Where_Enumerable<int, int[], ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], int, ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
                 .CSelect((int i) => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
-            while (CEnumerator<int, SelectOfWhere<ArrayCursor<int>, int, int>>.MoveNext(ref results))
+            while (CEnumerator<SelectOfWhere<ArrayCursor<int>, int, int>>.MoveNext(ref results))
             {
-                counter += CEnumerator<int, SelectOfWhere<ArrayCursor<int>, int, int>>.Current(ref results);
+                counter += CEnumerator<SelectOfWhere<ArrayCursor<int>, int, int>>.Current(ref results);
             }
 
             return counter;
@@ -81,13 +82,17 @@ namespace TinyLinq
             var results = items.CWhere((int i) => i % 10 == 0).CSelect((int i) => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
-            while (CEnumerator<int, ArraySelectOfWhere<int, int>>.MoveNext(ref results))
+            while (CEnumerator<ArraySelectOfWhere<int, int>, int>.MoveNext(ref results))
             {
-                counter += CEnumerator<int, ArraySelectOfWhere<int, int>>.Current(ref results);
+                counter += CEnumerator<ArraySelectOfWhere<int, int>, int>.Current(ref results);
             }
 
             return counter;
         }
+
+        [Benchmark(Description = "TinyLINQ (Sum)")]
+        public int TinyLinq_Sum() =>
+            items.CWhere((int i) => i % 10 == 0).CSelect((int i) => i + 5).CSum();
     }
 
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
@@ -136,7 +141,7 @@ namespace TinyLinq
         {
             return
                 items
-                .CWhere<int, int[], Where<ArrayCursor<int>, int>, Where_Enumerable<int, int[], ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], int, ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
                 .CCount();
         }
 

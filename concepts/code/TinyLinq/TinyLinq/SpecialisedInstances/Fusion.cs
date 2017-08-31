@@ -43,9 +43,21 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public struct WhereOfSelect<TEnum, TElem, TProj>
     {
+        /// <summary>
+        /// The source enumerator.
+        /// </summary>
         public TEnum source;
+        /// <summary>
+        /// The projection function from the Select.
+        /// </summary>
         public Func<TElem, TProj> projection;
+        /// <summary>
+        /// The filtering predicate from the Where.
+        /// </summary>
         public Func<TProj, bool> filter;
+        /// <summary>
+        /// The cached current item.
+        /// </summary>
         public TProj current;
     }
 
@@ -53,8 +65,8 @@ namespace TinyLinq.SpecialisedInstances
     /// Enumerator instance for fused Wheres on unspecialised Selects.
     /// </summary>
     public instance Enumerator_WhereSelect<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, WhereOfSelect<TEnum, TElem, TProj>>
-        where E : CEnumerator<TElem, TEnum>
+        : CEnumerator<WhereOfSelect<TEnum, TElem, TProj>, TProj>
+        where E : CEnumerator<TEnum, TElem>
     {
         void Reset(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
 
@@ -81,7 +93,7 @@ namespace TinyLinq.SpecialisedInstances
     /// Instance reducing a Where on a Select to a single composed
     /// qyery.
     /// </summary>
-    public instance Where_Select<TEnum, TElem, TProj> : CWhere<TProj, Select<TEnum, TElem, TProj>, WhereOfSelect<TEnum, TElem, TProj>>
+    public instance Where_Select<TEnum, TElem, TProj> : CWhere<Select<TEnum, TElem, TProj>, TProj, WhereOfSelect<TEnum, TElem, TProj>>
     {
         WhereOfSelect<TEnum, TElem, TProj> Where(Select<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
             new WhereOfSelect<TEnum, TElem, TProj>
@@ -111,15 +123,30 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public struct SelectOfWhere<TEnum, TElem, TProj>
     {
+        /// <summary>
+        /// The original source enumerator.
+        /// </summary>
         public TEnum source;
+        /// <summary>
+        /// The filtering predicate from the Where query.
+        /// </summary>
         public Func<TElem, bool> filter;
+        /// <summary>
+        /// The projection function from the Select query.
+        /// </summary>
         public Func<TElem, TProj> projection;
+        /// <summary>
+        /// The cached current item.
+        /// </summary>
         public TProj current;
     }
 
+    /// <summary>
+    /// Enumerator instance for fused Selects on unspecialised Wheres.
+    /// </summary>
     public instance Enumerator_SelectWhere<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, SelectOfWhere<TEnum, TElem, TProj>>
-        where E : CEnumerator<TElem, TEnum>
+        : CEnumerator<SelectOfWhere<TEnum, TElem, TProj>, TProj>
+        where E : CEnumerator<TEnum, TElem>
     {
         void Reset(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Reset(ref sw.source);
 

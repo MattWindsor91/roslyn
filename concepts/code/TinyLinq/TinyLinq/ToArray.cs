@@ -80,7 +80,7 @@ namespace TinyLinq
     /// </summary>
     [Overlappable]
     public instance ToArray_UnboundedEnumerator<TEnum, TElem, implicit E> : CToArray<TEnum, TElem>
-        where E : CEnumerator<TElem, TEnum>
+        where E : CEnumerator<TEnum, TElem>
     {
         TElem[] ToArray(TEnum e)
         {
@@ -97,7 +97,7 @@ namespace TinyLinq
     [Overlappable]
     public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit S, implicit E> : CToArray<TEnum, TElem>
         where S : CStaticCount<TEnum>
-        where E : CEnumerator<TElem, TEnum>
+        where E : CEnumerator<TEnum, TElem>
     {
         TElem[] ToArray(TEnum e)
         {

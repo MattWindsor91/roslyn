@@ -35,7 +35,7 @@ namespace TinyLinq
     /// where we just reset and spin the enumerator.
     /// </summary>
     [Overlappable]
-    public instance Count_Enumerator<TEnum, [AssociatedType]TElem, implicit E> : CCount<TEnum> where E : CEnumerator<TElem, TEnum>
+    public instance Count_Enumerator<TEnum, [AssociatedType]TElem, implicit E> : CCount<TEnum> where E : CEnumerator<TEnum, TElem>
     {
         int Count(ref TEnum t)
         {

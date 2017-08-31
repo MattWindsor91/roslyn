@@ -31,9 +31,9 @@ namespace TinyLinq
     /// <summary>
     /// Enumerator instance for <see cref="Select{TEnum, TElem, TProj}"/>.
     /// </summary>
-    public instance Enumerator_Select<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<TProj, Select<TEnum, TElem, TProj>>
-        where E : CEnumerator<TElem, TEnum>
+    public instance Enumerator_Select<TEnum, TElem, TProj, implicit E>
+        : CEnumerator<Select<TEnum, TElem, TProj>, TProj>
+        where E : CEnumerator<TEnum, TElem>
     {
         void Reset(ref Select<TEnum, TElem, TProj> s) => E.Reset(ref s.source);
 
@@ -58,9 +58,9 @@ namespace TinyLinq
     /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerator<TElem, TProj, TEnum, implicit E>
+    public instance Select_Enumerator<TEnum, TElem, TProj, implicit E>
         : CSelect<TElem, TProj, TEnum, Select<TEnum, TElem, TProj>>
-        where E : CEnumerator<TElem, TEnum>
+        where E : CEnumerator<TEnum, TElem>
     {
         Select<TEnum, TElem, TProj> Select(TEnum t, Func<TElem, TProj> projection) =>
             new Select<TEnum, TElem, TProj>
@@ -76,9 +76,9 @@ namespace TinyLinq
     /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerable<TElem, TProj, [AssociatedType] TSrc, [AssociatedType] TDst, implicit E>
+    public instance Select_Enumerable<TSrc, [AssociatedType] TElem, TProj, [AssociatedType] TDst, implicit E>
         : CSelect<TElem, TProj, TSrc, Select<TDst, TElem, TProj>>
-        where E : CEnumerable<TSrc, TElem, TDst>
+        where E : CEnumerable<TSrc, TDst, TElem>
     {
         Select<TDst, TElem, TProj> Select(TSrc t, Func<TElem, TProj> projection) =>
             new Select<TDst, TElem, TProj>

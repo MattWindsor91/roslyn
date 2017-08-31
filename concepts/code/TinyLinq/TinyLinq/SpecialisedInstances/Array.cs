@@ -17,16 +17,31 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public struct ArrayWhere<TElem>
     {
+        /// <summary>
+        /// The source array.
+        /// </summary>
         public TElem[] source;
+        /// <summary>
+        /// The filtering predicate.
+        /// </summary>
         public Func<TElem, bool> filter;
+        /// <summary>
+        /// The current index of the enumerator.
+        /// </summary>
         public int lo;
+        /// <summary>
+        /// The length of the array.
+        /// </summary>
         public int hi;
     }
 
     /// <summary>
     /// Enumerator instance for filtered arrays.
     /// </summary>
-    public instance Enumerator_ArrayWhere<TElem> : CEnumerator<TElem, ArrayWhere<TElem>>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public instance Enumerator_ArrayWhere<TElem> : CEnumerator<ArrayWhere<TElem>, TElem>
     {
         void Reset(ref ArrayWhere<TElem> enumerator)
         {
@@ -68,6 +83,9 @@ namespace TinyLinq.SpecialisedInstances
     /// <summary>
     /// Count instance for filtered arrays.
     /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
     instance Count_ArrayWhere<TElem> : CCount<ArrayWhere<TElem>>
     {
         int Count(ref ArrayWhere<TElem> aw)
@@ -87,7 +105,10 @@ namespace TinyLinq.SpecialisedInstances
     /// <summary>
     /// Specialised instance for executing Where queries on an array.
     /// </summary>
-    public instance Where_Array<TElem> : CWhere<TElem, TElem[], ArrayWhere<TElem>>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public instance Where_Array<TElem> : CWhere<TElem[], TElem, ArrayWhere<TElem>>
     {
         ArrayWhere<TElem> Where(TElem[] src, Func<TElem, bool> f) =>
             new ArrayWhere<TElem> { source = src, filter = f, lo = -1, hi = src.Length };
@@ -97,20 +118,54 @@ namespace TinyLinq.SpecialisedInstances
 
     #region Select of Where
 
+    /// <summary>
+    /// Specialised enumerator for executing Select queries on Where queries
+    /// that originated from an array.
+    /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of elements exiting the select.
+    /// </typeparam>
     public struct ArraySelectOfWhere<TElem, TProj>
     {
+        /// <summary>
+        /// The source array.
+        /// </summary>
         public TElem[] source;
+        /// <summary>
+        /// The filtering predicate from the Where query.
+        /// </summary>
         public Func<TElem, bool> filter;
+        /// <summary>
+        /// The projection function from the Select query.
+        /// </summary>
         public Func<TElem, TProj> projection;
+        /// <summary>
+        /// The current array index.
+        /// </summary>
         public int lo;
+        /// <summary>
+        /// The cached length of the array.
+        /// </summary>
         public int hi;
+        /// <summary>
+        /// The cached current item.
+        /// </summary>
         public TProj current;
     }
 
     /// <summary>
     /// Enumerator instance for selections of filtered arrays.
     /// </summary>
-    public instance Enumerator_ArraySelectOfWhere<TElem, TProj> : CEnumerator<TProj, ArraySelectOfWhere<TElem, TProj>>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of elements exiting the select.
+    /// </typeparam>
+    public instance Enumerator_ArraySelectOfWhere<TElem, TProj> : CEnumerator<ArraySelectOfWhere<TElem, TProj>, TProj>
     {
         void Reset(ref ArraySelectOfWhere<TElem, TProj> sw)
         {
@@ -146,8 +201,14 @@ namespace TinyLinq.SpecialisedInstances
 
     /// <summary>
     /// Instance reducing a Select on a filtered array cursor to a single
-    /// composed <see cref="SelectedFilteredArrayCursor{TElem, TProj}"/>.
+    /// composed <see cref="ArraySelectOfWhere{TElem, TProj}"/>.
     /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of elements exiting the select.
+    /// </typeparam>
     public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhere<TElem>, ArraySelectOfWhere<TElem, TProj>>
     {
         ArraySelectOfWhere<TElem, TProj> Select(ArrayWhere<TElem> t, Func<TElem, TProj> projection) =>

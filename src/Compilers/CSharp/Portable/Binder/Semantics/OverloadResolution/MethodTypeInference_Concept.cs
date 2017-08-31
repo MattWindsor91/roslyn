@@ -321,7 +321,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Filters a set of type parameters into a fixed map, unfixed concept
         /// witnesses and unfixed associated types, and checks that there are
-        /// no other unfixed parameters. 
+        /// no other unfixed parameters.
         /// </summary>
         /// <param name="typeParameters">
         /// The set of type parameters being inferred.
@@ -393,7 +393,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     // If we got here, the type parameter is unfixed, but is
                     // neither a concept witness nor an associated type.  Our
-                    // inferrer can't possibly fix these, so we give up. 
+                    // inferrer can't possibly fix these, so we give up.
                     wBuilder.Free();
                     aBuilder.Free();
                     return (false, ImmutableArray<TypeParameterSymbol>.Empty, ImmutableArray<TypeParameterSymbol>.Empty, new ImmutableTypeMap());
@@ -575,6 +575,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                     (var newConceptParameters, var newSubstitution) = TryInferConceptWitnesses(conceptParams, currentSubstitution, chain, ref useSiteDiagnostics);
                     conceptProgress = conceptProgress || (newConceptParameters.Length < conceptParams.Length);
                     conceptParams = newConceptParameters;
+
+                    // Make sure we use the new substitutions in the next
+                    // round -- associated types might have been fixed.
                     currentSubstitution = newSubstitution;
                 }
 
@@ -680,7 +683,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                  *    to avoid accidentally clobbering the witness's
                  *    type parameter with any other like-named parameters
                  *    coming from recursive calls.
-                 *    
+                 *
                  *    TODO: why?
                  */
                 currentSubstitution = currentSubstitution.Add(conceptParameters[i], new TypeWithModifiers(candidate.Instance));
@@ -1647,7 +1650,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 //
                 // TODO: ensure that this is sound---there might be places
                 // where we claim this is ok, but then don't go on to infer the
-                // concept and the result is a spurious type error or crash. 
+                // concept and the result is a spurious type error or crash.
                 if (!expandAssociatedIfFailed || !conceptParams.IsEmpty)
                 {
                     return ImmutableArray<TypeSymbol>.Empty;

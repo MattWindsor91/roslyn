@@ -140,6 +140,8 @@
     <Compile Include="SelectMany.cs" />
     <Compile Include="SpecialisedInstances\Array.cs" />
     <Compile Include="Count.cs" />
+    <Compile Include="Average.cs" />
+    <Compile Include="Sum.cs" />
     <Compile Include="ToArray.cs" />
     <Compile Include="DesugaredTests.cs" />
     <Compile Include="LinqSyntaxTests.cs" />
