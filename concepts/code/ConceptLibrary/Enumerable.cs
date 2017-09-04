@@ -6,38 +6,35 @@ namespace System.Concepts.Enumerable
     /// <summary>
     ///     Concept for types which may be enumerated.
     /// </summary>
-    /// <typeparam name="C">
-    ///     The type to be enumerated.
-    /// </typeparam>
-    /// <typeparam name="E">
-    ///     The element returned by the enumerator.
-    /// </typeparam>
-    /// <typeparam name="S">
+    /// <typeparam name="TState">
     ///     The state held by the enumerator.
     /// </typeparam>
-    public concept CEnumerator<E, [AssociatedType] S>
+    /// <typeparam name="TElem">
+    ///     The element returned by the enumerator.
+    /// </typeparam>
+    public concept CEnumerator<TState, [AssociatedType] TElem>
     {
-        void Reset(ref S enumerator);
-        bool MoveNext(ref S enumerator);
-        E Current(ref S enumerator);
-        void Dispose(ref S enumerator);
+        void Reset(ref TState enumerator);
+        bool MoveNext(ref TState enumerator);
+        TElem Current(ref TState enumerator);
+        void Dispose(ref TState enumerator);
     }
 
     /// <summary>
     ///     Concept for types which may be enumerated.
     /// </summary>
-    /// <typeparam name="C">
+    /// <typeparam name="TColl">
     ///     The type to be enumerated.
     /// </typeparam>
-    /// <typeparam name="E">
-    ///     The element returned by the enumerator.
-    /// </typeparam>
-    /// <typeparam name="S">
+    /// <typeparam name="TState">
     ///     The state held by the enumerator.
     /// </typeparam>
-    public concept CEnumerable<C, [AssociatedType] E, [AssociatedType] S> : CEnumerator<E, S>
+    /// <typeparam name="TElem">
+    ///     The element returned by the enumerator.
+    /// </typeparam>
+    public concept CEnumerable<TColl, [AssociatedType] TState, [AssociatedType] TElem> : CEnumerator<TState, TElem>
     {
-        S GetEnumerator(C container);
+        TState GetEnumerator(TColl container);
     }
 
     /// <summary>
@@ -46,7 +43,7 @@ namespace System.Concepts.Enumerable
     public static class Instances
     {
         [Overlappable]
-        public instance Enumerable_IEnumerable<TColl, TElem> : CEnumerable<TColl, TElem, IEnumerator<TElem>>
+        public instance Enumerable_IEnumerable<TColl, TElem> : CEnumerable<TColl, IEnumerator<TElem>, TElem>
             where TColl : IEnumerable<TElem>
         {
             IEnumerator<TElem> GetEnumerator(TColl coll) => coll.GetEnumerator();
@@ -72,12 +69,12 @@ namespace System.Concepts.Enumerable
         }
 
         /// <summary>
-        /// <see cref="CEnumerable{C, E, S}"/> instance for arrays,
+        /// <see cref="CEnumerable{TColl, TState, TElem}"/> instance for arrays,
         /// using array cursors.
-        /// Also serves as a <see cref="CEnumerator{E, S}"/> instance for
+        /// Also serves as a <see cref="CEnumerator{TState, TElem}"/> instance for
         /// array cursors, because it has the same types.
         /// </summary>
-        public instance Enumerable_Array<TElem> : CEnumerable<TElem[], TElem, ArrayCursor<TElem>>
+        public instance Enumerable_Array<TElem> : CEnumerable<TElem[], ArrayCursor<TElem>, TElem>
         {
             ArrayCursor<TElem> GetEnumerator(TElem[] array) => new ArrayCursor<TElem> { source = array, lo = -1, hi = array.Length };
 
@@ -114,10 +111,10 @@ namespace System.Concepts.Enumerable
         #region Generic collections
 
         /// <summary>
-        /// <see cref="CEnumerable{C, E, S}"/> instance for lists,
+        /// <see cref="CEnumerable{TColl, TState, TElem}"/> instance for lists,
         /// using list enumerators.
         /// </summary>
-        public instance Enumerable_List<TElem> : CEnumerable<List<TElem>, TElem, List<TElem>.Enumerator>
+        public instance Enumerable_List<TElem> : CEnumerable<List<TElem>, List<TElem>.Enumerator, TElem>
         {
             List<TElem>.Enumerator GetEnumerator(List<TElem> list) => list.GetEnumerator();
 

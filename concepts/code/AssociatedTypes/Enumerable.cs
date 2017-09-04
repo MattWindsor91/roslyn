@@ -20,24 +20,24 @@ namespace AssociatedTypes
         /// <param name="c">
         ///     The container to be enumerated.
         /// </param>
-        /// <typeparam name="C">
+        /// <typeparam name="TColl">
         ///     The type to be enumerated.
         /// </typeparam>
-        /// <typeparam name="E">
-        ///     The element returned by the enumerator.
-        /// </typeparam>
-        /// <typeparam name="S">
+        /// <typeparam name="TState">
         ///     The state held by the enumerator.
+        /// </typeparam>
+        /// <typeparam name="TElem">
+        ///     The element returned by the enumerator.
         /// </typeparam>
         /// <returns>
         ///     An <see cref="IEnumerable"/> for <see cref="c"/>.
         /// </returns>
-        public static IEnumerable<E> Enumerate<C, [AssociatedType] E, [AssociatedType] S, implicit N>(C c) where N : CEnumerable<C, E, S> => new EnumerableShim<C>(c);
+        public static IEnumerable<TElem> Enumerate<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N>(TColl c) where N : CEnumerable<TColl, TState, TElem> => new EnumerableShim<TColl>(c);
 
-        public static void Foreach<C, [AssociatedType] E, [AssociatedType] S, implicit N>(C c, Action<E> f)
-            where N : CEnumerable<C, E, S>
+        public static void Foreach<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N>(TColl c, Action<TElem> f)
+            where N : CEnumerable<TColl, TState, TElem>
         {
-            S state = N.GetEnumerator(c);
+            var state = N.GetEnumerator(c);
             while (true)
             {
                 if (!N.MoveNext(ref state)) return;
@@ -70,13 +70,13 @@ namespace AssociatedTypes
     /// <summary>
     ///     Concept for types which may be addressed by an integer index.
     /// </summary>
-    /// <typeparam name="C">
+    /// <typeparam name="TColl">
     ///     The type to be addressed by index.
     /// </typeparam>
-    /// <typeparam name="E">
+    /// <typeparam name="TElem">
     ///     The element returned by the indexing operation.
     /// </typeparam>
-    public concept CIndexable<C, [AssociatedType] E>
+    public concept CIndexable<TColl, [AssociatedType] TElem>
     {
         /// <summary>
         ///     Gets the element at a given index.
@@ -91,19 +91,19 @@ namespace AssociatedTypes
         ///     The <paramref name="i"/>th element, or an exception if out of
         ///     bounds.
         /// </returns>
-        E At(C container, int i);
+        TElem At(TColl container, int i);
     }
 
     /// <summary>
     ///     Instance of <see cref="CIndexable"/> for arrays, using
     ///     array-element indexing.
     /// </summary>
-    /// <typeparam name="E">
+    /// <typeparam name="TElem">
     ///     The array element.
     /// </typeparam>
-    public instance CIndexableArray<E> : CIndexable<E[], E>
+    public instance CIndexableArray<TElem> : CIndexable<TElem[], TElem>
     {
-        E At(E[] container, int i) => container[i];
+        TElem At(TElem[] container, int i) => container[i];
     }
 
     /// <summary>
@@ -179,12 +179,12 @@ namespace AssociatedTypes
     /// <summary>
     ///     Instance of <see cref="CLength"/> for arrays, using array length.
     /// </summary>
-    /// <typeparam name="E">
+    /// <typeparam name="TElem">
     ///     The array element.
     /// </typeparam>
-    public instance CLengthArray<E> : CLength<E[]>
+    public instance CLengthArray<TElem> : CLength<TElem[]>
     {
-        int Length(E[] container) => container.Length;
+        int Length(TElem[] container) => container.Length;
     }
 
     /// <summary>
@@ -245,7 +245,7 @@ namespace AssociatedTypes
         /// <typeparam name="E">
         ///     The element returned by the enumerator.
         /// </typeparam>
-        public instance CEnumerableLE<C, [AssociatedType] E, implicit I, implicit L> : CEnumerable<C, E, (C, int, E)>
+        public instance CEnumerableLE<C, [AssociatedType] E, implicit I, implicit L> : CEnumerable<C, (C, int, E), E>
             where I : CIndexable<C, E>
             where L : CLength<C>
         {
@@ -466,7 +466,7 @@ namespace AssociatedTypes
     /// </summary>
     static class Specialised
     {
-        public instance CEnumerableString : CEnumerable<string, char, (char[], int, char)>
+        public instance CEnumerableString : CEnumerable<string, (char[], int, char), char>
         {
             (char[], int, char) GetEnumerator(string str) => (str.ToCharArray(), -1, default(char));
             void Reset(ref (char[], int, char) enumerator)
@@ -484,7 +484,7 @@ namespace AssociatedTypes
             void Dispose(ref (char[], int, char) enumerator) {}
         }
 
-        public instance CEnumerableArray<E> : CEnumerable<E[], E, (E[], int, E)>
+        public instance CEnumerableArray<E> : CEnumerable<E[], (E[], int, E), E>
         {
             (E[], int, E) GetEnumerator(E[] ary) => (ary, -1, default(E));
             void Reset(ref (E[], int, E) enumerator)
@@ -527,9 +527,9 @@ namespace AssociatedTypes
         public instance CEnumerableZip2<A, [AssociatedType] AE, [AssociatedType] AS,
                                         B, [AssociatedType] BE, [AssociatedType] BS,
                                         implicit EA, implicit EB>
-                                        : CEnumerable<(A, B), (AE, BE), (AS, BS)>
-            where EA : CEnumerable<A, AE, AS>
-            where EB : CEnumerable<B, BE, BS>
+                                        : CEnumerable<(A, B), (AS, BS), (AE, BE)>
+            where EA : CEnumerable<A, AS, AE>
+            where EB : CEnumerable<B, BS, BE>
         {
             (AS, BS) GetEnumerator((A, B) tup) =>
                 (EA.GetEnumerator(tup.Item1), EB.GetEnumerator(tup.Item2));
@@ -759,8 +759,8 @@ namespace AssociatedTypes
     /// <typeparam name="E">
     ///     The element returned by the enumerator.
     /// </typeparam>
-    class EnumeratorShim<C, E, S, implicit N> : IEnumerator<E>
-        where N : CEnumerable<C, E, S>
+    class EnumeratorShim<C, S, E, implicit N> : IEnumerator<E>
+        where N : CEnumerable<C, S, E>
     {
         private S _state;
 
@@ -789,14 +789,14 @@ namespace AssociatedTypes
     /// <typeparam name="C">
     ///     The type to be enumerated.
     /// </typeparam>
-    /// <typeparam name="E">
-    ///     The element returned by the enumerator.
-    /// </typeparam>
     /// <typeparam name="S">
     ///     The state held by the enumerator.
     /// </typeparam>
-    class EnumerableShim<C, [AssociatedType] E, [AssociatedType] S, implicit N> : IEnumerable<E>
-        where N : CEnumerable<C, E, S>
+    /// <typeparam name="E">
+    ///     The element returned by the enumerator.
+    /// </typeparam>
+    class EnumerableShim<C, [AssociatedType] S, [AssociatedType] E, implicit N> : IEnumerable<E>
+        where N : CEnumerable<C, S, E>
     {
         private C _collection;
 
@@ -811,8 +811,8 @@ namespace AssociatedTypes
             _collection = collection;
         }
 
-        public IEnumerator<E> GetEnumerator() => new EnumeratorShim<C, E, S>(_collection);
-        IEnumerator IEnumerable.GetEnumerator() => new EnumeratorShim<C, E, S>(_collection);
+        public IEnumerator<E> GetEnumerator() => new EnumeratorShim<C, S, E>(_collection);
+        IEnumerator IEnumerable.GetEnumerator() => new EnumeratorShim<C, S, E>(_collection);
     }
 
     public class Timer

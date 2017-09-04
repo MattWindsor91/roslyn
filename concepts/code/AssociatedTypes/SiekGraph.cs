@@ -111,8 +111,8 @@ namespace AssociatedTypes
         public static void CSearch<Vis, G, [AssociatedType] E, [AssociatedType] V, [AssociatedType] VS, [AssociatedType] ES, implicit CIncidenceGraphG, implicit CEnumerableEG, implicit CEnumerableVG, implicit CEdgeE>(G graph, V root, Vis vis)
             where Vis : BFSVisitor<G, E, V, Queue<V>, CIncidenceGraphG, CEdgeE>
             where CIncidenceGraphG : CIncidenceGraph<G, E, V, CEdgeE>
-            where CEnumerableEG : CEnumerable<(V, G), E, ES>
-            where CEnumerableVG : CEnumerable<G, V, VS>
+            where CEnumerableEG : CEnumerable<(V, G), ES, E>
+            where CEnumerableVG : CEnumerable<G, VS, V>
             where CEdgeE : CEdge<E, V>
         {
             var q = new Queue<V>();
@@ -219,7 +219,7 @@ namespace AssociatedTypes
         }
         int OutDegree(Vertex vertex, AdjacencyList graph) => graph.list[vertex.id].Count;
     }
-    instance CEnumerableAdjacencyListOutEdge : CEnumerable<(Vertex, AdjacencyList), Edge, (int, List<int>[], int, Edge)>
+    instance CEnumerableAdjacencyListOutEdge : CEnumerable<(Vertex, AdjacencyList), (int, List<int>[], int, Edge), Edge>
     {
         (int, List<int>[], int, Edge) GetEnumerator((Vertex, AdjacencyList) idAndGraph) => (idAndGraph.Item1.id, idAndGraph.Item2.list, -1, default(Edge));
         void Reset(ref (int, List<int>[], int, Edge) enumerator)
@@ -245,7 +245,7 @@ namespace AssociatedTypes
         }
         int NumVertices(AdjacencyList graph) => graph.list.Length;
     }
-    instance CEnumerableAdjacencyListVertex : CEnumerable<AdjacencyList, Vertex, (int, int, Vertex)>
+    instance CEnumerableAdjacencyListVertex : CEnumerable<AdjacencyList, (int, int, Vertex), Vertex>
     {
         (int, int, Vertex) GetEnumerator(AdjacencyList graph) => (graph.list.Length, -1, default(Vertex));
         void Reset(ref (int, int, Vertex) enumerator)
