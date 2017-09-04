@@ -510,6 +510,16 @@ End Namespace
                     Case WellKnownType.Microsoft_CodeAnalysis_Runtime_Instrumentation
                         ' Not always available.
                         Continue For
+                    Case WellKnownType.System_Concepts_AssociatedTypeAttribute
+                    Case WellKnownType.System_Concepts_ConceptAttribute
+                    Case WellKnownType.System_Concepts_ConceptDefaultAttribute
+                    Case WellKnownType.System_Concepts_ConceptInstanceAttribute
+                    Case WellKnownType.System_Concepts_OverlappableAttribute
+                    Case WellKnownType.System_Concepts_OverlappingAttribute
+                        ' @MattWindsor91 (Concept-C# 2017)
+                        ' These are part of our experimental concepts
+                        ' implementation, thus not in the platform.
+                        Continue For
                 End Select
 
                 Dim symbol = comp.GetWellKnownType(wkt)
@@ -544,6 +554,16 @@ End Namespace
                         Continue For
                     Case WellKnownType.Microsoft_CodeAnalysis_Runtime_Instrumentation
                         ' Not always available.
+                        Continue For
+                    Case WellKnownType.System_Concepts_AssociatedTypeAttribute
+                    Case WellKnownType.System_Concepts_ConceptAttribute
+                    Case WellKnownType.System_Concepts_ConceptDefaultAttribute
+                    Case WellKnownType.System_Concepts_ConceptInstanceAttribute
+                    Case WellKnownType.System_Concepts_OverlappableAttribute
+                    Case WellKnownType.System_Concepts_OverlappingAttribute
+                        ' @MattWindsor91 (Concept-C# 2017)
+                        ' These are part of our experimental concepts
+                        ' implementation, thus not in the platform.
                         Continue For
                 End Select
 
@@ -583,6 +603,16 @@ End Namespace
                     Case WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningSingleFile,
                          WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningMultipleFiles
                         ' Not always available.
+                        Continue For
+                    Case WellKnownMember.System_Concepts_AssociatedTypeAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptDefaultAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor
+                    Case WellKnownMember.System_Concepts_OverlappableAttribute__ctor
+                    Case WellKnownMember.System_Concepts_OverlappingAttribute__ctor
+                        ' @MattWindsor91 (Concept-C# 2017)
+                        ' These are part of our experimental concepts
+                        ' implementation, thus not in the platform.
                         Continue For
                 End Select
 
@@ -664,6 +694,16 @@ End Namespace
                     Case WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningSingleFile,
                          WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningMultipleFiles
                         ' Not always available.
+                        Continue For
+                    Case WellKnownMember.System_Concepts_AssociatedTypeAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptDefaultAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor
+                    Case WellKnownMember.System_Concepts_OverlappableAttribute__ctor
+                    Case WellKnownMember.System_Concepts_OverlappingAttribute__ctor
+                        ' @MattWindsor91 (Concept-C# 2017)
+                        ' These are part of our experimental concepts
+                        ' implementation, thus not in the platform.
                         Continue For
                 End Select
 

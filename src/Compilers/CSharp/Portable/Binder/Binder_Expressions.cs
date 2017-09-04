@@ -6243,7 +6243,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // @MattWindsor91 (Concept-C# 2017)
                     // Allow property accesses to concept witness parameters:
                     // we'll convert them into dictionary lookups in lowering.
-                    if (receiver.Kind == BoundKind.TypeExpression)
+                    if (receiver != null && receiver.Kind == BoundKind.TypeExpression)
                     {
                         var r = (BoundTypeExpression)receiver;
                         if (r.Type.IsConceptWitness)

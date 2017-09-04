@@ -244,13 +244,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             // Container binders cannot provide explicit witnesses--only type
             // parameter binders can do that.
-            if (onlyExplicitWitnesses) return;
+            if (onlyExplicitWitnesses)
+            {
+                return;
+            }
 
             // We need not check to see if the container itself is a possible
             // concept instance, because, if it is, then it has a parent
             // container, and the below check works fine.
-
-            GetConceptInstancesInContainer(_container, instances, originalBinder, ref useSiteDiagnostics);
+            if (_container != null)
+            {
+                GetConceptInstancesInContainer(_container, instances, originalBinder, ref useSiteDiagnostics);
+            }
 
             // The above is ok if we just want to get all instances in
             // a straight line up the scope from here to the global
@@ -281,6 +286,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </param>
         private void GetConceptInstancesInContainer(NamespaceOrTypeSymbol container, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
+            Debug.Assert(container != null, "container being searched should not be null: this should have been checked earlier");
+
             foreach (var member in container.GetTypeMembers())
             {
                 if (!originalBinder.IsAccessible(member, ref useSiteDiagnostics, originalBinder.ContainingType)) continue;

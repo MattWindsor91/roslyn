@@ -843,7 +843,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private static ImmutableArray<TypeSymbol> GetRequiredConceptsFor(TypeParameterSymbol typeParam, ImmutableTypeMap fixedMap)
         {
             //TODO: error if interface constraint that is not a concept?
-            var rawRequiredConcepts = typeParam.AllEffectiveInterfacesNoUseSiteDiagnostics;
+            var rawRequiredConcepts = typeParam.EffectiveInterfacesNoUseSiteDiagnostics;
 
             // The concepts from above are in terms of the method's type
             // parameters.  In order to be able to unify properly, we need to

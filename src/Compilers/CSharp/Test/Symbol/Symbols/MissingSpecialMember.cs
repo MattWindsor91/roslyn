@@ -565,6 +565,17 @@ namespace System
                     case WellKnownType.ExtSentinel:
                         // Not a real type
                         continue;
+
+                    case WellKnownType.System_Concepts_AssociatedTypeAttribute:
+                    case WellKnownType.System_Concepts_ConceptAttribute:
+                    case WellKnownType.System_Concepts_ConceptDefaultAttribute:
+                    case WellKnownType.System_Concepts_ConceptInstanceAttribute:
+                    case WellKnownType.System_Concepts_OverlappableAttribute:
+                    case WellKnownType.System_Concepts_OverlappingAttribute:
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // These are part of our experimental concepts
+                        // implementation, thus not in the platform.
+                        continue;
                 }
 
                 switch (wkt)
@@ -857,6 +868,16 @@ namespace System
                         continue;
                     case WellKnownMember.System_Array__Empty:
                         // Not yet in the platform.
+                        continue;
+                    case WellKnownMember.System_Concepts_AssociatedTypeAttribute__ctor:
+                    case WellKnownMember.System_Concepts_ConceptAttribute__ctor:
+                    case WellKnownMember.System_Concepts_ConceptDefaultAttribute__ctor:
+                    case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor:
+                    case WellKnownMember.System_Concepts_OverlappableAttribute__ctor:
+                    case WellKnownMember.System_Concepts_OverlappingAttribute__ctor:
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // These are part of our experimental concepts
+                        // implementation, thus not in the platform.
                         continue;
                     case WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningSingleFile:
                     case WellKnownMember.Microsoft_CodeAnalysis_Runtime_Instrumentation__CreatePayloadForMethodsSpanningMultipleFiles:
