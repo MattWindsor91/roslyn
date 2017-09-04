@@ -99,22 +99,56 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(node != null, "Call being checked for concept witness should not be null");
             Debug.Assert(node.Method != null, "Call being checked for concept witness should not have a null method");
+            var isInstanceMethod = !node.Method.IsStatic;
+            return isInstanceMethod && IsConceptWitnessReceiver(node.ReceiverOpt);
+        }
 
-            // Concept witness calls are instance calls...
-            if (node.Method.IsStatic)
+        /// <summary>
+        /// Decides whether a bound property access targets concept witness.
+        ///
+        /// <para>
+        /// These kinds of call need to be lowered into a dictionary call,
+        /// because they expect an instance of their witness type but
+        /// currently reference the type itself as their receiver.
+        /// (This, unsurprisingly, isn't correct IL!)
+        /// </para>
+        /// </summary>
+        /// <param name="node">
+        /// The node to check.
+        /// </param>
+        /// <returns>
+        /// True if <paramref name="node"/> is a concept witness property
+        /// access; false otherwise.
+        /// </returns>
+        private static bool IsConceptWitnessPropertyAccess(BoundPropertyAccess node)
+        {
+            Debug.Assert(node != null, "Property access being checked for concept witness should not be null");
+            Debug.Assert(node.PropertySymbol != null, "Property access being checked for concept witness should not have a null method");
+            var isInstanceProperty = !node.PropertySymbol.IsStatic;
+            return isInstanceProperty && IsConceptWitnessReceiver(node.ReceiverOpt);
+        }
+
+        /// <summary>
+        /// Decides whether a call or property receiver targets a concept
+        /// witness.
+        /// </summary>
+        /// <param name="receiverOpt">
+        /// The receiver to check; may be null.
+        /// </param>
+        /// <returns>
+        /// True if, and only if, the receiver is a valid witness
+        /// (either a ground instance, or a witness parameter).
+        /// </returns>
+        private static bool IsConceptWitnessReceiver(BoundExpression receiverOpt)
+        {
+            // Concept witness receivers are valid type expressions...
+            if (receiverOpt == null || receiverOpt.Kind != BoundKind.TypeExpression)
             {
                 return false;
             }
 
-            // ...that have a valid, type expression receiver...
-            var ro = node.ReceiverOpt;
-            if (ro == null || ro.Kind != BoundKind.TypeExpression)
-            {
-                return false;
-            }
-
-            // ...that is either a ground instance or a witness parameter.
-            return node.ReceiverOpt.Type.IsInstanceType() || node.ReceiverOpt.Type.IsConceptWitness;
+            // ...that are either ground instances or witness parameters.
+            return receiverOpt.Type.IsInstanceType() || receiverOpt.Type.IsConceptWitness;
         }
     }
 }

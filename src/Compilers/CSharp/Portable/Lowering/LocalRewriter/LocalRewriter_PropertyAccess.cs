@@ -17,7 +17,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private BoundExpression VisitPropertyAccess(BoundPropertyAccess node, bool isLeftOfAssignment)
         {
-            var rewrittenReceiverOpt = VisitExpression(node.ReceiverOpt);
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // As with LocalWriter_Call.VisitCall, lower concept witness
+            // property accesses into accesses on a dictionary.
+            var rewrittenReceiverOpt =
+                IsConceptWitnessPropertyAccess(node)
+                ? SynthesizeWitnessReceiver(node.ReceiverOpt.Syntax, node.ReceiverOpt.Type)
+                : VisitExpression(node.ReceiverOpt);
             return MakePropertyAccess(node.Syntax, rewrittenReceiverOpt, node.PropertySymbol, node.ResultKind, node.Type, isLeftOfAssignment, node);
         }
 

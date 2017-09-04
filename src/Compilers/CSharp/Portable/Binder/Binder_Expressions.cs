@@ -6240,6 +6240,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 if (instanceReceiver == false && EnclosingNameofArgument != node)
                 {
+                    // @MattWindsor91 (Concept-C# 2017)
+                    // Allow property accesses to concept witness parameters:
+                    // we'll convert them into dictionary lookups in lowering.
+                    if (receiver.Kind == BoundKind.TypeExpression)
+                    {
+                        var r = (BoundTypeExpression)receiver;
+                        if (r.Type.IsConceptWitness)
+                        {
+                            return false;
+                        }
+                    }
+
                     Error(diagnostics, ErrorCode.ERR_ObjectRequired, node, symbol);
                     resultKind = LookupResultKind.StaticInstanceMismatch;
                     return true;

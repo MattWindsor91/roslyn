@@ -718,7 +718,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private DeclarationModifiers MakeModifiers(SyntaxTokenList modifiers, bool isExplicitInterfaceImplementation, bool isIndexer, Location location, DiagnosticBag diagnostics, out bool modifierErrors)
         {
             bool isInterface = this.ContainingType.IsInterface;
-            var defaultAccess = isInterface ? DeclarationModifiers.Public : DeclarationModifiers.Private;
+            // @MattWindsor91 (Concept-C# 2017)
+            // Properties on instances default to public, and cannot be given
+            // any other modifiers.
+            bool isConceptInstance = ContainingType.IsInstance;
+
+            var defaultAccess = isInterface || isConceptInstance ? DeclarationModifiers.Public : DeclarationModifiers.Private;
 
             // Check that the set of modifiers is allowed
             var allowedModifiers = DeclarationModifiers.Unsafe;
@@ -726,7 +731,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 allowedModifiers |= DeclarationModifiers.New;
 
-                if (!isInterface)
+                if (!isInterface && !isConceptInstance)
                 {
                     allowedModifiers |=
                         DeclarationModifiers.AccessibilityMask |
