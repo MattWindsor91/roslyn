@@ -288,7 +288,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // MutableTypeMap.Add will throw if the key has already been added.  However,
             // if t1 was already in the substitution, it would have been substituted at the
             // start of CanUnifyHelper and we wouldn't be here.
-            substitution.Add(tp1, t2);
+
+            // @MattWindsor91 (Concept-C# 2017)
+            // use AddAndPropagate here to avoid denormalised typemaps.
+            substitution.AddAndPropagate(tp1, t2);
         }
 
         /// <summary>

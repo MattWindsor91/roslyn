@@ -24,39 +24,41 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
+        /// Adds an entry to the map and propagates the substitution through
+        /// all other entries in the type map.
+        /// </summary>
+        internal void AddAndPropagate(TypeParameterSymbol key, TypeWithModifiers value)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // This is an attempt to make TypeUnification perform a proper
+            // unification where no mapping is dependent on another mapping.
+            //
+            // This is important for using unification for concepts, but less
+            // so elsewhere.
+
+            Debug.Assert(!Mapping.ContainsKey(key), "should not map the same type twice");
+
+            // CONSIDER: performance
+            var tmp = new MutableTypeMap();
+            tmp.Add(key, value);
+
+            var ms = Mapping.AsImmutable();
+            foreach (var m in ms)
+            {
+                Mapping[m.Key] = m.Value.SubstituteType(tmp);
+            }
+
+            Add(key, value);
+        }
+
+        /// <summary>
         /// Converts this type map to an immutable unification.
         /// </summary>
         /// <returns>
         /// The unification corresponding to this type map.
         /// </returns>
-        internal ImmutableTypeMap ToUnification()
-        {
-            /* @MattWindsor91 (Concept-C# 2017)
-             * 
-             * We can't just take 'Mapping' directly, as it might not be
-             * in a normal form.  For example, it might map E to char, and
-             * S to (int, string, E).  Do a quick pass of normalisation to fix
-             * this.
-             * 
-             * CONSIDER: performance impact.
-             * CONSIDER: pushing this sort of normalisation up into the stack.
-             */
-            var prev = SmallDictionary<TypeParameterSymbol, TypeWithModifiers>.Empty;
-            var next = Mapping;
-            var progress = true;
-            while (progress)
-            {
-                prev = next;
-                next = new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>();
-                progress = false;
-                foreach (var mapping in prev)
-                {
-                    next[mapping.Key] = mapping.Value.SubstituteType(this);
-                    progress |= (next[mapping.Key] != prev[mapping.Key]);
-                }
-            };
-            return new ImmutableTypeMap(next);
-        }
+        internal ImmutableTypeMap ToUnification() => new ImmutableTypeMap(Mapping);
     }
 
     /// <summary>
