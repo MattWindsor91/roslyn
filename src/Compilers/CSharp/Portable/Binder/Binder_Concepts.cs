@@ -68,9 +68,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// to see if any contain a viable method matching the symbol.
         /// </para>
         /// <para>
-        /// This lookup approach only works for methods, and returns a
-        /// method whose parent is a type parameter.  We rely on later
-        /// binder stages to detect this and resolve it back to a proper
+        /// This lookup approach only works for methods and properties, and
+        /// returns members whose parents are type parameters.  We rely on
+        /// later stages to detect this and resolve it back to a proper
         /// statement.
         /// </para>
         /// </summary>
@@ -106,32 +106,38 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(witness.IsConceptWitness);
 
-            // Concepts are just interfaces, so we look at every possible
-            // interface this witness has been constrained to implement.
-            foreach (var iface in witness.AllEffectiveInterfacesNoUseSiteDiagnostics)
+            var concepts = witness.ProvidedConcepts;
+            if (concepts.IsDefaultOrEmpty)
             {
-                if (!iface.IsConcept) continue;
-
-                // We're assuming that the above handles inheritance for us.
-                // This may be a mistake.
-                var members = GetCandidateMembers(iface, name, options, originalBinder);
+                return;
+            }
+            foreach (var c in concepts)
+            {
+                var members = GetCandidateMembers(c, name, options, originalBinder);
                 foreach (var member in members)
                 {
-                    // Don't bother trying to resolve non-methods:
-                    // concepts can't have them, and we only have shims for
-                    // dealing with methods later on anyway.
-                    if (member.Kind != SymbolKind.Method) continue;
-                    var method = member as MethodSymbol;
-                    Debug.Assert(method != null);
-
-                    // Suppose our witness is W : C<A>, and this finds C<A>.M(x).
-                    // We need to return that we found W.M(x), but W is a type
-                    // parameter!  While we can handle this later on in binding,
-                    // the main issue is changing C<A> to W, for which we use
-                    // a synthesized method symbol.
-                    var witnessMethod = new SynthesizedWitnessMethodSymbol(method, witness);
-                    SingleLookupResult resultOfThisMember = originalBinder.CheckViability(witnessMethod, arity, options, witness, diagnose, ref useSiteDiagnostics, basesBeingResolved);
-                    result.MergeEqual(resultOfThisMember);
+                    switch (member.Kind)
+                    {
+                        case SymbolKind.Method:
+                            var method = (MethodSymbol)member;
+                            // Suppose our witness is W : C<A>, and this finds C<A>.M(x).
+                            // We need to return that we found W.M(x), but W is a type
+                            // parameter!  While we can handle this later on in binding,
+                            // the main issue is changing C<A> to W, for which we use
+                            // a synthesized method symbol.
+                            var witnessMethod = new SynthesizedWitnessMethodSymbol(method, witness);
+                            SingleLookupResult resultOfThisMethod = originalBinder.CheckViability(witnessMethod, arity, options, witness, diagnose, ref useSiteDiagnostics, basesBeingResolved);
+                            result.MergeEqual(resultOfThisMethod);
+                            break;
+                        case SymbolKind.Property:
+                            var prop = (PropertySymbol)member;
+                            var witnessProp = new SynthesizedWitnessPropertySymbol(prop, witness);
+                            SingleLookupResult resultOfThisProp = originalBinder.CheckViability(witnessProp, arity, options, witness, diagnose, ref useSiteDiagnostics, basesBeingResolved);
+                            result.MergeEqual(resultOfThisProp);
+                            break;
+                        // We don't allow other types to be fields of a
+                        // witness.
+                    }
                 }
             }
         }

@@ -107,8 +107,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Decides whether a bound property access targets concept witness.
         ///
         /// <para>
-        /// These kinds of call need to be lowered into a dictionary call,
-        /// because they expect an instance of their witness type but
+        /// These kinds of access need to be lowered into a dictionary call,
+        /// as they expect an instance of their witness type but
         /// currently reference the type itself as their receiver.
         /// (This, unsurprisingly, isn't correct IL!)
         /// </para>
@@ -124,6 +124,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             Debug.Assert(node != null, "Property access being checked for concept witness should not be null");
             Debug.Assert(node.PropertySymbol != null, "Property access being checked for concept witness should not have a null method");
+
+            // Concept property accesses are instance-level
+            // and have a concept witness receiver.
+            // (Even implicit accesses will have been rewritten to have a
+            //  receiver by now.)
             var isInstanceProperty = !node.PropertySymbol.IsStatic;
             return isInstanceProperty && IsConceptWitnessReceiver(node.ReceiverOpt);
         }

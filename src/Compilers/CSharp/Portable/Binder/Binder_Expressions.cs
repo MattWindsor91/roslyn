@@ -1682,6 +1682,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return null;
             }
 
+            // @MattWindsor91 (Concept-C# 2017)
+            // Is this an implicit reference to a property on a concept?
+            // If so, pull down the concept type as the receiver: we'll
+            // lower it into a dictionary call later.
+            //
+            // CONSIDER: working out how to do this without special symbols.
+            if (member is SynthesizedWitnessPropertySymbol sw)
+            {
+                // CONSIDER: correct syntax here.
+                return new BoundTypeExpression(node, null, sw.Parent);
+            }
+
             var currentType = this.ContainingType;
             HashSet<DiagnosticInfo> useSiteDiagnostics = null;
 
@@ -6245,11 +6257,18 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // we'll convert them into dictionary lookups in lowering.
                     if (receiver != null && receiver.Kind == BoundKind.TypeExpression)
                     {
+                        // Explicit witnesses
                         var r = (BoundTypeExpression)receiver;
                         if (r.Type.IsConceptWitness)
                         {
                             return false;
                         }
+                    }
+                    if (receiver == null && symbol is SynthesizedWitnessPropertySymbol)
+                    {
+                        // Implicit witnesses
+                        // CONSIDER: making this not a type switch.
+                        return false;
                     }
 
                     Error(diagnostics, ErrorCode.ERR_ObjectRequired, node, symbol);

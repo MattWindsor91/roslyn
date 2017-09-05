@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
@@ -499,6 +500,36 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 // We only reach this if all constraints are concepts and
                 // at least one exists.
                 return true;
+            }
+        }
+
+        // @MattWindsor91 (Concept-C# 2017)
+
+        /// <summary>
+        /// Returns all concepts this type parameter is constrained to
+        /// provide.
+        /// </summary>
+        internal ImmutableArray<NamedTypeSymbol> ProvidedConcepts
+        {
+            get
+            {
+                if (!IsConceptWitness)
+                {
+                    return ImmutableArray<NamedTypeSymbol>.Empty;
+                }
+
+                // CONSIDER: can we just use ConstraintTypes here?
+                var ab = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+
+                foreach (var iface in AllEffectiveInterfacesNoUseSiteDiagnostics)
+                {
+                    if (iface.IsConcept)
+                    {
+                        ab.Add(iface);
+                    }
+                }
+
+                return ab.ToImmutableAndFree();
             }
         }
 

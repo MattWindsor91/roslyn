@@ -621,7 +621,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // If we could access the member through implicit "this" the receiver would be a BoundThisReference.
                 // If it is null it means that the instance member is inaccessible.
-                if (!(memberSymbol is SynthesizedWitnessMethodSymbol) && (receiverOpt == null || ContainingMember().IsStatic))
+
+                // @MattWindsor91 (Concept-C# 2017)
+                // CONSIDER: somehow making this not a type switch.
+                var isFromWitness =
+                    memberSymbol is SynthesizedWitnessMethodSymbol ||
+                    memberSymbol is SynthesizedWitnessPropertySymbol;
+
+                if (!isFromWitness && (receiverOpt == null || ContainingMember().IsStatic))
                 {
                     Error(diagnostics, ErrorCode.ERR_ObjectRequired, node, memberSymbol);
                     return true;
