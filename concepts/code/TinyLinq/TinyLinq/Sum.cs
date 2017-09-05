@@ -34,7 +34,7 @@ namespace TinyLinq
         {
             TElem Sum(ref TEnum e)
             {
-                var sum = M.Empty();
+                var sum = M.Empty;
 
                 E.Reset(ref e);
                 while (E.MoveNext(ref e))
@@ -58,7 +58,7 @@ namespace TinyLinq
             {
                 var e = E.GetEnumerator(c);
 
-                var sum = M.Empty();
+                var sum = M.Empty;
 
                 E.Reset(ref e);
                 while (E.MoveNext(ref e))

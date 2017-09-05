@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Concepts.Prelude;
 
 /// <summary>
@@ -53,7 +53,7 @@ namespace System.Concepts.Monoid
         /// <summary>
         ///     The identity of <see cref="Append" />.
         /// <summary>
-        A Empty();
+        A Empty { get; }
 
         // In Haskell 98, we also have MConcat here.
         // For now, however, we define it separately.
@@ -68,7 +68,7 @@ namespace System.Concepts.Monoid
     /// </summary>
     public instance All : Monoid<bool>
     {
-        bool Empty() => true;
+        bool Empty => true;
         bool Append(bool x, bool y) => x && y;
     }
 
@@ -77,7 +77,7 @@ namespace System.Concepts.Monoid
     /// </summary>
     public instance Any : Monoid<bool>
     {
-        bool Empty() => true;
+        bool Empty => true;
         bool Append(bool x, bool y) => x || y;
     }
 
@@ -113,7 +113,7 @@ namespace System.Concepts.Monoid
     /// </typeparam>
     public instance Sum<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
-        A Empty() => FromInteger(0);
+        A Empty => FromInteger(0);
         A Append(A x, A y) => Add(x, y);
     }
 
@@ -125,7 +125,7 @@ namespace System.Concepts.Monoid
     /// </typeparam>
     public instance Product<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
-        A Empty() => FromInteger(1);
+        A Empty => FromInteger(1);
         A Append(A x, A y) => Mul(x, y);
     }
 
@@ -218,7 +218,7 @@ namespace System.Concepts.Monoid
         public static A Concat<A, implicit MA>(IEnumerable<A> xs)
             where MA : Monoid<A>
         {
-            A result = Empty();
+            A result = Empty;
             foreach (A x in xs)
             {
                 result = Append(result, x);
@@ -248,7 +248,7 @@ namespace System.Concepts.Monoid
         public static A ConcatMap<A, B, implicit MA>(IEnumerable<B> xs, Func<B, A> f)
             where MA : Monoid<A>
         {
-            A result = Empty();
+            A result = Empty;
             foreach (B x in xs)
             {
                 result = Append(result, f(x));

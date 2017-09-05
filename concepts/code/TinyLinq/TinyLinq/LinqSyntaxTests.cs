@@ -12,7 +12,7 @@ namespace TinyLinq
     {
         // List extensions
 
-        private static D Select<[AssociatedType]T, [AssociatedType]U, [AssociatedType] D, implicit M>(this List<T> This, Func<T, U> f) where M : CSelect<T, U, List<T>, D>
+        private static D Select<T, [AssociatedType]U, [AssociatedType] D, implicit M>(this List<T> This, Func<T, U> f) where M : CSelect<T, U, List<T>, D>
         {
             return M.Select(This, f);
         }
