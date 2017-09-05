@@ -37,7 +37,74 @@ namespace Microsoft.CodeAnalysis.CSharp
                 "Concept witness inference is pointless if there is nothing to infer");
 
             var inferrer = ConceptWitnessInferrer.ForBinder(binder);
-            var fixedMap = inferrer.Infer(_methodTypeParameters, _fixedResults.AsImmutable(), new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
+
+            var fixbuild = ArrayBuilder<TypeSymbol>.GetInstance();
+            for (int i = 0; i < _methodTypeParameters.Length; i++)
+            {
+                if (_fixedResults[i] != null)
+                {
+                    fixbuild.Add(_fixedResults[i]);
+                    continue;
+                }
+                /* Heuristic:
+                 * 
+                 * If we couldn't fix a type parameter, but it corresponds to
+                 * a method group with only one viable method, fix it as the
+                 * corresponding Func<>.
+                 *
+                 * CONSIDER: check to make sure there aren't multiple conflicting
+                 *           formal parameters!
+                 * CONSIDER: doing this correctly!
+                 */
+                var fix = false;
+                for (int j = 0; j < _formalParameterTypes.Length; j++)
+                {
+                    if (_formalParameterTypes[j] == _methodTypeParameters[i]
+                        && _arguments[j].Kind == BoundKind.MethodGroup)
+                    {
+                        var mg = (BoundMethodGroup)_arguments[j];
+                        if (mg.Methods.Length != 1)
+                        {
+                            continue;
+                        }
+
+                        var method = mg.Methods[0];
+                        if (!method.ReturnsVoid && method.IsStatic)
+                        {
+                            var rtype = method.ReturnType;
+                            var funcwkt = WellKnownTypes.GetWellKnownFunctionDelegate(method.ParameterCount);
+                            if (funcwkt == WellKnownType.Unknown)
+                            {
+                                continue;
+                            }
+
+                            var functype = binder.Compilation.GetWellKnownType(funcwkt);
+                            if (functype.HasUseSiteError)
+                            {
+                                continue;
+                            }
+
+                            var ftargs = new TypeSymbol[method.ParameterCount + 1];
+                            for (var k = 0; k < method.ParameterCount; k++)
+                            {
+                                ftargs[k] = method.ParameterTypes[k];
+                            }
+                            ftargs[method.ParameterCount] = method.ReturnType;
+
+                            fix = true;
+                            fixbuild.Add(functype.Construct(ftargs));
+                            break;
+                        }
+                    }
+                }
+
+                if (!fix)
+                {
+                    fixbuild.Add(null);
+                }
+            }
+
+            var fixedMap = inferrer.Infer(_methodTypeParameters, fixbuild.ToImmutableAndFree(), new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
             if (fixedMap == null)
             {
                 return false;

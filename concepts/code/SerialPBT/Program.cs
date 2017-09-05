@@ -156,12 +156,12 @@ namespace SerialPBT
             // method as a Func.
             
             // We can test simple predicates...
-            ShowableHelpers.WriteLine(Check<Func<int, bool>>(Prop_IsSingleDigit, 9));
-            ShowableHelpers.WriteLine(Check<Func<int, bool>>(Prop_IsSingleDigit, 11));
+            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit, 9));
+            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit, 11));
 
             // ...existentials, and implications.
             ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Exists, 11));
-            ShowableHelpers.WriteLine(Check<Func<int, Imp<bool, Func<bool>>>>(Prop_IsSingleDigit_Imp, 11));
+            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Imp, 11));
             ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Filtered, 11));
 
             // We can wrap tests up in generic classes.
