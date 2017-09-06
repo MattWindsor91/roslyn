@@ -168,12 +168,12 @@ namespace SerialPBT
             // For example, our IsPrefix test suite can be used both on an
             // invalid implementation...
             var faulty = new IsPrefixTests<int>(IsPrefixFaulty);
-            ShowableHelpers.WriteLine(Check<Func<int[], int[], bool>>(faulty.Prop_IsPrefix, 4));
-            ShowableHelpers.WriteLine(Check<Func<int[], int[], Imp<bool, Exists<int[], bool>>>>(faulty.Prop_IsPrefix_Sound, 4));
+            ShowableHelpers.WriteLine(Check(faulty.Prop_IsPrefix, 4));
+            ShowableHelpers.WriteLine(Check(faulty.Prop_IsPrefix_Sound, 4));
 
             // ...and a valid one.
             var valid = new IsPrefixTests<int>(IsPrefixValid);
-            ShowableHelpers.WriteLine(Check<Func<int[], int[], bool>>(valid.Prop_IsPrefix, 4));
+            ShowableHelpers.WriteLine(Check(valid.Prop_IsPrefix, 4));
             // We can also name properties.
             var named = new Named<Func<int[], int[], Imp<bool, Exists<int[], bool>>>>("valid IsPrefix is sound", valid.Prop_IsPrefix_Sound);
             ShowableHelpers.WriteLine(Check(named, 4));
