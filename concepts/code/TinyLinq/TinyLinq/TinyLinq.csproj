@@ -8,9 +8,10 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>TinyLinq</RootNamespace>
     <AssemblyName>TinyLinq</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -144,6 +145,7 @@
     <Compile Include="Sum.cs" />
     <Compile Include="ToArray.cs" />
     <Compile Include="DesugaredTests.cs" />
+    <Compile Include="PrefixedExtensions.cs" />
     <Compile Include="LinqSyntaxTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

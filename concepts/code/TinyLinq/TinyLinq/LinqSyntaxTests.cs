@@ -10,34 +10,16 @@ namespace TinyLinq
 {
     static class LinqSyntaxTests
     {
-        // List extensions
+        private static TDst Select<TSrc, [AssociatedType]TDst, [AssociatedType]TElem, [AssociatedType]TProj, implicit M>(this TSrc This, Func<TElem, TProj> f) where M : CSelect<TElem, TProj, TSrc, TDst> =>
+    M.Select(This, f);
 
-        private static D Select<T, [AssociatedType]U, [AssociatedType] D, implicit M>(this List<T> This, Func<T, U> f) where M : CSelect<T, U, List<T>, D>
-        {
-            return M.Select(This, f);
-        }
-
-        private static D Where<[AssociatedType]T, [AssociatedType]D, implicit M>(this List<T> This, Func<T, bool> f) where M : CWhere<List<T>, T, D>
-        {
-            return M.Where(This, f);
-        }
+        private static TDest Where<TSrc, [AssociatedType]TElem, [AssociatedType]TDest, implicit M>(this TSrc This, Func<TElem, bool> f) where M : CWhere<TSrc, TElem, TDest> =>
+    M.Where(This, f);
 
         private static List<V> SelectMany<[AssociatedType]T, [AssociatedType]U, [AssociatedType]V, implicit M>(this List<T> This, Func<T, List<U>> selector, Func<T, U, V> resultSelector)
             where M : CSelectMany<T, U, V, List<T>, List<U>, List<V>>
         {
             return M.SelectMany(This, selector, resultSelector);
-        }
-
-        // Array extensions
-
-        private static D Select<[AssociatedType]T, [AssociatedType]U, [AssociatedType] D, implicit M>(this T[] This, Func<T, U> f) where M : CSelect<T, U, T[], D>
-        {
-            return M.Select(This, f);
-        }
-
-        private static D Where<[AssociatedType]T, [AssociatedType] D, implicit M>(this T[] This, Func<T, bool> f) where M : CWhere<T[], T, D>
-        {
-            return M.Where(This, f);
         }
 
         private static V[] SelectMany<[AssociatedType]T, [AssociatedType]U, [AssociatedType]V, implicit M>(this T[] This, Func<T, U[]> selector, Func<T, U, V> resultSelector)
@@ -51,12 +33,17 @@ namespace TinyLinq
             // List queries
             List<int> l = new List<int>(new int[] { 1, 2, 3 });
 
+
             //var l1 = from x in l where x % 2 == 0 select (double) x;
 
             List<Tuple<int,int>> a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
 
             // Array queries
             int[] a = new int[] { 1, 2, 3 };
+
+            var ac = CEnumerable<int[]>.GetEnumerator(a);
+            var aq = from x in a select x * 5;
+
             //Selection<ArrayCursor<int>, int, double> a2 = from x in a where x % 2 == 0  select (double) x;
 
             int[] b = new int[] { 1, 2, 3 };
