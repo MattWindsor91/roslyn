@@ -30,7 +30,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="useSiteDiagnostics">
         /// The diagnostics set for this use site.
         /// </param>
-        /// <returns></returns>
+        /// <returns>
+        /// True if concept inference succeeded; false otherwise.
+        /// </returns>
         private bool InferTypeArgsConceptPhase(Binder binder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             Debug.Assert(!AllFixed(),
@@ -38,73 +40,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var inferrer = ConceptWitnessInferrer.ForBinder(binder);
 
-            var fixbuild = ArrayBuilder<TypeSymbol>.GetInstance();
-            for (int i = 0; i < _methodTypeParameters.Length; i++)
-            {
-                if (_fixedResults[i] != null)
-                {
-                    fixbuild.Add(_fixedResults[i]);
-                    continue;
-                }
-                /* Heuristic:
-                 * 
-                 * If we couldn't fix a type parameter, but it corresponds to
-                 * a method group with only one viable method, fix it as the
-                 * corresponding Func<>.
-                 *
-                 * CONSIDER: check to make sure there aren't multiple conflicting
-                 *           formal parameters!
-                 * CONSIDER: doing this correctly!
-                 */
-                var fix = false;
-                for (int j = 0; j < _formalParameterTypes.Length; j++)
-                {
-                    if (_formalParameterTypes[j] == _methodTypeParameters[i]
-                        && _arguments[j].Kind == BoundKind.MethodGroup)
-                    {
-                        var mg = (BoundMethodGroup)_arguments[j];
-                        if (mg.Methods.Length != 1)
-                        {
-                            continue;
-                        }
+            ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
 
-                        var method = mg.Methods[0];
-                        if (!method.ReturnsVoid && method.IsStatic)
-                        {
-                            var rtype = method.ReturnType;
-                            var funcwkt = WellKnownTypes.GetWellKnownFunctionDelegate(method.ParameterCount);
-                            if (funcwkt == WellKnownType.Unknown)
-                            {
-                                continue;
-                            }
-
-                            var functype = binder.Compilation.GetWellKnownType(funcwkt);
-                            if (functype.HasUseSiteError)
-                            {
-                                continue;
-                            }
-
-                            var ftargs = new TypeSymbol[method.ParameterCount + 1];
-                            for (var k = 0; k < method.ParameterCount; k++)
-                            {
-                                ftargs[k] = method.ParameterTypes[k];
-                            }
-                            ftargs[method.ParameterCount] = method.ReturnType;
-
-                            fix = true;
-                            fixbuild.Add(functype.Construct(ftargs));
-                            break;
-                        }
-                    }
-                }
-
-                if (!fix)
-                {
-                    fixbuild.Add(null);
-                }
-            }
-
-            var fixedMap = inferrer.Infer(_methodTypeParameters, fixbuild.ToImmutableAndFree(), new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
+            var fixedMap = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
             if (fixedMap == null)
             {
                 return false;
@@ -142,6 +80,166 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Adds some 'best guesses' to the fixed arguments list to make
+        /// concept inference run more smoothly.
+        /// <para>
+        /// This method is mainly a stopgap for improving concept based
+        /// inference until we can think of a more robust way of adding
+        /// the ideas in.
+        /// </para>
+        /// </summary>
+        /// <param name="binder">
+        /// The binder for the scope in which the type-inferred method
+        /// resides.
+        /// </param>
+        /// <returns>
+        /// The resulting fixed argument list, with some guesses.
+        /// The guesses should be sound (ie, implicit conversions of anything
+        /// that could possibly be inferred in their place), but not complete.
+        /// </returns>
+        private ImmutableArray<TypeSymbol> FixedArgsWithHeuristics(Binder binder)
+        {
+            var fixbuild = ArrayBuilder<TypeSymbol>.GetInstance();
+            for (int i = 0; i < _methodTypeParameters.Length; i++)
+            {
+                if (_fixedResults[i] != null)
+                {
+                    fixbuild.Add(_fixedResults[i]);
+                    continue;
+                }
+                /* Heuristic:
+                 * 
+                 * If we couldn't fix a type parameter, but it corresponds to
+                 * a method group with only one viable method, fix it as the
+                 * corresponding Func<>.
+                 *
+                 * CONSIDER: check to make sure there aren't multiple conflicting
+                 *           formal parameters!
+                 * CONSIDER: doing this correctly!
+                 */
+                TypeSymbol fix = null;
+                bool fixedAlready = false;
+                for (int j = 0; j < _formalParameterTypes.Length; j++)
+                {
+                    if (_formalParameterTypes[j] == _methodTypeParameters[i]
+                        && _arguments[j].Kind == BoundKind.MethodGroup)
+                    {
+                        var mg = (BoundMethodGroup)_arguments[j];
+                        if (mg.Methods.Length != 1)
+                        {
+                            continue;
+                        }
+
+                        var method = mg.Methods[0];
+
+                        TypeSymbol newfix = null;
+
+                        newfix = method.ReturnsVoid ? MakeActionTypeFor(method, binder) : MakeFuncTypeFor(method, binder);
+                        if (newfix == null)
+                        {
+                            continue;
+                        }
+
+                        if (!fixedAlready)
+                        {
+                            fix = newfix;
+                            fixedAlready = true;
+                        }
+                        else if (fix != newfix)
+                        {
+                            // Unfix the parameter if there's a conflicting
+                            // definition for it.
+                            fix = null;
+                        }
+                    }
+                }
+
+                fixbuild.Add(fix);
+            }
+            var fixedWithHeuristics = fixbuild.ToImmutableAndFree();
+            return fixedWithHeuristics;
+        }
+
+        /// <summary>
+        /// Creates a Func type with the same parameter and return types
+        /// as a given method symbol.
+        /// </summary>
+        /// <param name="method">
+        /// The method symbol to create.  Must not return void.
+        /// </param>
+        /// <param name="binder">
+        /// The binder for the scope in which the original type-inferred
+        /// method resides.
+        /// </param>
+        /// <returns>
+        /// A type symbol representing the corresponding Func if possible;
+        /// null if one could not be made.
+        /// </returns>
+        private TypeSymbol MakeFuncTypeFor(MethodSymbol method, Binder binder)
+        {
+            Debug.Assert(method != null, "can't make func type for null method");
+            Debug.Assert(!method.ReturnsVoid, "can't make a Func<> if the method returns void");
+
+            var rtype = method.ReturnType;
+            var funcwkt = WellKnownTypes.GetWellKnownFunctionDelegate(method.ParameterCount);
+            if (funcwkt == WellKnownType.Unknown)
+            {
+                return null;
+            }
+
+            var functype = binder.Compilation.GetWellKnownType(funcwkt);
+            if (functype.HasUseSiteError)
+            {
+                return null;
+            }
+
+            var ftargs = new TypeSymbol[method.ParameterCount + 1];
+            for (var k = 0; k < method.ParameterCount; k++)
+            {
+                ftargs[k] = method.ParameterTypes[k];
+            }
+            ftargs[method.ParameterCount] = method.ReturnType;
+
+            return functype.Construct(ftargs);
+        }
+
+
+        /// <summary>
+        /// Creates an Action type with the same parameter and return types
+        /// as a given method symbol.
+        /// </summary>
+        /// <param name="method">
+        /// The method symbol to create.  Must return void.
+        /// </param>
+        /// <param name="binder">
+        /// The binder for the scope in which the original type-inferred
+        /// method resides.
+        /// </param>
+        /// <returns>
+        /// A type symbol representing the corresponding Func if possible;
+        /// null if one could not be made.
+        /// </returns>
+        private TypeSymbol MakeActionTypeFor(MethodSymbol method, Binder binder)
+        {
+            Debug.Assert(method != null, "can't make action type for null method");
+            Debug.Assert(method.ReturnsVoid, "can't make an Action<> if the method returns void");
+
+            var actwkt = WellKnownTypes.GetWellKnownActionDelegate(method.ParameterCount);
+            if (actwkt == WellKnownType.Unknown)
+            {
+                return null;
+            }
+
+            var acttype = binder.Compilation.GetWellKnownType(actwkt);
+            if (acttype.HasUseSiteError)
+            {
+                return null;
+            }
+
+            return acttype.Construct(method.ParameterTypes);
         }
     }
 
