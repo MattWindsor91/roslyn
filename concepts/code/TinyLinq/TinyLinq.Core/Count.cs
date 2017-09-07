@@ -64,6 +64,17 @@ namespace TinyLinq
     }
 
     /// <summary>
+    /// Instance for O(1) length lookup of arrays.
+    /// </summary>
+    /// <typeparam name="TElem">
+    /// Type of elements in the array.
+    /// </typeparam>
+    public instance StaticCount_Array<TElem> : CStaticCount<TElem[]>
+    {
+        int Count(ref TElem[] t) => t.Length;
+    }
+
+    /// <summary>
     /// Instance for O(1) length lookup of array cursors.
     /// </summary>
     /// <typeparam name="TElem">

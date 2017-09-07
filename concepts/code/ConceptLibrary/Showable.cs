@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 
 /// <summary>
 /// Concept and basic instances for pretty-printing.
@@ -27,6 +28,31 @@ namespace System.Concepts.Showable
     public instance ShowableInt : CShowable<int>
     {
         void Show(int i, StringBuilder sb) => sb.Append(i);
+    }
+
+    /// <summary>
+    /// Instance allowing lists of showable items to be pretty-printed.
+    /// </summary>
+    public instance ShowableList<A, implicit ShowableA> : CShowable<List<A>>
+        where ShowableA : CShowable<A>
+    {
+        void Show(List<A> xs, StringBuilder sb)
+        {
+            sb.Append("{");
+
+            var xl = xs.Count;
+            for (var i = 0; i < xl; i++)
+            {
+                if (0 < i)
+                {
+                    sb.Append(", ");
+                }
+
+                Show(xs[i], sb);
+            }
+
+            sb.Append("}");
+        }
     }
 
     /// <summary>

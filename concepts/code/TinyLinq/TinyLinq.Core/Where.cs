@@ -48,7 +48,7 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Enumerator instance for <see cref="Where{TEnum, TElem}/>.
+    /// Enumerator instance for <see cref="Where{TEnum, TElem}"/>.
     /// </summary>
     /// <typeparam name="TEnum">
     /// Type of the inner enumerator we are filtering over.

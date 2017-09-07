@@ -23,18 +23,29 @@ namespace SerialPBT
             new Imp<TL, TR> { filter=filter, property = property };
     }
 
-
-    class Program
+    public static class PBTHelpers
     {
-        static TestResult<R> Check<T, [AssociatedType] R, implicit TestableT>(T test, int depth)
+        public static Imp<TL, TR> Implies<TL, TR, [AssociatedType] RL, [AssociatedType] RR, implicit TestableL, implicit TestableR>(TL filter, TR property)
+            where TestableL : CTestable<TL, RL>
+            where TestableR : CTestable<TR, RR> =>
+            new Imp<TL, TR> { filter = filter, property = property };
+
+        public static void Check<T, [AssociatedType] R, implicit TestableT, implicit ShowableR>(T test, int depth)
             where TestableT : CTestable<T, R>
+            where ShowableR : CShowable<R>
         {
             var name = TestableT.Name(test);
             Console.WriteLine(name);
             Console.WriteLine(new string('=', name.Length));
             Console.WriteLine();
-            return TestableT.Test(test, depth);
+            Console.WriteLine(Helpers.String(TestableT.Test(test, depth)));
         }
+    }
+
+
+    class Program
+    {
+
 
         static bool Prop_IsSingleDigit(int num) => -10 < num && num < 10;
 
@@ -145,7 +156,7 @@ namespace SerialPBT
             public static void WriteLine<A, implicit ShowableA>(A a)
                 where ShowableA : CShowable<A>
             {
-                Console.WriteLine(Helpers.String(a));
+                Console.WriteLine(System.Concepts.Showable.Helpers.String(a));
             }
         }
 
@@ -156,27 +167,27 @@ namespace SerialPBT
             // method as a Func.
             
             // We can test simple predicates...
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit, 9));
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit, 11));
+            PBTHelpers.Check(Prop_IsSingleDigit, 9);
+            PBTHelpers.Check(Prop_IsSingleDigit, 11);
 
             // ...existentials, and implications.
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Exists, 11));
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Imp, 11));
-            ShowableHelpers.WriteLine(Check(Prop_IsSingleDigit_Filtered, 11));
+            PBTHelpers.Check(Prop_IsSingleDigit_Exists, 11);
+            PBTHelpers.Check(Prop_IsSingleDigit_Imp, 11);
+            PBTHelpers.Check(Prop_IsSingleDigit_Filtered, 11);
 
             // We can wrap tests up in generic classes.
             // For example, our IsPrefix test suite can be used both on an
             // invalid implementation...
             var faulty = new IsPrefixTests<int>(IsPrefixFaulty);
-            ShowableHelpers.WriteLine(Check(faulty.Prop_IsPrefix, 4));
-            ShowableHelpers.WriteLine(Check(faulty.Prop_IsPrefix_Sound, 4));
+            PBTHelpers.Check(faulty.Prop_IsPrefix, 4);
+            PBTHelpers.Check(faulty.Prop_IsPrefix_Sound, 4);
 
             // ...and a valid one.
             var valid = new IsPrefixTests<int>(IsPrefixValid);
-            ShowableHelpers.WriteLine(Check(valid.Prop_IsPrefix, 4));
+            PBTHelpers.Check(valid.Prop_IsPrefix, 4);
             // We can also name properties.
             var named = new Named<Func<int[], int[], Imp<bool, Exists<int[], bool>>>>("valid IsPrefix is sound", valid.Prop_IsPrefix_Sound);
-            ShowableHelpers.WriteLine(Check(named, 4));
+            PBTHelpers.Check(named, 4);
         }
     }
 }

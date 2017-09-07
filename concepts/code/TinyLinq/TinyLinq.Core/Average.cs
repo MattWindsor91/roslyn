@@ -22,6 +22,54 @@ namespace TinyLinq
     }
 
     /// <summary>
+    /// Averaging over a general enumerator of integers, promoting the
+    /// result to a double.
+    /// </summary>
+    public instance Average_Enumerator_Int<TEnum, implicit E> : CAverage<TEnum, double>
+        where E : CEnumerator<TEnum, int>
+    {
+        double Average(ref TEnum e)
+        {
+            var sum = 0;
+            var count = 0;
+
+            E.Reset(ref e);
+            while (E.MoveNext(ref e))
+            {
+                count++;
+                sum += E.Current(ref e);
+            }
+
+            return (double)sum / count;
+        }
+    }
+
+
+    /// <summary>
+    /// Averaging over a general enumerable of integers, promoting the
+    /// result to a double.
+    /// </summary>
+    public instance Average_Enumerator_Int<TColl, [AssociatedType]TEnum, implicit E> : CAverage<TColl, double>
+        where E : CEnumerable<TColl, TEnum, int>
+    {
+        double Average(ref TColl c)
+        {
+            var sum = 0;
+            var count = 0;
+
+            var e = E.GetEnumerator(c);
+            E.Reset(ref e);
+            while (E.MoveNext(ref e))
+            {
+                count++;
+                sum += E.Current(ref e);
+            }
+
+            return (double)sum / count;
+        }
+    }
+
+    /// <summary>
     /// Averaging over a general enumerator, when the element is fractional.
     /// </summary>
     public instance Average_Enumerator_Fractional<TEnum, [AssociatedType] TElem, implicit E, implicit F> : CAverage<TEnum, TElem>

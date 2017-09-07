@@ -44,5 +44,7 @@ namespace TinyLinq
         public static int CCount<S, implicit C>(this S This) where C : CCount<S> => C.Count(ref This);
 
         public static TElem CSum<TEnum, [AssociatedType]TElem, implicit S>(this TEnum e) where S : CSum<TEnum, TElem> => S.Sum(ref e);
+
+        public static TElem CAverage<TEnum, [AssociatedType]TElem, implicit A>(this TEnum e) where A : CAverage<TEnum, TElem> => A.Average(ref e);
     }
 }

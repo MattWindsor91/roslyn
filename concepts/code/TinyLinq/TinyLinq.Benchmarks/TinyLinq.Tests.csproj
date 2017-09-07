@@ -60,6 +60,10 @@
       <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
       <Name>ConceptLibrary</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\SerialPBT\SerialPBT.csproj">
+      <Project>{958d76d8-9420-4cf8-9c5a-3be63950790e}</Project>
+      <Name>SerialPBT</Name>
+    </ProjectReference>
     <ProjectReference Include="..\TinyLinq.Core\TinyLinq.Core.csproj">
       <Project>{70dbd542-9553-43cd-b3a0-fc000e5b10d2}</Project>
       <Name>TinyLinq.Core</Name>
