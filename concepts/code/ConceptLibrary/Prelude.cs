@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 ///     Prelude of common concepts.
 /// </summary>
 /// <remarks>

@@ -7,12 +7,12 @@ namespace TinyLinq
 {
     // TODO: generalise and make lazy
 
-    concept CSelectMany<[AssociatedType] T, [AssociatedType] U, [AssociatedType] V, CT, [AssociatedType] CU, [AssociatedType] CV>
+    public concept CSelectMany<[AssociatedType] T, [AssociatedType] U, [AssociatedType] V, CT, [AssociatedType] CU, [AssociatedType] CV>
     {
         CV SelectMany(CT src, Func<T, CU> selector, Func<T, U, V> resultSelector);
     }
 
-    instance ListSelectMany<T, U, V> : CSelectMany<T, U, V, List<T>, List<U>, List<V>>
+    public instance ListSelectMany<T, U, V> : CSelectMany<T, U, V, List<T>, List<U>, List<V>>
     {
         List<V> SelectMany(List<T> src, Func<T, List<U>> selector, Func<T, U, V> resultSelector)
         {
@@ -27,7 +27,7 @@ namespace TinyLinq
         }
     }
 
-    instance ArraySelectMany<T, U, V> : CSelectMany<T, U, V, T[], U[], V[]>
+    public instance ArraySelectMany<T, U, V> : CSelectMany<T, U, V, T[], U[], V[]>
     {
         V[] SelectMany(T[] src, Func<T, U[]> selector, Func<T, U, V> resultSelector)
         {
