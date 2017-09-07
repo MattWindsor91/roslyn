@@ -190,6 +190,34 @@ namespace TinyLinq
                 (Func<bool>)(() => toAverage.Select(x => x * x).Where(x => x % 2 == 1).Average() ==
                  toAverage.CSelect((int x) => x * x).CWhere((int x) => x % 2 == 1).CAverage()));
 
+        private static bool Prop_CartesianProductsEqualIntArray(int[] input)
+        {
+            var linq =
+                input.SelectMany(x => input,
+                                 (x, y) => (x, y)).ToArray();
+            var tiny =
+                input.CSelectMany((int x) => input,
+                                  (int x, int y) => (x, y)).CToArray();
+            if (linq.Length != tiny.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < linq.Length; i++)
+            {
+                if (linq[i].Item1 != tiny[i].Item1)
+                {
+                    return false;
+                }
+                if (linq[i].Item2 != tiny[i].Item2)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public static void Run()
         {
             PBTHelpers.Check(Prop_SelectIdentityIntArray, 7);
@@ -211,6 +239,8 @@ namespace TinyLinq
             PBTHelpers.Check(Prop_AverageOddEqualIntArray, 7);
             PBTHelpers.Check(Prop_AverageSquaredOddEqualIntArray, 7);
             PBTHelpers.Check(Prop_AverageOddSquaresEqualIntArray, 7);
+
+            PBTHelpers.Check(Prop_CartesianProductsEqualIntArray, 7);
         }
     }
 }

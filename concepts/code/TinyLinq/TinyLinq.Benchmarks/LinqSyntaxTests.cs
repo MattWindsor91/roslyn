@@ -16,14 +16,8 @@ namespace TinyLinq
         private static TDest Where<TSrc, [AssociatedType]TElem, [AssociatedType]TDest, implicit M>(this TSrc This, Func<TElem, bool> f) where M : CWhere<TSrc, TElem, TDest> =>
     M.Where(This, f);
 
-        private static List<V> SelectMany<[AssociatedType]T, [AssociatedType]U, [AssociatedType]V, implicit M>(this List<T> This, Func<T, List<U>> selector, Func<T, U, V> resultSelector)
-            where M : CSelectMany<T, U, V, List<T>, List<U>, List<V>>
-        {
-            return M.SelectMany(This, selector, resultSelector);
-        }
-
-        private static V[] SelectMany<[AssociatedType]T, [AssociatedType]U, [AssociatedType]V, implicit M>(this T[] This, Func<T, U[]> selector, Func<T, U, V> resultSelector)
-            where M : CSelectMany<T, U, V, T[], U[], V[]>
+        private static SelectMany<List<T>, T, List<U>, List<U>.Enumerator, U, V> SelectMany<[AssociatedType]T, [AssociatedType]U, [AssociatedType]V, implicit M>(this List<T> This, Func<T, List<U>> selector, Func<T, U, V> resultSelector)
+            where M : CSelectMany<List<T>, T, List<U>, U, V, SelectMany<List<T>, T, List<U>, List<U>.Enumerator, U, V>>
         {
             return M.SelectMany(This, selector, resultSelector);
         }
@@ -36,7 +30,7 @@ namespace TinyLinq
 
             //var l1 = from x in l where x % 2 == 0 select (double) x;
 
-            List<Tuple<int,int>> a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
+            //List<Tuple<int,int>> a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
 
             // Array queries
             int[] a = new int[] { 1, 2, 3 };
@@ -48,7 +42,7 @@ namespace TinyLinq
 
             int[] b = new int[] { 1, 2, 3 };
 
-            Tuple<int, int>[] a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
+            //Tuple<int, int>[] a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
 
             int[] c = new int[] { 1, 2, 3 };
             //Selection<ArrayCursor<int>, int, double> a4 = from x in a where x % 2 == 0  select (double) x;

@@ -38,6 +38,12 @@ namespace TinyLinq
         public static TDest CWhere<TSrc, [AssociatedType]TElem, [AssociatedType]TDest, implicit M>(this TSrc This, Func<TElem, bool> f) where M : CWhere<TSrc, TElem, TDest> =>
             M.Where(This, f);
 
+        public static TDest CSelectMany<TSrc, [AssociatedType]TElem, TInner, [AssociatedType]TInnerElem, TProj, [AssociatedType]TDest, implicit M>(this TSrc This, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector)
+            where M : CSelectMany<TSrc, TElem, TInner, TInnerElem, TProj, TDest>
+        {
+            return M.SelectMany(This, selector, resultSelector);
+        }
+
         public static U[] CToArray<S, [AssociatedType]U, implicit TA>(this S This) where TA : CToArray<S, U>
             => TA.ToArray(This);
 
