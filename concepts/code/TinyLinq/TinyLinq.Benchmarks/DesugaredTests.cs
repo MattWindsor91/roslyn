@@ -218,6 +218,10 @@ namespace TinyLinq
             return true;
         }
 
+        private static bool Prop_CartesianMultiplicationEqualIntArray(int[] xs, int[] ys)
+            => xs.SelectMany(x => ys, (x, y) => x * y).Sum() ==
+               xs.CSelectMany((int x) => ys, (int x, int y) => x * y).CSum();
+
         public static void Run()
         {
             PBTHelpers.Check(Prop_SelectIdentityIntArray, 7);
@@ -241,6 +245,7 @@ namespace TinyLinq
             PBTHelpers.Check(Prop_AverageOddSquaresEqualIntArray, 7);
 
             PBTHelpers.Check(Prop_CartesianProductsEqualIntArray, 7);
+            PBTHelpers.Check(Prop_CartesianMultiplicationEqualIntArray, 5);
         }
     }
 }
