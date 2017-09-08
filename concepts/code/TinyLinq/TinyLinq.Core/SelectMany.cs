@@ -112,8 +112,7 @@ namespace TinyLinq
         }
     }
 
-
-
+    [Overlappable]
     public instance SelectMany_Enumerator<TSrc, TElem, TInnerColl, [AssociatedType] TInnerSrc, TInnerElem, TProj, implicit EI, implicit ES>
         : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
         where ES : CEnumerator<TSrc, TElem>
@@ -130,6 +129,7 @@ namespace TinyLinq
             };
     }
 
+    [Overlappable]
     public instance SelectMany_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType]TInnerElem, TProj, implicit EI, implicit ES>
         : CSelectMany<TColl, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
         where ES : CEnumerable<TColl, TSrc, TElem>

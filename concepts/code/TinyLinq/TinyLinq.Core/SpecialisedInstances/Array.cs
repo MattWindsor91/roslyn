@@ -129,7 +129,7 @@ namespace TinyLinq.SpecialisedInstances
 
     #region SelectMany
 
-    public struct SelectMany_ArrayToArray<TElem, TInnerElem, TProj>
+    public struct ArrayToArraySelectMany<TElem, TInnerElem, TProj>
     {
         /// <summary>
         /// The source array.
@@ -160,6 +160,11 @@ namespace TinyLinq.SpecialisedInstances
         public int innerLength;
 
         /// <summary>
+        /// The current element.
+        /// </summary>
+        public TProj current;
+
+        /// <summary>
         /// The outer projection.
         /// </summary>
         public Func<TElem, TInnerElem[]> outerProjection;
@@ -169,6 +174,85 @@ namespace TinyLinq.SpecialisedInstances
         public Func<TElem, TInnerElem, TProj> innerProjection;
     }
 
+    public instance Enumerator_SelectMany_ArrayToArray<TElem, TInnerElem, TProj>
+        : CEnumerator<ArrayToArraySelectMany<TElem, TInnerElem, TProj>, TProj>
+    {
+        void Reset(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm)
+        {
+            sm.sourceIndex = sm.innerIndex = -1;
+        }
+
+        bool MoveNext(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm)
+        {
+            // Outer array has finished: we're done.
+            if (sm.sourceLength <= sm.sourceIndex)
+            {
+                return false;
+            }
+
+            var mustCycleOuter = sm.sourceIndex < 0;
+
+            // Keep going until we run out of outer elements.
+            while (true)
+            {
+                if (mustCycleOuter)
+                {
+                    sm.sourceIndex++;
+                    if (sm.sourceLength <= sm.sourceIndex)
+                    {
+                        // We've run out of outer elements, so we're done.
+                        return false;
+                    }
+                    sm.inner = sm.outerProjection(sm.source[sm.sourceIndex]);
+                    sm.innerIndex = -1;
+                    sm.innerLength = sm.inner.Length;
+                }
+                mustCycleOuter = true;
+
+                // Does the inner array have something left in it?
+                sm.innerIndex++;
+                if (sm.innerIndex < sm.innerLength)
+                {
+                    sm.current = sm.innerProjection(sm.source[sm.sourceIndex], sm.inner[sm.innerIndex]);
+                    return true;
+                }
+
+                // It doesn't, so loop back and increment the outer array.
+            }
+        }
+
+        TProj Current(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm) => sm.current;
+
+        void Dispose(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm) {}
+    }
+
+    public instance SelectMany_ArrayCursorToArray<TElem, TInnerElem, TProj> : CSelectMany<Instances.ArrayCursor<TElem>, TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
+    {
+        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+            new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
+            {
+                source = t.source,
+                sourceIndex = -1,
+                sourceLength = t.source.Length,
+
+                outerProjection = outer,
+                innerProjection = inner
+            };
+    }
+
+    public instance SelectMany_ArrayToArray<TElem, TInnerElem, TProj> : CSelectMany<TElem[], TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
+    {
+        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+            new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
+            {
+                source = t,
+                sourceIndex = -1,
+                sourceLength = t.Length,
+
+                outerProjection = outer,
+                innerProjection = inner
+            };
+    }
 
 
     #endregion SelectMany
