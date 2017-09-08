@@ -11,7 +11,7 @@ using SerialPBT;
 
 namespace TinyLinq
 {   
-    public static class DesugaredTests
+    public static class SpecialisedArrayTests
     {
         /// <summary>
         /// Select and ToArray behaves as identity.
