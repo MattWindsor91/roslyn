@@ -40,15 +40,6 @@ namespace TinyLinq.SpecialisedInstances
         /// The cached current item.
         /// </summary>
         public TProj current;
-
-        public ArraySelect(TElem[] array, Func<TElem, TProj> proj)
-        {
-            source = array;
-            projection = proj;
-            lo = -1;
-            hi = array.Length;
-            current = default;
-        }
     }
 
     /// <summary>
@@ -103,7 +94,13 @@ namespace TinyLinq.SpecialisedInstances
     public instance Select_ArrayCursor<TElem, TProj> : CSelect<TElem, TProj, Instances.ArrayCursor<TElem>, ArraySelect<TElem, TProj>>
     {
         ArraySelect<TElem, TProj> Select(Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
-            new ArraySelect<TElem, TProj>(array: t.source, proj: projection);
+            new ArraySelect<TElem, TProj>
+            {
+                source = t.source,
+                projection = projection,
+                lo = -1,
+                hi = t.source.Length
+            };
     }
 
     /// <summary>
@@ -119,10 +116,62 @@ namespace TinyLinq.SpecialisedInstances
     public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], ArraySelect<TElem, TProj>>
     {
         ArraySelect<TElem, TProj> Select(TElem[] t, Func<TElem, TProj> projection) =>
-            new ArraySelect<TElem, TProj>(array: t, proj: projection);
+            new ArraySelect<TElem, TProj>
+            {
+                source = t,
+                projection = projection,
+                lo = -1,
+                hi = t.Length
+            };
     }
 
     #endregion Select
+
+    #region SelectMany
+
+    public struct SelectMany_ArrayToArray<TElem, TInnerElem, TProj>
+    {
+        /// <summary>
+        /// The source array.
+        /// </summary>
+        public TElem[] source;
+        /// <summary>
+        /// The current index into the source array.
+        /// May be +/-1 past array bounds.
+        /// </summary>
+        public int sourceIndex;
+        /// <summary>
+        /// The cached length of the source array.
+        /// </summary>
+        public int sourceLength;
+
+        /// <summary>
+        /// The current inner array.
+        /// </summary>
+        public TInnerElem[] inner;
+        /// <summary>
+        /// The current index into the inner array.
+        /// May be +/-1 past array bounds.
+        /// </summary>
+        public int innerIndex;
+        /// <summary>
+        /// The cached length of the inner array.
+        /// </summary>
+        public int innerLength;
+
+        /// <summary>
+        /// The outer projection.
+        /// </summary>
+        public Func<TElem, TInnerElem[]> outerProjection;
+        /// <summary>
+        /// The inner projection.
+        /// </summary>
+        public Func<TElem, TInnerElem, TProj> innerProjection;
+    }
+
+
+
+    #endregion SelectMany
 
     #region Select of Select
 
@@ -133,7 +182,13 @@ namespace TinyLinq.SpecialisedInstances
     public instance Select_Select_Array<TElem, TProj1, TProj2> : CSelect<TProj1, TProj2, ArraySelect<TElem, TProj1>, ArraySelect<TElem, TProj2>>
     {
         ArraySelect<TElem, TProj2> Select(ArraySelect<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
-            new ArraySelect<TElem, TProj2>(array: t.source, proj: x => projection(t.projection(x)));
+            new ArraySelect<TElem, TProj2>
+            {
+                source = t.source,
+                projection = x => projection(t.projection(x)),
+                lo = -1,
+                hi = t.source.Length
+            };
     }
 
     #endregion Select of Select

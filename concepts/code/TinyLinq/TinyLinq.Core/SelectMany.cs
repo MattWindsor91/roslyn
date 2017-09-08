@@ -5,6 +5,34 @@ using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
+    /// <summary>
+    /// Concept for selecting multiple items from each element of a collection,
+    /// then projecting them into a new enumerator.
+    /// </summary>
+    /// <typeparam name="TSrc">
+    /// Type of the collection to target.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of the elements of <typeparamref name="TSrc"/>.
+    /// </typeparam>
+    /// <typeparam name="TInner">
+    /// Type of the collection returned by the first projection.
+    /// </typeparam>
+    /// <typeparam name="TInnerElem">
+    /// Type of the elements of <typeparamref name="TInner"/>.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of the elements returned by the second projection.
+    /// </typeparam>
+    /// <typeparam name="TDest">
+    /// Type of the enumerator over <typeparamref name="TInner"/>
+    /// that the selection returns.
+    /// </typeparam>
+    public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, [AssociatedType] TProj, [AssociatedType] TDest>
+    {
+        TDest SelectMany(TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
+    }
+
     public struct SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
     {
         public TSrc source;
@@ -17,19 +45,6 @@ namespace TinyLinq
 
         public Func<TElem, TInnerColl> outerProjection;
         public Func<TElem, TInnerElem, TProj> innerProjection;
-
-        public SelectMany(TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-        {
-            source = src;
-            currentElem = default;
-            currentInnerSource = default;
-            current = default;
-            started = false;
-            finished = false;
-
-            outerProjection = outerProj;
-            innerProjection = innerProj;
-        }
     }
 
     public instance Enumerator_SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI>
@@ -97,12 +112,7 @@ namespace TinyLinq
         }
     }
 
-    // TODO: generalise and make lazy
 
-    public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, [AssociatedType] TProj, [AssociatedType] TDest>
-    {
-        TDest SelectMany(TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
-    }
 
     public instance SelectMany_Enumerator<TSrc, TElem, TInnerColl, [AssociatedType] TInnerSrc, TInnerElem, TProj, implicit EI, implicit ES>
         : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
@@ -110,7 +120,14 @@ namespace TinyLinq
         where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
     {
         SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>(src, outerProj, innerProj);
+            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
+            {
+                source = src,
+                started = false,
+                finished = false,
+                outerProjection = outerProj,
+                innerProjection = innerProj
+            };
     }
 
     public instance SelectMany_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType]TInnerElem, TProj, implicit EI, implicit ES>
@@ -119,37 +136,13 @@ namespace TinyLinq
         where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
     {
         SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>(ES.GetEnumerator(coll), outerProj, innerProj);
-    }
-
-    /*
-    public instance ListSelectMany<T, U, V> : CSelectMany<T, U, V, List<T>, List<U>, List<V>>
-    {
-        List<V> SelectMany(List<T> src, Func<T, List<U>> selector, Func<T, U, V> resultSelector)
-        {
-            var vs = new List<V>();
-            foreach (T t in src)
+            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
             {
-                var us = selector(t);
-                foreach (U u in us)
-                    vs.Add(resultSelector(t, u));
-            }
-            return vs;
-        }
+                source = ES.GetEnumerator(coll),
+                started = false,
+                finished = false,
+                outerProjection = outerProj,
+                innerProjection = innerProj
+            };
     }
-
-    public instance ArraySelectMany<T, U, V> : CSelectMany<T, U, V, T[], U[], V[]>
-    {
-        V[] SelectMany(T[] src, Func<T, U[]> selector, Func<T, U, V> resultSelector)
-        {
-            var vs = new List<V>(); // rather inefficient
-            foreach (T t in src)
-            {
-                var us = selector(t);
-                foreach (U u in us)
-                    vs.Add(resultSelector(t, u));
-            }
-            return vs.ToArray();
-        }
-    }*/
 }

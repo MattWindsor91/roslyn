@@ -95,7 +95,7 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Summation over a general enumerable, when the element is a number
+    /// Summation over a general enumerable, when the element is a number.
     /// </summary>
     public instance Sum_Enumerable_Num<TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit N> : CSum<TColl, TElem>
         where E : CEnumerable<TColl, TEnum, TElem>

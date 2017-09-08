@@ -72,20 +72,14 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Unspecialised instance for selecting over an enumerable, producing
-    /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
+    /// Adapts any selection over enumerators into one over enumerables.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerable<TSrc, [AssociatedType] TElem, TProj, [AssociatedType] TDst, implicit E>
-        : CSelect<TElem, TProj, TSrc, Select<TDst, TElem, TProj>>
-        where E : CEnumerable<TSrc, TDst, TElem>
+    public instance Select_Enumerable<TColl, [AssociatedType] TSrc, [AssociatedType] TElem, TProj, [AssociatedType] TDst, implicit S, implicit E>
+        : CSelect<TElem, TProj, TColl, TDst>
+        where S : CSelect<TElem, TProj, TSrc, TDst>
+        where E : CEnumerable<TColl, TSrc, TElem>
     {
-        Select<TDst, TElem, TProj> Select(TSrc t, Func<TElem, TProj> projection) =>
-            new Select<TDst, TElem, TProj>
-            {
-                source = E.GetEnumerator(t),
-                projection = projection,
-                current = default
-            };
+        TDst Select(TColl t, Func<TElem, TProj> projection) => S.Select(E.GetEnumerator(t), projection);
     }
 }
