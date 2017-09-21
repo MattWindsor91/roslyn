@@ -429,11 +429,16 @@ namespace Microsoft.CodeAnalysis
         // @MattWindsor91 (Concept-C# 2017)
         // Instance overlap attributes
         //
-
         System_Concepts_OverlappingAttribute__ctor,
         System_Concepts_OverlappableAttribute__ctor,
-
         // End instance overlap attributes
+
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Concept extension method attributes
+        //
+        System_Concepts_ConceptExtensionAttribute__ctor,
+        // End concept extension method attributes
 
         Count
     }

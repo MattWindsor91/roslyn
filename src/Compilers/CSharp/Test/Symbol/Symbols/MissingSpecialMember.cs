@@ -572,6 +572,7 @@ namespace System
                     case WellKnownType.System_Concepts_ConceptInstanceAttribute:
                     case WellKnownType.System_Concepts_OverlappableAttribute:
                     case WellKnownType.System_Concepts_OverlappingAttribute:
+                    case WellKnownType.System_Concepts_ConceptExtensionAttribute:
                         // @MattWindsor91 (Concept-C# 2017)
                         // These are part of our experimental concepts
                         // implementation, thus not in the platform.

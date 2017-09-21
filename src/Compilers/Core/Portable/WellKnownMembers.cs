@@ -2937,9 +2937,20 @@ namespace Microsoft.CodeAnalysis
                 (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_OverlappableAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
                 0,                                                                                                          // Arity
                     0,                                                                                                      // Method Signature
-                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void
-
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
                 // End instance overlap attributes
+
+                //
+                // @MattWindsor91 (Concept-C# 2017)
+                // Concept extension attributes
+                //
+                // System_Concepts_ConceptExtensionAttribute__ctor
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_OverlappingAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                // End concept extension attributes
             };
 
             string[] allNames = new string[(int)WellKnownMember.Count]
@@ -3311,11 +3322,16 @@ namespace Microsoft.CodeAnalysis
                 // @MattWindsor91 (Concept-C# 2017)
                 // Instance overlap attributes
                 //
-
                 ".ctor",                                    // System_Concepts_OverlappingAttribute__ctor
-                ".ctor"                                     // System_Concepts_OverlappableAttribute__ctor
-
+                ".ctor",                                    // System_Concepts_OverlappableAttribute__ctor
                 // End instance overlap attributes
+
+                //
+                // @MattWindsor91 (Concept-C# 2017)
+                // Concept extension attributes
+                //
+                ".ctor"                                     // System_Concepts_ConceptExtensionAttribute__ctor
+                // End concept extension attributes
             };
 
             s_descriptors = MemberDescriptor.InitializeFromStream(new System.IO.MemoryStream(initializationBytes, writable: false), allNames);
