@@ -26,6 +26,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private TypeSymbol _lazyReturnType;
         private bool _lazyIsVararg;
 
+        // @MattWindsor91 (Concept-C# 2017)
+        //
+        // Naturally, this needs to be stored more efficiently in a real
+        // implementation.
+        private bool _isConceptExtensionMethod;
+
         /// <summary>
         /// A collection of type parameter constraints, populated when
         /// constraints for the first type parameter is requested.
@@ -88,6 +94,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             bool isExtensionMethod = firstParam != null &&
                 !firstParam.IsArgList &&
                 firstParam.Modifiers.Any(SyntaxKind.ThisKeyword);
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // A 'this' keyword on the first parameter of a concept or instance
+            // method, or on a default struct, is not an extension method:
+            // it's a concept extension method.
+            if (containingType != null && (containingType.IsConcept || containingType.IsInstance || containingType.IsDefaultStruct))
+            {
+                _isConceptExtensionMethod = isExtensionMethod;
+                isExtensionMethod = false;
+            }
+            else
+            {
+                _isConceptExtensionMethod = false;
+            }
 
             bool modifierErrors;
             var declarationModifiers = this.MakeModifiers(modifiers, methodKind, location, diagnostics, out modifierErrors);
@@ -1095,5 +1115,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         internal override bool GenerateDebugInfo => !IsAsync && !IsIterator;
+
+        /// <summary>
+        /// Returns whether this method is a concept extension.
+        /// </summary>
+        /// <remarks>
+        /// Only ordinary source methods can be a CEM, so we pull this to false
+        /// in all other source symbols.
+        /// </remarks>
+        public override bool IsConceptExtensionMethod => _isConceptExtensionMethod;
     }
 }

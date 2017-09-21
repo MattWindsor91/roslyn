@@ -7,7 +7,11 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
-    internal sealed class ConstructedMethodSymbol : SubstitutedMethodSymbol
+    // @MattWindsor91 (Concept-C# 2017)
+    //
+    // Unsealed to allow RetargetedConstructedMethodSymbol to descend from this
+
+    internal class ConstructedMethodSymbol : SubstitutedMethodSymbol
     {
         private readonly ImmutableArray<TypeSymbol> _typeArguments;
 
@@ -16,6 +20,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                    map: new TypeMap(constructedFrom.ContainingType, ((MethodSymbol)constructedFrom.OriginalDefinition).TypeParameters, typeArguments.SelectAsArray(TypeMap.TypeSymbolAsTypeWithModifiers)),
                    originalDefinition: (MethodSymbol)constructedFrom.OriginalDefinition,
                    constructedFrom: constructedFrom)
+        {
+            _typeArguments = typeArguments;
+        }
+
+        // @MattWindsor (Concept-C# 2017)
+        //
+        // Added new constructor to allow retargeting the contained
+        // type.
+
+        internal ConstructedMethodSymbol(MethodSymbol constructedFrom, ImmutableArray<TypeSymbol> typeArguments, NamedTypeSymbol newContainingType)
+        : base(containingSymbol: newContainingType,
+           map: new TypeMap(newContainingType, (constructedFrom.OriginalDefinition).TypeParameters, typeArguments.SelectAsArray(TypeMap.TypeSymbolAsTypeWithModifiers)),
+           originalDefinition: constructedFrom.OriginalDefinition,
+           constructedFrom: constructedFrom)
         {
             _typeArguments = typeArguments;
         }

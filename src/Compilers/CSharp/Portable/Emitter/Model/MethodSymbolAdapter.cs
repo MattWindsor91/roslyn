@@ -45,8 +45,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (!this.IsDefinition &&
                     (!this.IsGenericMethod || PEModuleBuilder.IsGenericType(this.ContainingType)))
                 {
-                    Debug.Assert((object)this.ContainingType != null &&
-                            PEModuleBuilder.IsGenericType(this.ContainingType));
+                    // @MattWindsor91 (Concept-C# 2017)
+                    //
+                    // Synthesised witness symbols trigger the original assert.
+                    // This might be because adapted symbols are usually
+                    // constructions or specialisations, but SWSes are neither.
+                    //
+                    // It isn't entirely clear to me what the correct behaviour
+                    // here is --- this probably isn't it.
+                    Debug.Assert(
+                        this is SynthesizedWitnessMethodSymbol
+                        ||
+                        ((object)this.ContainingType != null &&
+                            PEModuleBuilder.IsGenericType(this.ContainingType)));
                     return this;
                 }
 

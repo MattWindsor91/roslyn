@@ -220,6 +220,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return false; }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        //
+        // Implementation methods _can_ be concept extensions, if they
+        // implement a concept extension themselves.
+        public override bool IsConceptExtensionMethod => _interfaceMethod.IsConceptExtensionMethod;
+
         public override string Name
         {
             get { return _name; }

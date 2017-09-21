@@ -979,6 +979,22 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (invokedAsExtensionMethod || (method.IsStatic && receiver != null && receiver.WasCompilerGenerated))
             {
                 receiver = null;
+
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // An extension method might be a concept extension method,
+                // in which case we once again have to synthesise its actual
+                // receiver type.
+                //
+                // TODO: do this cleanly!
+                if (method is SynthesizedWitnessMethodSymbol sm)
+                {
+                    receiver = new BoundTypeExpression(node, null, sm.Parent) { WasCompilerGenerated = true };
+                }
+                else
+                {
+                    receiver = null;
+                }
             }
 
             var argNames = analyzedArguments.GetNames();

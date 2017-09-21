@@ -264,6 +264,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        public sealed override bool IsConceptExtensionMethod => false;
+
         internal override Microsoft.Cci.CallingConvention CallingConvention
         {
             get

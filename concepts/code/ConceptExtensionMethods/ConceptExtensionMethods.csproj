@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{6A8191EA-9B29-4A25-9073-67EFC6ECB578}</ProjectGuid>
+    <ProjectGuid>{5BB3763D-50D6-407F-93BB-C15B85C825F8}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TinyLinq.Benchmarks</RootNamespace>
-    <AssemblyName>TinyLinq.Benchmarks</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <RootNamespace>ConceptExtensionMethods</RootNamespace>
+    <AssemblyName>ConceptExtensionMethods</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -43,32 +42,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConceptExtensionTests.cs" />
-    <Compile Include="LinqSyntaxTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SpecialisedArrayTests.cs" />
-    <Compile Include="UnspecialisedArrayTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ConceptAttributes\ConceptAttributes.csproj">
+    <ProjectReference Include="..\ConceptAttributes\ConceptAttributes.csproj">
       <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
       <Name>ConceptAttributes</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\ConceptLibrary\ConceptLibrary.csproj">
-      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
-      <Name>ConceptLibrary</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\SerialPBT\SerialPBT.csproj">
-      <Project>{958d76d8-9420-4cf8-9c5a-3be63950790e}</Project>
-      <Name>SerialPBT</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\TinyLinq.Core\TinyLinq.Core.csproj">
-      <Project>{70dbd542-9553-43cd-b3a0-fc000e5b10d2}</Project>
-      <Name>TinyLinq.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

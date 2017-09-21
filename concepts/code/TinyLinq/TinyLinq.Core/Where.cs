@@ -19,7 +19,7 @@ namespace TinyLinq
     /// </typeparam>
     public concept CWhere<TSrc, [AssociatedType] TElem, [AssociatedType] TDest>
     {
-        TDest Where(TSrc src, Func<TElem, bool> f);
+        TDest Where(this TSrc src, Func<TElem, bool> f);
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ namespace TinyLinq
         : CWhere<TEnum, TElem, Where<TEnum, TElem>>
         where E : CEnumerator<TEnum, TElem>
     {
-        Where<TEnum, TElem> Where(TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter, current = default };
+        Where<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter, current = default };
     }
 
     /// <summary>
@@ -105,6 +105,6 @@ namespace TinyLinq
         : CWhere<TSrc, TElem, Where<TEnum, TElem>>
         where E : CEnumerable<TSrc, TEnum, TElem>
     {
-        Where<TEnum, TElem> Where(TSrc src, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = E.GetEnumerator(src), filter = filter, current = default };
+        Where<TEnum, TElem> Where(this TSrc src, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = E.GetEnumerator(src), filter = filter, current = default };
     }
 }

@@ -408,11 +408,17 @@ namespace Microsoft.CodeAnalysis
         // @MattWindsor91 (Concept-C# 2017)
         // Instance overlap attributes
         //
-
         private static readonly byte[][] s_signaturesOfOverlappingAttribute = { s_signature_HasThis_Void };
         private static readonly byte[][] s_signaturesOfOverlappableAttribute = { s_signature_HasThis_Void };
-
         // End instance overlap attributes
+
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Concept extension attributes
+        //
+        private static readonly byte[][] s_signaturesOfConceptExtensionAttribute = { s_signature_HasThis_Void };
+        // End concept extension attributes
+
 
         // early decoded attributes:
         internal static readonly AttributeDescription OptionalAttribute = new AttributeDescription("System.Runtime.InteropServices", "OptionalAttribute", s_signaturesOfOptionalAttribute);
@@ -535,10 +541,14 @@ namespace Microsoft.CodeAnalysis
         // @MattWindsor91 (Concept-C# 2017)
         // Instance overlap attributes
         //
-
         internal static readonly AttributeDescription OverlappingAttribute = new AttributeDescription("System.Concepts", "OverlappingAttribute", s_signaturesOfOverlappingAttribute);
         internal static readonly AttributeDescription OverlappableAttribute = new AttributeDescription("System.Concepts", "OverlappableAttribute", s_signaturesOfOverlappableAttribute);
-
         // End instance overlap attributes
+
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Concept extension attributes
+        internal static readonly AttributeDescription ConceptExtensionAttribute = new AttributeDescription("System.Concepts", "ConceptExtensionAttribute", s_signaturesOfConceptExtensionAttribute);
+        // End concept extension attributes
     }
 }

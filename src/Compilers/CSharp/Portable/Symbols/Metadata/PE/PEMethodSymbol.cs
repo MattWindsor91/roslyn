@@ -1125,5 +1125,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
         // Internal for unit test
         internal bool TestIsExtensionBitTrue => _packedFlags.IsExtensionMethod;
+
+        /// <summary>
+        /// Returns whether this method is a concept extension.
+        /// </summary>
+        /// <remarks>
+        /// Currently, this means that the method has the
+        /// <code>ConceptExtension</code> attribute.
+        /// </remarks>
+        public override bool IsConceptExtensionMethod => HasConceptExtensionMethodAttribute;
     }
 }

@@ -30,7 +30,7 @@ namespace TinyLinq
     /// </typeparam>
     public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, [AssociatedType] TProj, [AssociatedType] TDest>
     {
-        TDest SelectMany(TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
+        TDest SelectMany(this TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
     }
 
     public struct SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
@@ -118,7 +118,7 @@ namespace TinyLinq
         where ES : CEnumerator<TSrc, TElem>
         where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
     {
-        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
+        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
             => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
             {
                 source = src,
@@ -135,7 +135,7 @@ namespace TinyLinq
         where ES : CEnumerable<TColl, TSrc, TElem>
         where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
     {
-        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
+        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
             => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
             {
                 source = ES.GetEnumerator(coll),

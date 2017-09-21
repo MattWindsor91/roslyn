@@ -192,6 +192,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             get { return false; }
         }
+        
+        // @MattWindsor91 (Concept-C# 2017)
+        public sealed override bool IsConceptExtensionMethod => false;
 
         internal sealed override ObsoleteAttributeData ObsoleteAttributeData
         {

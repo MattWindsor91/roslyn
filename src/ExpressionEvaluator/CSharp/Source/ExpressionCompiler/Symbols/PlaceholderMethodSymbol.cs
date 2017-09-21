@@ -88,6 +88,9 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             get { return false; }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        public override bool IsConceptExtensionMethod => false;
+
         public override bool IsExtern
         {
             get { return false; }

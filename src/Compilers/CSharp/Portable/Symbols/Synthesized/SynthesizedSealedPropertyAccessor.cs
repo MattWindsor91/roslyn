@@ -138,6 +138,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        public sealed override bool IsConceptExtensionMethod => false;
+
         public override bool HidesBaseMethodsByName
         {
             get

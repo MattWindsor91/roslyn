@@ -16,7 +16,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </summary>
     public instance Select_Select<TElem, TProj1, TProj2, TDest> : CSelect<TProj1, TProj2, Select<TDest, TElem, TProj1>, Select<TDest, TElem, TProj2>>
     {
-        Select<TDest, TElem, TProj2> Select(Select<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
+        Select<TDest, TElem, TProj2> Select(this Select<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
             new Select<TDest, TElem, TProj2>
             {
                 source = t.source,
@@ -95,7 +95,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </summary>
     public instance Where_Select<TEnum, TElem, TProj> : CWhere<Select<TEnum, TElem, TProj>, TProj, WhereOfSelect<TEnum, TElem, TProj>>
     {
-        WhereOfSelect<TEnum, TElem, TProj> Where(Select<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
+        WhereOfSelect<TEnum, TElem, TProj> Where(this Select<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
             new WhereOfSelect<TEnum, TElem, TProj>
             {
                 source = selection.source,
@@ -179,7 +179,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </summary>
     public instance Select_Where<TElem, TProj, TDest> : CSelect<TElem, TProj, Where<TDest, TElem>, SelectOfWhere<TDest, TElem, TProj>>
     {
-        SelectOfWhere<TDest, TElem, TProj> Select(Where<TDest, TElem> t, Func<TElem, TProj> projection) =>
+        SelectOfWhere<TDest, TElem, TProj> Select(this Where<TDest, TElem> t, Func<TElem, TProj> projection) =>
             new SelectOfWhere<TDest, TElem, TProj>
             {
                 source = t.source,

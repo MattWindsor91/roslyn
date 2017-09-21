@@ -516,6 +516,7 @@ End Namespace
                     Case WellKnownType.System_Concepts_ConceptInstanceAttribute
                     Case WellKnownType.System_Concepts_OverlappableAttribute
                     Case WellKnownType.System_Concepts_OverlappingAttribute
+                    Case WellKnownType.System_Concepts_ConceptExtensionAttribute
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.
@@ -561,6 +562,7 @@ End Namespace
                     Case WellKnownType.System_Concepts_ConceptInstanceAttribute
                     Case WellKnownType.System_Concepts_OverlappableAttribute
                     Case WellKnownType.System_Concepts_OverlappingAttribute
+                    Case WellKnownType.System_Concepts_ConceptExtensionAttribute
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.

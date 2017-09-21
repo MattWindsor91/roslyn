@@ -86,7 +86,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             for (var scope = binder; scope != null; scope = scope.Next)
             {
-                if (scope.SupportsExtensionMethods)
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // CONSIDER: separating CEMs out of EMs completely;
+                // this is fairly invasive.
+                if (scope.SupportsExtensionMethods || scope.SupportsConceptExtensionMethods)
                 {
                     return new ExtensionMethodScope(scope, searchUsingsNotNamespace: false);
                 }

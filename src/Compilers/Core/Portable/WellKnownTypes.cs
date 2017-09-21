@@ -274,11 +274,16 @@ namespace Microsoft.CodeAnalysis
         // @MattWindsor91 (Concept-C# 2017)
         // Instance overlap attributes
         //
-
         System_Concepts_OverlappingAttribute,
         System_Concepts_OverlappableAttribute,
-
         // End instance overlap attributes
+
+        //
+        // @MattWindsor91 (Concept-C# 2017)
+        // Concept extension attributes
+        //
+        System_Concepts_ConceptExtensionAttribute,
+        // End concept extension attributes
 
         NextAvailable,
     }
@@ -549,11 +554,16 @@ namespace Microsoft.CodeAnalysis
             // @MattWindsor91 (Concept-C# 2017)
             // Instance overlap attributes
             //
-
             "System.Concepts.OverlappingAttribute",
-            "System.Concepts.OverlappableAttribute"
+            "System.Concepts.OverlappableAttribute",
+            // End instance overlap attributes
 
-           // End instance overlap attributes
+            //
+            // @MattWindsor91 (Concept-C# 2017)
+            // Concept extension attributes
+            //
+            "System.Concepts.ConceptExtensionAttribute"
+            // End concept extension attributes           
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);
@@ -594,7 +604,7 @@ namespace Microsoft.CodeAnalysis
                         typeIdName = "";
                         continue;
                     case (WellKnownType.NextAvailable - 1):
-                        typeIdName = "System.Concepts.OverlappableAttribute";
+                        typeIdName = "System.Concepts.ConceptExtensionAttribute";
                         continue;
                     default:
                         typeIdName = typeId.ToString().Replace("__", "+").Replace('_', '.');

@@ -91,6 +91,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public abstract bool IsExtensionMethod { get; }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        //
+        // Added IsConceptExtensionMethod to make CEMs work.
+        //
+        // TODO: reflect in VB code or make 'internal'
+
+        /// <summary>
+        /// Returns true if this method is a concept extension method.
+        /// </summary>
+        public abstract bool IsConceptExtensionMethod { get; }
+
         /// <summary>
         /// True if this symbol has a special name (metadata flag SpecialName is set).
         /// </summary>
@@ -851,6 +862,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Debug.Assert(this.IsDefinition);
             Debug.Assert(ReferenceEquals(newOwner.OriginalDefinition, this.ContainingSymbol.OriginalDefinition));
             return (newOwner == this.ContainingSymbol) ? this : new SubstitutedMethodSymbol(newOwner, this);
+        }
+
+        internal bool HasConceptExtensionMethodAttribute
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // TODO: performance for this will be terrible.
+            // This is also almost certainly not the right place for this.
+            get
+            {
+                foreach (var attr in GetAttributes())
+                {
+                    if (attr.IsTargetAttribute(this, AttributeDescription.ConceptExtensionAttribute))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
         /// <summary>

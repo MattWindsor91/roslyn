@@ -74,6 +74,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Core", "TinyLinq\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Tests", "TinyLinq\TinyLinq.Benchmarks\TinyLinq.Tests.csproj", "{6A8191EA-9B29-4A25-9073-67EFC6ECB578}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Features", "Features", "{1FCA22B0-231D-49FB-B7A8-48F12A86B64F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConceptExtensionMethods", "ConceptExtensionMethods\ConceptExtensionMethods.csproj", "{5BB3763D-50D6-407F-93BB-C15B85C825F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -164,6 +168,10 @@ Global
 		{6A8191EA-9B29-4A25-9073-67EFC6ECB578}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A8191EA-9B29-4A25-9073-67EFC6ECB578}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A8191EA-9B29-4A25-9073-67EFC6ECB578}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BB3763D-50D6-407F-93BB-C15B85C825F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BB3763D-50D6-407F-93BB-C15B85C825F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BB3763D-50D6-407F-93BB-C15B85C825F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB3763D-50D6-407F-93BB-C15B85C825F8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -192,6 +200,8 @@ Global
 		{14367B62-41E9-4DD2-887E-6E36B32F3CC7} = {EE9330C3-6DDB-4911-A8C4-14BC72AEADFA}
 		{70DBD542-9553-43CD-B3A0-FC000E5B10D2} = {EE9330C3-6DDB-4911-A8C4-14BC72AEADFA}
 		{6A8191EA-9B29-4A25-9073-67EFC6ECB578} = {EE9330C3-6DDB-4911-A8C4-14BC72AEADFA}
+		{1FCA22B0-231D-49FB-B7A8-48F12A86B64F} = {3D1A3BD2-2288-4DA5-85D8-F3635A9F31C0}
+		{5BB3763D-50D6-407F-93BB-C15B85C825F8} = {1FCA22B0-231D-49FB-B7A8-48F12A86B64F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B5B871F3-3F38-4042-BF45-751700F753CE}

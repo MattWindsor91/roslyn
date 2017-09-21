@@ -268,6 +268,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return true; }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        // CONSIDER: do we need something like this for CEMs?
+        public sealed override bool IsConceptExtensionMethod => false;
+
         internal sealed override bool IsMetadataNewSlot(bool ignoreInterfaceImplementationChanges = false)
         {
             return false;
