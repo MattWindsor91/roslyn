@@ -73,4 +73,14 @@ namespace System.Concepts
     /// </summary>
     [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
     public class OverlappableAttribute : Attribute { }
+
+    /// <summary>
+    /// Attribute marking concept methods as extensions.
+    /// <para>
+    /// Concept extension methods can be treated as extension methods,
+    /// as long as a valid witness for that concept is in scope.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    public class ConceptExtensionAttribute : Attribute { }
 }
