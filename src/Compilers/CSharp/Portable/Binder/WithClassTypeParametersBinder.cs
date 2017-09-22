@@ -60,7 +60,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        internal override void GetConceptInstances(bool onlyExplicitWitnesses, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        // Can have witness type parameters.
+        internal override bool SupportsConceptExtensionMethods => true;
+
+        internal override void GetConceptInstances(ConceptInstanceSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             foreach (var parameter in _namedType.TypeParameters)
             {

@@ -92,6 +92,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public abstract bool IsExtensionMethod { get; }
 
         /// <summary>
+        /// Returns true if this method is a concept extension method.
+        /// </summary>
+        public abstract bool IsConceptExtensionMethod { get; }
+
+        /// <summary>
         /// True if this symbol has a special name (metadata flag SpecialName is set).
         /// </summary>
         internal abstract bool HasSpecialName { get; }

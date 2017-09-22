@@ -138,6 +138,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             get { return true; }
         }
 
+        // Can have instance members.
+        internal override bool SupportsConceptExtensionMethods => true;
+
         internal override void GetCandidateExtensionMethods(
             bool searchUsingsNotNamespace,
             ArrayBuilder<MethodSymbol> methods,
@@ -240,8 +243,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        internal override void GetConceptInstances(bool onlyExplicitWitnesses, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        internal override void GetConceptInstances(ConceptInstanceSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
+            var onlyExplicitWitnesses = (options & ConceptInstanceSearchOptions.OnlyExplicitWitnesses) != 0;
+            var searchContainers = (options & ConceptInstanceSearchOptions.SearchContainers) != 0;
+            var searchUsings = (options & ConceptInstanceSearchOptions.SearchUsings) != 0;
+
             // Container binders cannot provide explicit witnesses--only type
             // parameter binders can do that.
             if (onlyExplicitWitnesses)
@@ -252,7 +259,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // We need not check to see if the container itself is a possible
             // concept instance, because, if it is, then it has a parent
             // container, and the below check works fine.
-            if (_container != null)
+            if (searchContainers && _container != null)
             {
                 GetConceptInstancesInContainer(_container, instances, originalBinder, ref useSiteDiagnostics);
             }
@@ -260,6 +267,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // The above is ok if we just want to get all instances in
             // a straight line up the scope from here to the global
             // namespace, but we also need to pull in imports too.
+            if (!searchUsings)
+            {
+                return;
+            }
             foreach (var u in GetImports(null).Usings)
             {
                 // This may cause duplicate instances, since we could

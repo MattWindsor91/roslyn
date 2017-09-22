@@ -381,7 +381,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             var methods = ArrayBuilder<MethodSymbol>.GetInstance();
             var binder = scope.Binder;
-            binder.GetCandidateExtensionMethods(scope.SearchUsingsNotNamespace, methods, name, arity, options, this);
+
+            if (binder.SupportsExtensionMethods)
+            {
+                binder.GetCandidateExtensionMethods(scope.SearchUsingsNotNamespace, methods, name, arity, options, this);
+            }
+
+            // @MattWindsor91 (Concept-C# 2017)
+            // We can also take extension methods from instances.
+            if (binder.SupportsConceptExtensionMethods)
+            {
+                binder.GetCandidateConceptExtensionMethods(scope.SearchUsingsNotNamespace, methods, name, arity, options, this);
+            }
 
             foreach (var method in methods)
             {
@@ -642,6 +653,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             get { return false; }
         }
 
+        internal virtual bool SupportsConceptExtensionMethods => false;
+
         /// <summary>
         /// Return the extension methods from this specific binding scope that match the name and optional
         /// arity. Since the lookup of extension methods is iterative, proceeding one binding scope at a time,
@@ -659,6 +672,84 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
         }
 
+        /// <summary>
+        /// Search this scope for any directly accessible concept instances
+        /// with extension methods, and add any matching methods into scope.
+        /// </summary>
+        internal void GetCandidateConceptExtensionMethods(
+            bool searchUsingsNotNamespace,
+            ArrayBuilder<MethodSymbol> methods,
+            string name,
+            int arity,
+            LookupOptions options,
+            Binder originalBinder)
+        {
+            var sopts = searchUsingsNotNamespace ? ConceptInstanceSearchOptions.SearchUsings : ConceptInstanceSearchOptions.SearchContainers;
+            var instances = ArrayBuilder<TypeSymbol>.GetInstance();
+            HashSet<DiagnosticInfo> ignore = null;
+            GetConceptInstances(sopts, instances, originalBinder, ref ignore);
+
+            foreach (var instance in instances.ToImmutableAndFree())
+            {
+                if (instance.Kind == SymbolKind.NamedType)
+                {
+                    AddConceptExtensionMethodsFromNamedType((NamedTypeSymbol)instance, name, arity, methods, options);
+                }
+                else if (instance.Kind == SymbolKind.TypeParameter)
+                {
+                    AddConceptExtensionMethodsFromWitness((TypeParameterSymbol)instance, name, arity, methods, options);
+                }
+            }
+        }
+
+        private void AddConceptExtensionMethodsFromNamedType(NamedTypeSymbol instance, string name, int arity, ArrayBuilder<MethodSymbol> methods, LookupOptions options)
+        {
+            Debug.Assert(instance != null, "cannot get methods from null instance");
+            Debug.Assert(instance.IsInstance || instance.IsConcept, "any named type instance must be declared as such");
+            Debug.Assert(0 <= arity, "arity cannot be negative");
+
+            // This part is mostly copied from DoGetExtensionMethods.
+            foreach (var member in instance.GetSimpleNonTypeMembers(name))
+            {
+                if (member.Kind == SymbolKind.Method)
+                {
+                    var method = (MethodSymbol)member;
+                    if (method.IsConceptExtensionMethod &&
+                        ((options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity))
+                    {
+                        methods.Add(method);
+                    }
+                }
+            }
+        }
+
+        private void AddConceptExtensionMethodsFromWitness(TypeParameterSymbol witness, string name, int arity, ArrayBuilder<MethodSymbol> methods, LookupOptions options)
+        {
+            Debug.Assert(witness != null, "cannot get methods from null witness");
+            Debug.Assert(witness.IsConceptWitness, "any type parameter instances must be witnesses");
+            Debug.Assert(0 <= arity, "arity cannot be negative");
+
+            // This part is mostly copied from LookupSymbolsInWitness.
+            var concepts = witness.ProvidedConcepts;
+            if (concepts.IsDefaultOrEmpty)
+            {
+                return;
+            }
+
+            // We can't easily just look up members on a type parameter.
+            // Instead, we have to get them off the concepts, and synth
+            // the symbols so they eventually lower to call the witness.
+            var rawMethods = ArrayBuilder<MethodSymbol>.GetInstance();
+            foreach (var c in concepts)
+            {
+                AddConceptExtensionMethodsFromNamedType(c, name, arity, rawMethods, options);
+            }
+            foreach (var m in rawMethods.ToImmutableAndFree())
+            {
+                methods.Add(new SynthesizedWitnessMethodSymbol(m, witness));
+            }
+        }
+ 
         // Does a member lookup in a single type, without considering inheritance.
         protected static void LookupMembersWithoutInheritance(LookupResult result, TypeSymbol type, string name, int arity,
             LookupOptions options, Binder originalBinder, TypeSymbol accessThroughType, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConsList<Symbol> basesBeingResolved = null)

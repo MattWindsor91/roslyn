@@ -110,6 +110,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public override bool IsExtensionMethod { get { throw ExceptionUtilities.Unreachable; } }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        public override bool IsConceptExtensionMethod => throw ExceptionUtilities.Unreachable;
+
         public override bool HidesBaseMethodsByName { get { throw ExceptionUtilities.Unreachable; } }
 
         public override ImmutableArray<Location> Locations { get { throw ExceptionUtilities.Unreachable; } }

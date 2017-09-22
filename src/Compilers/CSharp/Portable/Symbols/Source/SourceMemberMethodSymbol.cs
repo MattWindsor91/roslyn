@@ -1599,5 +1599,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             return localPosition - this.BodySyntax.SpanStart;
         }
+
+        /// <summary>
+        /// Returns whether this method is a concept extension.
+        /// </summary>
+        /// <remarks>
+        /// Currently, this means that the method has the
+        /// <code>ConceptAttribute</code> extension.
+        /// </remarks>
+        public override bool IsConceptExtensionMethod
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // TODO: when we add syntax for CEMs, we'll look it up here.
+            get
+            {
+                foreach (var attr in GetAttributes())
+                {
+                    if (attr.IsTargetAttribute(this, AttributeDescription.ConceptExtensionAttribute))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
     }
 }

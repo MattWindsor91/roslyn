@@ -77,6 +77,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             get { return false; }
         }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        public sealed override bool IsConceptExtensionMethod => false;
         internal override bool HasSpecialName
         {
             get { return false; }

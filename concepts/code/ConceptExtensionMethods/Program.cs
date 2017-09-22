@@ -23,6 +23,11 @@ namespace ConceptExtensionMethods
 
     class Program
     {
+        private static A Wrap<A, implicit MA>(A x, A y) where MA : CMonoid<A>
+        {
+            return x.Plus(y);
+        }
+
         static void Main(string[] args)
         {
             // Static invocation
@@ -34,13 +39,21 @@ namespace ConceptExtensionMethods
             }
             System.Console.WriteLine();
 
-            // Extension invocation
-            System.Console.Write("CEM:   ");
-            foreach (var i in (new List<int> { 1, 2, 3 }).Plus(new List<int> { 4, 5, 6 }))
+            // Nested extension invocation
+            System.Console.Write("CEM(W):");
+            foreach (var i in Wrap(new List<int> { 1, 2, 3 }, new List<int> { 4, 5, 6 }))
             {
                 System.Console.Write(" ");
                 System.Console.Write(i);
             }
+
+            // Extension invocation
+            /*System.Console.Write("CEM:   ");
+            foreach (var i in (new List<int> { 1, 2, 3 }).Plus(new List<int> { 4, 5, 6 }))
+            {
+                System.Console.Write(" ");
+                System.Console.Write(i);
+            }*/
             System.Console.WriteLine();
         }
     }

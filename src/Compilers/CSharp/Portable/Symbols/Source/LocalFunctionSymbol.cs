@@ -443,5 +443,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return (object)localFunction != null
                 && localFunction._syntax == _syntax;
         }
+
+        // @MattWindsor91 (Concept-C# 2017)
+        // We should probably be checking this and reporting it,
+        // just like IsExtensionMethod.
+        public sealed override bool IsConceptExtensionMethod => false;
     }
 }
