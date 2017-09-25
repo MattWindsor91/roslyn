@@ -714,16 +714,36 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 if (instance.Kind == SymbolKind.NamedType)
                 {
-                    AddConceptExtensionMethodsFromNamedType((NamedTypeSymbol)instance, name, arity, methods, options);
+                    AddConceptExtensionMethodsFromNamedType((NamedTypeSymbol)instance, methods, name, arity, options);
                 }
                 else if (instance.Kind == SymbolKind.TypeParameter)
                 {
-                    AddConceptExtensionMethodsFromWitness((TypeParameterSymbol)instance, name, arity, methods, options);
+                    AddConceptExtensionMethodsFromWitness((TypeParameterSymbol)instance, methods, name, arity, options);
                 }
             }
         }
 
-        private void AddConceptExtensionMethodsFromNamedType(NamedTypeSymbol instance, string name, int arity, ArrayBuilder<MethodSymbol> methods, LookupOptions options)
+        /// <summary>
+        /// Adds the concept extension methods available in a named type to a
+        /// candidate method list.
+        /// </summary>
+        /// <param name="instance">
+        /// The instance we are searching for CEMs.
+        /// </param>
+        /// <param name="methods">
+        /// The method array being populated.
+        /// Any found candidate CEMs are added here.
+        /// </param>
+        /// <param name="name">
+        /// The name of the method under lookup.
+        /// </param>
+        /// <param name="arity">
+        /// The arity of the method under lookup.
+        /// </param>
+        /// <param name="options">
+        /// The option set being used for this lookup.
+        /// </param>
+        private void AddConceptExtensionMethodsFromNamedType(NamedTypeSymbol instance, ArrayBuilder<MethodSymbol> methods, string name, int arity, LookupOptions options)
         {
             Debug.Assert(instance != null, "cannot get methods from null instance");
             Debug.Assert(instance.IsInstance || instance.IsConcept, "any named type instance must be declared as such");
@@ -744,7 +764,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private void AddConceptExtensionMethodsFromWitness(TypeParameterSymbol witness, string name, int arity, ArrayBuilder<MethodSymbol> methods, LookupOptions options)
+        /// <summary>
+        /// Adds the concept extension methods available in a witness to a
+        /// candidate method list.
+        /// </summary>
+        /// <param name="witness">
+        /// The witness type parameter we are searching for CEMs.
+        /// </param>
+        /// <param name="methods">
+        /// The method array being populated.
+        /// Any found candidate CEMs are added here.
+        /// </param>
+        /// <param name="name">
+        /// The name of the method under lookup.
+        /// </param>
+        /// <param name="arity">
+        /// The arity of the method under lookup.
+        /// </param>
+        /// <param name="options">
+        /// The option set being used for this lookup.
+        /// </param>
+        private void AddConceptExtensionMethodsFromWitness(TypeParameterSymbol witness, ArrayBuilder<MethodSymbol> methods, string name, int arity, LookupOptions options)
         {
             Debug.Assert(witness != null, "cannot get methods from null witness");
             Debug.Assert(witness.IsConceptWitness, "any type parameter instances must be witnesses");
@@ -763,7 +803,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var rawMethods = ArrayBuilder<MethodSymbol>.GetInstance();
             foreach (var c in concepts)
             {
-                AddConceptExtensionMethodsFromNamedType(c, name, arity, rawMethods, options);
+                AddConceptExtensionMethodsFromNamedType(c, rawMethods, name, arity, options);
             }
             foreach (var m in rawMethods.ToImmutableAndFree())
             {
