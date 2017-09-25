@@ -20,7 +20,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// The witness 'owning' the concept method.
         /// </summary>
-        private TypeParameterSymbol _parent;
+        private TypeSymbol _parent;
 
         /// <summary>
         /// The concept method to wrap.
@@ -36,10 +36,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <param name="parent">
         /// The witness 'owning' the concept method.
         /// </param>
-        internal SynthesizedWitnessMethodSymbol(MethodSymbol method, TypeParameterSymbol parent)
+        internal SynthesizedWitnessMethodSymbol(MethodSymbol method, TypeSymbol parent)
             : base()
         {
-            Debug.Assert(parent.IsConceptWitness);
+            Debug.Assert(parent != null, "synthesized witness method must have a parent");
+            Debug.Assert(parent.IsConceptWitness || parent.IsInstanceType(), "parent of a synthesised witness method must be an instance or witness");
 
             _method = method;
             _parent = parent;
@@ -49,7 +50,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// Gets the type parameter of the witness from which this method is
         /// being called.
         /// </summary>
-        internal TypeParameterSymbol Parent => _parent;
+        internal TypeSymbol Parent => _parent;
 
         public override MethodSymbol UnderlyingMethod => _method;
 

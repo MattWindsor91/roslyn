@@ -269,7 +269,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     /// </summary>
     internal sealed class SynthesizedWitnessParameterSymbol : SynthesizedWitnessParameterSymbolBase
     {
-        private NamedTypeSymbol _owner;
+        private Symbol _owner;
 
         // The below are Funcs because, if they are coming from _owner,
         // evaluating them at ctor time triggers an infinite loop.
@@ -302,7 +302,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             string name,
             Location clauseLocation,
             int ordinal,
-            NamedTypeSymbol owner,
+            Symbol owner,
             Func<int, ImmutableArray<TypeSymbol>> constraintTypes,
             Func<int, TypeParameterConstraintKind> constraintKind)
             : base(name, clauseLocation, ordinal)
@@ -354,7 +354,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected override ImmutableArray<TypeParameterSymbol> ContainerTypeParameters => _owner.TypeParameters;
+        protected override ImmutableArray<TypeParameterSymbol> ContainerTypeParameters
+        {
+            get
+            {
+                // TODO: Is this even remotely correct?
+                //       We're trying to generalise something that was only ever
+                //       intended for named types to methods.
+                if (_owner.Kind == SymbolKind.NamedType)
+                {
+                    return ((NamedTypeSymbol)_owner).TypeParameters;
+                }
+                if (_owner.Kind == SymbolKind.Method)
+                {
+                    return ((MethodSymbol)_owner).TypeParameters;
+                }
+                return ImmutableArray<TypeParameterSymbol>.Empty;
+            }
+        }
 
         protected override TypeParameterBounds ResolveBounds(ConsList<TypeParameterSymbol> inProgress, DiagnosticBag diagnostics) =>
             this.ResolveBounds(ContainingAssembly.CorLibrary, inProgress.Prepend(this), _constraintTypes(Ordinal), false, DeclaringCompilation, diagnostics);

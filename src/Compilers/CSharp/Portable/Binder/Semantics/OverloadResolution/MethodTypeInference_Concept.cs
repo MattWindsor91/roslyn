@@ -415,7 +415,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             for (var b = binder; b != null; b = b.Next)
             {
-                b.GetConceptInstances(Binder.ConceptInstanceSearchOptions.SearchContainers | Binder.ConceptInstanceSearchOptions.SearchUsings, iBuilder, binder, ref ignore);
+                b.GetConceptInstances(Binder.ConceptSearchOptions.SearchContainers | Binder.ConceptSearchOptions.SearchUsings, iBuilder, binder, ref ignore);
                 b.GetFixedTypeParameters(fpBuilder);
             }
 

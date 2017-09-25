@@ -13,7 +13,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Bitfield of search options when getting concept instances.
         /// </summary>
-        internal enum ConceptInstanceSearchOptions
+        internal enum ConceptSearchOptions
         {
             /// <summary>
             /// Default behaviour.
@@ -38,7 +38,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         /// <summary>
-        /// Retrieves the list of witnesses available in this particular
+        /// Retrieves the list of concept instances available in this
         /// binder's scope.
         /// </summary>
         /// <param name="options">
@@ -53,9 +53,30 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="useSiteDiagnostics">
         /// Diagnostics set at the use-site.
         /// </param>
-        internal virtual void GetConceptInstances(ConceptInstanceSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        internal virtual void GetConceptInstances(ConceptSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             // By default, binders have no instances.
+        }
+
+        /// <summary>
+        /// Retrieves the list of concepts available in this
+        /// binder's scope.
+        /// </summary>
+        /// <param name="options">
+        /// The search options to use when retrieving the list.
+        /// </param>
+        /// <param name="concepts">
+        /// The array builder to populate with concepts.
+        /// </param>
+        /// <param name="originalBinder">
+        /// The call-site binder.
+        /// </param>
+        /// <param name="useSiteDiagnostics">
+        /// Diagnostics set at the use-site.
+        /// </param>
+        internal virtual void GetConcepts(ConceptSearchOptions options, ArrayBuilder<NamedTypeSymbol> concepts, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        {
+            // By default, binders have no concepts.
         }
 
         /// <summary>
@@ -74,7 +95,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal virtual void LookupConceptMethodsInSingleBinder(LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             var instanceBuilder = ArrayBuilder<TypeSymbol>.GetInstance();
-            GetConceptInstances(ConceptInstanceSearchOptions.OnlyExplicitWitnesses | ConceptInstanceSearchOptions.SearchContainers | ConceptInstanceSearchOptions.SearchUsings, instanceBuilder, originalBinder, ref useSiteDiagnostics);
+            GetConceptInstances(ConceptSearchOptions.OnlyExplicitWitnesses | ConceptSearchOptions.SearchContainers | ConceptSearchOptions.SearchUsings, instanceBuilder, originalBinder, ref useSiteDiagnostics);
             var instances = instanceBuilder.ToImmutableAndFree();
             foreach (var instance in instances)
             {

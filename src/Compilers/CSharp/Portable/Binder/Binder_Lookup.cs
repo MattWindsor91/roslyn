@@ -705,18 +705,30 @@ namespace Microsoft.CodeAnalysis.CSharp
             LookupOptions options,
             Binder originalBinder)
         {
-            var sopts = searchUsingsNotNamespace ? ConceptInstanceSearchOptions.SearchUsings : ConceptInstanceSearchOptions.SearchContainers;
-            var instances = ArrayBuilder<TypeSymbol>.GetInstance();
-            HashSet<DiagnosticInfo> ignore = null;
-            GetConceptInstances(sopts, instances, originalBinder, ref ignore);
+            var sopts = searchUsingsNotNamespace ? ConceptSearchOptions.SearchUsings : ConceptSearchOptions.SearchContainers;
 
+            HashSet<DiagnosticInfo> ignore = null;
+
+            var concepts = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            GetConcepts(sopts, concepts, originalBinder, ref ignore);
+
+
+            var rawMethods = ArrayBuilder<MethodSymbol>.GetInstance();
+            foreach (var concept in concepts.ToImmutableAndFree())
+            {
+                AddConceptExtensionMethodsFromNamedType(concept, rawMethods, name, arity, options);
+            }
+            foreach (var m in rawMethods.ToImmutableAndFree())
+            {
+                methods.Add(new SynthesizedImplicitConceptMethodSymbol(m));
+            }
+
+            // TODO: do we need this?
+            var instances = ArrayBuilder<TypeSymbol>.GetInstance();
+            GetConceptInstances(sopts | ConceptSearchOptions.OnlyExplicitWitnesses, instances, originalBinder, ref ignore);
             foreach (var instance in instances.ToImmutableAndFree())
             {
-                if (instance.Kind == SymbolKind.NamedType)
-                {
-                    AddConceptExtensionMethodsFromNamedType((NamedTypeSymbol)instance, methods, name, arity, options);
-                }
-                else if (instance.Kind == SymbolKind.TypeParameter)
+                if (instance.Kind == SymbolKind.TypeParameter)
                 {
                     AddConceptExtensionMethodsFromWitness((TypeParameterSymbol)instance, methods, name, arity, options);
                 }
@@ -734,8 +746,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// The method array being populated.
         /// Any found candidate CEMs are added here.
         /// </param>
-        /// <param name="name">
-        /// The name of the method under lookup.
+        /// <param name="nameOpt">
+        /// The name of the method under lookup; may be null.
         /// </param>
         /// <param name="arity">
         /// The arity of the method under lookup.
@@ -743,14 +755,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="options">
         /// The option set being used for this lookup.
         /// </param>
-        private void AddConceptExtensionMethodsFromNamedType(NamedTypeSymbol instance, ArrayBuilder<MethodSymbol> methods, string name, int arity, LookupOptions options)
+        private void AddConceptExtensionMethodsFromNamedType(NamedTypeSymbol instance, ArrayBuilder<MethodSymbol> methods, string nameOpt, int arity, LookupOptions options)
         {
             Debug.Assert(instance != null, "cannot get methods from null instance");
             Debug.Assert(instance.IsInstance || instance.IsConcept, "any named type instance must be declared as such");
             Debug.Assert(0 <= arity, "arity cannot be negative");
 
             // This part is mostly copied from DoGetExtensionMethods.
-            foreach (var member in instance.GetSimpleNonTypeMembers(name))
+            var members = nameOpt == null ? instance.GetMembersUnordered() : instance.GetSimpleNonTypeMembers(nameOpt);
+            foreach (var member in members)
             {
                 if (member.Kind == SymbolKind.Method)
                 {

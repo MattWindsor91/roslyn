@@ -2864,8 +2864,34 @@ namespace Microsoft.CodeAnalysis.CSharp
                         }
                     }
 
-                    member = (TMember)(Symbol)method.Construct(typeArguments);
-                    leastOverriddenMember = (TMember)(Symbol)leastOverriddenMethod.ConstructedFrom.Construct(typeArguments);
+
+                    // @MattWindsor91 (Concept-C# 2017)
+                    //
+                    // Special case for if the given method is a concept method
+                    // invoked implicitly (as a concept extension method,
+                    // operator overload, or naked static method).
+                    //
+                    // In these cases, we briefly rewrote the method
+                    // `CConcept<TC>.Method<TM>(args)` as
+                    // `Method<TM, TC, A>(args) where A:CConcept<TC>`
+                    // to let it pass through into method type inference.
+                    // This undoes that trick.
+                    if (method is SynthesizedImplicitConceptMethodSymbol icm)
+                    {
+                        member = (TMember)(Symbol)icm.ConstructAndRetarget(typeArguments);
+                    }
+                    else
+                    {
+                        member = (TMember)(Symbol)method.Construct(typeArguments);
+                    }
+                    if (leastOverriddenMethod.ConstructedFrom is SynthesizedImplicitConceptMethodSymbol iclm)
+                    {
+                        leastOverriddenMember = (TMember)(Symbol)iclm.ConstructAndRetarget(typeArguments);
+                    }
+                    else
+                    {
+                        leastOverriddenMember = (TMember)(Symbol)leastOverriddenMethod.ConstructedFrom.Construct(typeArguments);
+                    }
 
                     // Spec (§7.6.5.1)
                     //   Once the (inferred) type arguments are substituted for the corresponding method type parameters, 
