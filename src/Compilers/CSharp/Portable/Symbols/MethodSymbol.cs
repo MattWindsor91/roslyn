@@ -91,6 +91,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </summary>
         public abstract bool IsExtensionMethod { get; }
 
+        // @MattWindsor91 (Concept-C# 2017)
+        //
+        // Added IsConceptExtensionMethod to make CEMs work.
+        //
+        // TODO: reflect in VB code or make 'internal'
+
         /// <summary>
         /// Returns true if this method is a concept extension method.
         /// </summary>

@@ -674,8 +674,29 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         /// <summary>
         /// Search this scope for any directly accessible concept instances
-        /// with extension methods, and add any matching methods into scope.
+        /// with extension methods, and add any matching Concept Extension
+        /// Methods into scope.
         /// </summary>
+        /// <param name="searchUsingsNotNamespace">
+        /// If true, and we are looking inside a namespace, search its 'using'
+        /// imports for CEMs instead of the namespace instead.
+        /// </param>
+        /// <param name="methods">
+        /// The method array being populated.
+        /// Any found candidate CEMs are added here.
+        /// </param>
+        /// <param name="name">
+        /// The name of the method under lookup.
+        /// </param>
+        /// <param name="arity">
+        /// The arity of the method under lookup.
+        /// </param>
+        /// <param name="options">
+        /// The option set being used for this lookup.
+        /// </param>
+        /// <param name="originalBinder">
+        /// The binder at the scope of the original method invocation.
+        /// </param>
         internal void GetCandidateConceptExtensionMethods(
             bool searchUsingsNotNamespace,
             ArrayBuilder<MethodSymbol> methods,
