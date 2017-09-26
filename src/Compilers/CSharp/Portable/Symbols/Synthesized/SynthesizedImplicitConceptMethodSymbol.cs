@@ -119,7 +119,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             var instance = typeArguments[Arity - 1];
             Debug.Assert(instance != null, "type inference should have given us a non-null instance");
-            Debug.Assert(instance.IsInstanceType(), "type inference should have made the last argument a concept instance");
+            Debug.Assert(instance.IsInstanceType() || instance.IsConceptWitness, "type inference should have made the last argument a concept instance");
 
             return new SynthesizedWitnessMethodSymbol(constructed, instance);
         }
