@@ -49,7 +49,7 @@ namespace TinyLinq
         [Benchmark(Description = "LINQ")]
         public int Linq()
         {
-            var results = items.Where(i => i % 10 == 0).Select(i => i + 5);
+            var results = items.Where<int>(i => i % 10 == 0).Select(i => i + 5);
             var counter = 0;
             foreach (var result in results)
             {
@@ -133,7 +133,7 @@ namespace TinyLinq
         [Benchmark(Description = "LINQ")]
         public int Linq()
         {
-            return items.Where(i => i % 10 == 0).Count();
+            return items.Where<int>(i => i % 10 == 0).Count();
         }
 
         [Benchmark(Description = "TinyLINQ (Unspec)")]

@@ -1,4 +1,4 @@
-// TODO: These benchmarks extend Peter Sestoft's sorting benchmarks with ones based on dictionary passing (see IOrd<T>),
+Ôªø// TODO: These benchmarks extend Peter Sestoft's sorting benchmarks with ones based on dictionary passing (see IOrd<T>),
 // but on closer inspection, the existing tests are not making the best use of generics. REVISE!
 
 // Sorting with Generic C#, and comparisons with dynamically typed sorting
@@ -161,11 +161,11 @@ namespace Perf {
     }
   }
   public instance IOrdInt : IOrd<int> {
-    public int Compare(int v1, int v2) => v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
+    int Compare(int v1, int v2) => v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
   }
 
   public instance IOrdString : IOrd<string> {
-    public int Compare(string v1, string v2) => string.Compare(v1, v2);
+    int Compare(string v1, string v2) => string.Compare(v1, v2);
   }
 
   public class PolyDictSort {
@@ -1095,7 +1095,7 @@ namespace Perf {
     where IOrdA : IOrd<A>
     where IOrdB : IOrd<B> {
     
-    public int Compare(Tuple<A,B> t, Tuple<A, B> u) {
+    int Compare(Tuple<A,B> t, Tuple<A, B> u) {
       //int ca = Overloads.Compare<IOrdA, A>(t.a, u.a);
       //int cb = Overloads.Compare<IOrdB, B>(t.b, u.b);
       int ca = Compare(t.a, u.a);
@@ -1189,14 +1189,14 @@ namespace Perf {
 
   Don Syme: 
 
-  ∑ Also I think itís worth adding an issue regarding
-    IGComparable ñ the results are slower for this than they
+  ¬∑ Also I think it‚Äôs worth adding an issue regarding
+    IGComparable ‚Äì the results are slower for this than they
     could be, because we box one of the integers (the first).
-    Also the terminology ìtypesafeî could be clarified to
-    ìprone to typecheck failures at runtimeî, which will
+    Also the terminology ‚Äútypesafe‚Äù could be clarified to
+    ‚Äúprone to typecheck failures at runtime‚Äù, which will
     mean more to the runtime team.
 
-  ∑ If it were possible to repeat the sorting examples on (a)
+  ¬∑ If it were possible to repeat the sorting examples on (a)
     strings (b) some value type, e.g. DateTime and (c) some kind
     of boxed record where you sort on one of the fields then that
     would be great.

@@ -761,8 +761,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         private DeclarationModifiers MakeModifiers(SyntaxTokenList modifiers, MethodKind methodKind, Location location, DiagnosticBag diagnostics, out bool modifierErrors)
         {
-            bool isInterface = this.ContainingType.IsInterface;
-            bool isConceptInstance = this.ContainingType.IsInstance;
+            bool isInterface = ContainingType.IsInterface;
+            bool isConceptInstance = ContainingType.IsInstance;
             bool isDefault = ContainingType.IsDefaultStruct;
 
             // @t-mawind
@@ -778,7 +778,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 allowedModifiers |= DeclarationModifiers.New;
 
-                if (!isInterface)
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // We now disallow most of the same modifiers on instances
+                // that we already disallowed on interfaces (including
+                // concepts).
+                if (!isInterface && !isConceptInstance)
                 {
                     allowedModifiers |=
                         DeclarationModifiers.AccessibilityMask |
@@ -799,17 +804,28 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             this.CheckUnsafeModifier(mods, diagnostics);
 
-            mods = AddImpliedModifiers(mods, isInterface, methodKind);
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Methods on instances are implicitly set to 'public':
+            // see AddImpliedModifiers.
+            mods = AddImpliedModifiers(mods, isInterface, isConceptInstance, methodKind);
             return mods;
         }
 
-        private static DeclarationModifiers AddImpliedModifiers(DeclarationModifiers mods, bool containingTypeIsInterface, MethodKind methodKind)
+        private static DeclarationModifiers AddImpliedModifiers(DeclarationModifiers mods, bool containingTypeIsInterface, bool containingTypeIsConceptInstance, MethodKind methodKind)
         {
             // Let's overwrite modifiers for interface and explicit interface implementation methods with what they are supposed to be. 
             // Proper errors must have been reported by now.
             if (containingTypeIsInterface)
             {
                 mods = (mods & ~DeclarationModifiers.AccessibilityMask) | DeclarationModifiers.Public | DeclarationModifiers.Abstract;
+            }
+            else if (containingTypeIsConceptInstance)
+            {
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // Methods on instances are implicitly set to 'public'.
+                mods = (mods & ~DeclarationModifiers.AccessibilityMask) | DeclarationModifiers.Public;
             }
             else if (methodKind == MethodKind.ExplicitInterfaceImplementation)
             {

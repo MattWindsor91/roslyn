@@ -1,4 +1,4 @@
-// encoding Haskell subclassing...
+﻿// encoding Haskell subclassing...
 // overloading numeric operations that also implement equality (thus passing fewer dictionaries to MemSq.
 namespace NumEq
 {
@@ -15,10 +15,10 @@ namespace NumEq
 
     instance NumInt : Num<int>
     {
-        public bool Equals(int a, int b) => EqInt.Equals(a, b);
-        public int Add(int a, int b) => a + b;
-        public int Mult(int a, int b) => a * b;
-        public int Neg(int a) => -a;
+        bool Equals(int a, int b) => EqInt.Equals(a, b);
+        int Add(int a, int b) => a + b;
+        int Mult(int a, int b) => a * b;
+        int Neg(int a) => -a;
     }
 
     class Test
