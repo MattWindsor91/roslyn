@@ -1553,6 +1553,20 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     AddSynthesizedAttribute(ref attributes, compilation.SynthesizeDebuggerStepThroughAttribute());
                 }
             }
+
+            if (IsConceptExtensionMethod && !HasConceptExtensionMethodAttribute)
+            {
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // Add [ConceptExtension], as that's how we identify CEMs in
+                // metadata.
+                //
+                // Eventually, it'd be nice to add it to the containing concept
+                // as well.
+                var compilation = this.DeclaringCompilation;
+                var ctor = WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor;
+                AddSynthesizedAttribute(ref attributes, compilation.TrySynthesizeAttribute(ctor));
+            }
         }
 
         /// <summary>
@@ -1604,25 +1618,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// Returns whether this method is a concept extension.
         /// </summary>
         /// <remarks>
-        /// Currently, this means that the method has the
-        /// <code>ConceptAttribute</code> extension.
+        /// Only ordinary source methods can be a CEM, so we pull this to false
+        /// in all other source symbols.
         /// </remarks>
-        public override bool IsConceptExtensionMethod
-        {
-            // @MattWindsor91 (Concept-C# 2017)
-            //
-            // TODO: when we add syntax for CEMs, we'll look it up here.
-            get
-            {
-                foreach (var attr in GetAttributes())
-                {
-                    if (attr.IsTargetAttribute(this, AttributeDescription.ConceptExtensionAttribute))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
+        public override bool IsConceptExtensionMethod => false;
     }
 }

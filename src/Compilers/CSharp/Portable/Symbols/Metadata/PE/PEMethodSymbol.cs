@@ -1131,24 +1131,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
         /// </summary>
         /// <remarks>
         /// Currently, this means that the method has the
-        /// <code>ConceptAttribute</code> extension.
+        /// <code>ConceptExtension</code> attribute.
         /// </remarks>
-        public override bool IsConceptExtensionMethod
-        {
-            // @MattWindsor91 (Concept-C# 2017)
-            //
-            // TODO: perf.
-            get
-            {
-                foreach (var attr in GetAttributes())
-                {
-                    if (attr.IsTargetAttribute(this, AttributeDescription.ConceptExtensionAttribute))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
+        public override bool IsConceptExtensionMethod => HasConceptExtensionMethodAttribute;
     }
 }

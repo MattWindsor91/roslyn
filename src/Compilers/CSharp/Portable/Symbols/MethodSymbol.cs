@@ -864,6 +864,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return (newOwner == this.ContainingSymbol) ? this : new SubstitutedMethodSymbol(newOwner, this);
         }
 
+        internal bool HasConceptExtensionMethodAttribute
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // TODO: performance for this will be terrible.
+            // This is also almost certainly not the right place for this.
+            get
+            {
+                foreach (var attr in GetAttributes())
+                {
+                    if (attr.IsTargetAttribute(this, AttributeDescription.ConceptExtensionAttribute))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
         /// <summary>
         /// As a performance optimization, cache parameter types and refkinds - overload resolution uses them a lot.
         /// </summary>
