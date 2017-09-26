@@ -4973,6 +4973,9 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_ConceptInstanceUnsatisfiable" xml:space="preserve">
     <value>No instances in scope satisfy concept '{0}'.</value>
   </data>
+  <data name="ERR_ExcessConceptInstanceMembers" xml:space="preserve">
+    <value>Concept instance member '{0}' does not match any member of any implemented concept.</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>

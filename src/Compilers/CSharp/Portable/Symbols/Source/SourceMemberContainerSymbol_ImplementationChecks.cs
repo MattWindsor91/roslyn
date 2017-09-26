@@ -95,6 +95,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             ComputeInterfaceImplementations(diagnostics, cancellationToken),
                             default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
                     {
+                        CheckExcessInstanceMembers(diagnostics);
+
                         // Do not cancel from this point on.  We've assigned the member, so we must add
                         // the diagnostics.
                         AddDeclarationDiagnostics(diagnostics);
@@ -109,6 +111,61 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return _lazySynthesizedImplementations;
+        }
+
+        /// <summary>
+        /// If this is a concept instance, checks that all of its members come
+        /// from concepts.
+        /// </summary>
+        /// <param name="diagnostics">
+        /// The diagnostics bag to extend with errors coming from excess
+        /// members.
+        /// </param>
+        private void CheckExcessInstanceMembers(DiagnosticBag diagnostics)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // This is extremely inefficient: it does a forall-exists pairwise
+            // equality check across all concepts in the instance.
+
+            if (!IsInstance)
+            {
+                return;
+            }
+
+            foreach (var member in GetMembersUnordered())
+            {
+                // Ignore the implicit struct constructor:
+                // we can't get rid of it, and it's harmless anyway.
+                if (member.Kind == SymbolKind.Method && ((MethodSymbol)member).IsDefaultValueTypeConstructor())
+                {
+                    continue;
+                }
+
+                var excess = true;
+                foreach (var @interface in AllInterfacesNoUseSiteDiagnostics)
+                {
+                    if (!@interface.IsConcept)
+                    {
+                        continue;
+                    }
+
+                    foreach (var imember in @interface.GetMembersUnordered())
+                    {
+                        if (FindImplementationForInterfaceMember(imember) == member)
+                        {
+                            excess = false;
+                        }
+                    }
+                }
+
+                if (excess)
+                {
+                    // TODO: suppress duplicate errors on excess properties:
+                    // currently, the property AND its accessors are flagged.
+                    diagnostics.Add(ErrorCode.ERR_ExcessConceptInstanceMembers, member.Locations.ElementAtOrDefault(0), member);
+                }
+            }
         }
 
         private void CheckAbstractClassImplementations(DiagnosticBag diagnostics)

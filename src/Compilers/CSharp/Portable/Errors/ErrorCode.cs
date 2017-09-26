@@ -1472,6 +1472,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ConceptAttributesMissing = 8957,
         ERR_ConceptInstanceAmbiguous = 8958,
         ERR_ConceptInstanceUnsatisfiable = 8959,
+        ERR_ExcessConceptInstanceMembers = 8960,
 
         #endregion diagnostics for concepts
 
