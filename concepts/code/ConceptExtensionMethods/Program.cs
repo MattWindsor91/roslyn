@@ -95,8 +95,7 @@ namespace ConceptExtensionMethods
             }
             System.Console.WriteLine();
 
-            // This currently doesn't get lowered properly!
-            // System.Console.WriteLine(1.Plus(2).Minus(3));
+            System.Console.WriteLine(1.Minus(3));
         }
     }
 }
