@@ -71,7 +71,7 @@ namespace TinyLinq
         /// The array resulting from <paramref name="from"/>.
         /// This may be the same object as <paramref name="from"/>.
         /// </returns>
-        TElem[] ToArray(TFrom from);
+        TElem[] ToArray(this TFrom from);
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ namespace TinyLinq
     public instance ToArray_UnboundedEnumerator<TEnum, TElem, implicit E> : CToArray<TEnum, TElem>
         where E : CEnumerator<TEnum, TElem>
     {
-        TElem[] ToArray(TEnum e)
+        TElem[] ToArray(this TEnum e)
         {
             E.Reset(ref e);
             var q = new Queue<TElem>();
@@ -99,7 +99,7 @@ namespace TinyLinq
         where S : CStaticCount<TEnum>
         where E : CEnumerator<TEnum, TElem>
     {
-        TElem[] ToArray(TEnum e)
+        TElem[] ToArray(this TEnum e)
         {
             E.Reset(ref e);
             var len = S.Count(ref e);

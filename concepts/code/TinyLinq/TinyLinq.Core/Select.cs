@@ -4,9 +4,9 @@ using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
-    public concept CSelect<[AssociatedType] T, [AssociatedType] U, S, D>
+    public concept CSelect<[AssociatedType] T, [AssociatedType] U, S, [AssociatedType] D>
     {
-        D Select(S src, Func<T, U> f);
+        D Select(this S src, Func<T, U> f);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ namespace TinyLinq
         : CSelect<TElem, TProj, TEnum, Select<TEnum, TElem, TProj>>
         where E : CEnumerator<TEnum, TElem>
     {
-        Select<TEnum, TElem, TProj> Select(TEnum t, Func<TElem, TProj> projection) =>
+        Select<TEnum, TElem, TProj> Select(this TEnum t, Func<TElem, TProj> projection) =>
             new Select<TEnum, TElem, TProj>
             {
                 source = t,
@@ -80,6 +80,6 @@ namespace TinyLinq
         where S : CSelect<TElem, TProj, TSrc, TDst>
         where E : CEnumerable<TColl, TSrc, TElem>
     {
-        TDst Select(TColl t, Func<TElem, TProj> projection) => S.Select(E.GetEnumerator(t), projection);
+        TDst Select(this TColl t, Func<TElem, TProj> projection) => S.Select(E.GetEnumerator(t), projection);
     }
 }

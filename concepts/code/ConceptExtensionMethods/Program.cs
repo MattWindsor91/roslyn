@@ -6,35 +6,30 @@ namespace ConceptExtensionMethods
 {
     public concept CIntExtensions
     {
-        [ConceptExtension]
-        int Minus(int x, int y);
+        int Minus(this int x, int y);
     }
     public instance IntExtensions : CIntExtensions
     {
-        [ConceptExtension]
-        int Minus(int x, int y) => x - y;
+        int Minus(this int x, int y) => x - y;
     }
 
     public concept CMonoid<T>
     {
-        [ConceptExtension]
-        T Plus(T me, T you);
+        T Plus(this T me, T you);
 
         T Zero { get; }
     }
 
     public instance Monoid_Int : CMonoid<int>
     {
-        [ConceptExtension]
-        int Plus(int me, int you) => me + you;
+        int Plus(this int me, int you) => me + you;
 
         int Zero => 0;
     }
 
     public instance Monoid_List<T> : CMonoid<List<T>>
     {
-        [ConceptExtension]
-        List<T> Plus(List<T> me, List<T> you) => new List<T>(me.Concat(you));
+        List<T> Plus(this List<T> me, List<T> you) => new List<T>(me.Concat(you));
 
         List<T> Zero => new List<T>();
     }

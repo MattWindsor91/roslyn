@@ -93,7 +93,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public instance Select_ArrayCursor<TElem, TProj> : CSelect<TElem, TProj, Instances.ArrayCursor<TElem>, ArraySelect<TElem, TProj>>
     {
-        ArraySelect<TElem, TProj> Select(Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
+        ArraySelect<TElem, TProj> Select(this Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
             new ArraySelect<TElem, TProj>
             {
                 source = t.source,
@@ -115,7 +115,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], ArraySelect<TElem, TProj>>
     {
-        ArraySelect<TElem, TProj> Select(TElem[] t, Func<TElem, TProj> projection) =>
+        ArraySelect<TElem, TProj> Select(this TElem[] t, Func<TElem, TProj> projection) =>
             new ArraySelect<TElem, TProj>
             {
                 source = t,
@@ -228,7 +228,7 @@ namespace TinyLinq.SpecialisedInstances
 
     public instance SelectMany_ArrayCursorToArray<TElem, TInnerElem, TProj> : CSelectMany<Instances.ArrayCursor<TElem>, TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
     {
-        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(this Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
             new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
             {
                 source = t.source,
@@ -242,7 +242,7 @@ namespace TinyLinq.SpecialisedInstances
 
     public instance SelectMany_ArrayToArray<TElem, TInnerElem, TProj> : CSelectMany<TElem[], TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
     {
-        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(this TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
             new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
             {
                 source = t,
@@ -265,7 +265,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </summary>
     public instance Select_Select_Array<TElem, TProj1, TProj2> : CSelect<TProj1, TProj2, ArraySelect<TElem, TProj1>, ArraySelect<TElem, TProj2>>
     {
-        ArraySelect<TElem, TProj2> Select(ArraySelect<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
+        ArraySelect<TElem, TProj2> Select(this ArraySelect<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
             new ArraySelect<TElem, TProj2>
             {
                 source = t.source,
@@ -481,7 +481,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhere<TElem>, ArraySelectOfWhere<TElem, TProj>>
     {
-        ArraySelectOfWhere<TElem, TProj> Select(ArrayWhere<TElem> t, Func<TElem, TProj> projection) =>
+        ArraySelectOfWhere<TElem, TProj> Select(this ArrayWhere<TElem> t, Func<TElem, TProj> projection) =>
             new ArraySelectOfWhere<TElem, TProj>
             {
                 source = t.source,
