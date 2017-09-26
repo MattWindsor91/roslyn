@@ -1,4 +1,4 @@
-
+﻿
 
 namespace ObserverPattern {
   using System.Collections.Generic;
@@ -73,21 +73,21 @@ namespace ObserverPattern {
   }
 
   instance ObserverPatternModelDisplay2 : ObserverPattern<Model, Display> {
-    public List<Display> GetObservers(Model s) {
+    List<Display> GetObservers(Model s) {
       return s.GetObservers();
     }
 
-    public void Register(Model m, Display s) {
+    void Register(Model m, Display s) {
       System.Console.WriteLine("Register from OPMD2");
       Overloads.DefaultRegister<Model, Display, ObserverPatternModelDisplay2>(m, s);
     }
 
-    public void Notify(Model m) {
+    void Notify(Model m) {
       System.Console.WriteLine("Notify from OPMD2");
       Overloads.DefaultNotify<Model, Display, ObserverPatternModelDisplay2>(m);
     }
 
-    public void Update(Display o, Model s) {
+    void Update(Display o, Model s) {
       o.Update(s);
     }
   }

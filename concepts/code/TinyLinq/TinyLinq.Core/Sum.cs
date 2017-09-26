@@ -22,7 +22,7 @@ namespace TinyLinq
         TElem Sum(ref TEnum e);        
     }
 
-    public instance MonoidInstances
+    public class MonoidInstances
     {
         /// <summary>
         /// Summation over a general enumerator, when the element is a monoid.

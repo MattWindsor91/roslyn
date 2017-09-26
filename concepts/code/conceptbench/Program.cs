@@ -19,16 +19,16 @@ namespace conceptbench {
 
     public instance CNumInt : CNum<int>
     {
-        public int FromInteger(int v) => v;
-        public int operator +(int a, int b) => a + b;
+        int FromInteger(int v) => v;
+        int operator +(int a, int b) => a + b;
 
-        public int operator *(int a, int b) => a * b;
+        int operator *(int a, int b) => a * b;
     }
 
 
     public instance CNumLong : CNum<long>
     {
-        public long FromInteger(int v) => v;
+        long FromInteger(int v) => v;
         public long operator +(long a, long b) => a + b;
 
         public long operator *(long a, long b) => a * b;
@@ -36,7 +36,7 @@ namespace conceptbench {
 
     public instance CNumFloat : CNum<float>
     {
-        public float FromInteger(int v) => v;
+        float FromInteger(int v) => v;
         public float operator +(float a, float b) => a + b;
 
         public float operator *(float a, float b) => a * b;
@@ -44,7 +44,7 @@ namespace conceptbench {
 
     public instance CNumDouble : CNum<double>
     {
-        public double FromInteger(int v) => v;
+        double FromInteger(int v) => v;
         public double operator +(double a, double b) => a + b;
 
         public double operator *(double a, double b) => a * b;

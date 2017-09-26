@@ -178,7 +178,7 @@ namespace SerialPBT
     public instance ShowableTestResult<R, implicit ShowableR> : CShowable<TestResult<R>>
         where ShowableR : CShowable<R>
     {
-        public void Show(TestResult<R> me, StringBuilder sb)
+        void Show(TestResult<R> me, StringBuilder sb)
         {
             if (me.Succeeded)
             {
