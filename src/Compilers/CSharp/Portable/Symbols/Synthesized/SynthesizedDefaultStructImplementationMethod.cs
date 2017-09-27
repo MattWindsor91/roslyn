@@ -52,9 +52,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 // Now try to find the default struct using the instance's scope...
                 var binder = new BinderFactory(compilationState.Compilation, instance.GetNonNullSyntaxNode().SyntaxTree).GetBinder(instance.GetNonNullSyntaxNode());
 
-                var ignore = new HashSet<DiagnosticInfo>();
-                var defs = concept.GetDefaultStruct(binder, false, ref ignore);
-
+                var defs = concept.GetDefaultStruct();
                 if (defs == null)
                 {
                     diagnostics.Add(ErrorCode.ERR_ConceptMethodNotImplementedAndNoDefault, instanceLoc, instance.Name, concept.Name, ImplementingMethod.ToDisplayString());

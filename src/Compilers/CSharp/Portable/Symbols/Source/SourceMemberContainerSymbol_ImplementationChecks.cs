@@ -248,8 +248,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     if (implementingMember == null && interfaceMemberKind == SymbolKind.Method && IsInstance && @interface.IsConcept)
                     {
                         var conceptMethod = interfaceMember as MethodSymbol;
-                        var def = new SynthesizedDefaultStructImplementationMethod(conceptMethod, this);
-                        if (def != null)
+                        var def = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember);
+                        if (def == null)
+                        {
+                            var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
+                            // TODO: wrong location?
+                            diagnostics.Add(ErrorCode.ERR_ConceptMethodNotImplementedAndNoDefault, instanceLoc, Name, @interface.Name, conceptMethod.ToDisplayString());
+                        } 
+                        else
                         {
                             synthesizedImplementations.Add(def);
                             implementingMember = def;
@@ -379,6 +385,45 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return synthesizedImplementations.ToImmutableAndFree();
+        }
+
+        private SynthesizedDefaultStructImplementationMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod)
+        {
+            Debug.Assert(concept.IsConcept, "concept for default implementation synthesis must be an actual concept");
+            Debug.Assert(IsInstance, "target for default implementation synthesis must be an instance");
+
+            var dstr = concept.GetDefaultStruct();
+            if (dstr == null)
+            {
+                return null;
+            }
+
+            // Check that the defaults struct actually contains this method
+            // TODO: check this works for properties
+            // TODO: hold onto method for default implementation
+            Symbol dmethod = null;
+            var eco = MemberSignatureComparer.CSharpImplicitImplementationComparer;
+            foreach (var member in dstr.GetMembersUnordered())
+            {
+                // TODO: properties
+                if (member.Kind != SymbolKind.Method)
+                {
+                    continue;
+                }
+
+                if (eco.Equals(conceptMethod, member))
+                {
+                    dmethod = member;
+                    break;
+                }
+            }
+
+            if (dmethod == null)
+            {
+                return null;
+            }
+
+            return new SynthesizedDefaultStructImplementationMethod(conceptMethod, this);
         }
 
         protected abstract Location GetCorrespondingBaseListLocation(NamedTypeSymbol @base);
