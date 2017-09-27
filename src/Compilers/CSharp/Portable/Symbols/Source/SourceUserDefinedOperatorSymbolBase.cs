@@ -21,7 +21,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         protected SourceUserDefinedOperatorSymbolBase(
             MethodKind methodKind,
             string name,
-            SourceMemberContainerTypeSymbol containingType,
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Default structs can contain these, so I've relaxed the class
+            // requirement on 'containingType' to allow for this.
+            //
+            // A more robust approach to this would be to make a new symbol
+            // for default user-defined operators and set this back to
+            // SourceMemberContainerTypeSymbol.
+            NamedTypeSymbol containingType,
             Location location,
             SyntaxReference syntaxReference,
             SyntaxReference bodySyntaxReference,
@@ -33,8 +41,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _name = name;
             _isExpressionBodied = isExpressionBodied;
 
+            var isConceptOperator = ContainingType.IsInstance || ContainingType.IsConcept || ContainingType.IsDefaultStruct;
+
             // @t-mawind (is this a good idea?)
-            var defaultAccess = (ContainingType.IsInstance || ContainingType.IsConcept) ? DeclarationModifiers.Public : DeclarationModifiers.Private;
+            var defaultAccess = isConceptOperator ? DeclarationModifiers.Public : DeclarationModifiers.Private;
             var allowedModifiers =
                 DeclarationModifiers.AccessibilityMask |
                 DeclarationModifiers.Static |
@@ -76,9 +86,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             // @t-mawind
-            //   If we're in a concept instance, then operators must be public and
-            //   _non_ -static.
-            if (ContainingType.IsInstance || ContainingType.IsConcept)
+            //   Concept operators must be public and _non_-static.
+            if (isConceptOperator)
             {
                 if (DeclaredAccessibility != Accessibility.Public || IsStatic)
                 {
@@ -436,8 +445,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             //   If we're on an concept, we insist that the type of
             //   the parameter is one of the type parameters of the concept.
             //   We presume that instance inheritance enforces this constraint
-            //   for instances, so don't check them.
-            if (ContainingType.IsInstance)
+            //   for instances, and construction enforces it for defaults, so
+            //   don't check them.
+            if (ContainingType.IsInstance || ContainingType.IsDefaultStruct)
             {
                 // TODO: We should be checking that this is part of the underlying concept
             }
@@ -577,8 +587,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             //   If we're on an concept, we insist that the type of one of
             //   the parameters is one of the type parameters of the concept.
             //   We presume that instance inheritance enforces this constraint
-            //   for instances, so don't check them.
-            if (ContainingType.IsInstance)
+            //   for instances, and construction does for defaults, so don't
+            //   check them.
+            if (ContainingType.IsInstance || ContainingType.IsDefaultStruct)
             {
                 // Deliberately do nothing here
             }

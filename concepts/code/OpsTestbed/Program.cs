@@ -30,6 +30,7 @@ namespace OpsTestbed
             Console.WriteLine(N(new Vector2(16, 8)));
 
             var v = new Vector2(16, 8);
+            // Should pick up original vector multipliers
             var m = new Vector2(666) * v * v * v + new Vector2(777) * v * v + new Vector2(888);
             Console.WriteLine(m);
         }

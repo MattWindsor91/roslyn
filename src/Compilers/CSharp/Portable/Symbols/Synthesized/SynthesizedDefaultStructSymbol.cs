@@ -2,9 +2,11 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
@@ -32,10 +34,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             : base(
                   name,
                   that =>
-                      // We duplicate the type parameters of the concept itself,
-                      // as well as adding one for the calling witness, so the
+                      // We add a type parameter for the calling witness, so the
                       // default struct can call back into it.
-                      that.CreateTypeParameters(concept.Arity, true)
+                      ImmutableArray<TypeParameterSymbol>.Empty
                           .Add(
                           new SynthesizedWitnessParameterSymbol(
                               // @t-mawind
@@ -43,7 +44,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                               //   the parent scopes, hence generated name.
                               GeneratedNames.MakeAnonymousTypeParameterName("witness"),
                               Location.None,
-                              concept.Arity,
+                              0,
                               that,
                               _ => ImmutableArray.Create((TypeSymbol) concept),
                               _ => TypeParameterConstraintKind.ValueType
@@ -97,13 +98,25 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 var diagnostics = DiagnosticBag.GetInstance();
 
-                var memberSyntax = _concept.GetConceptDefaultMethods();
-                foreach (var m in memberSyntax)
+                var memberRefs = _concept.GetConceptDefaultMethods();
+                foreach (var memberRef in memberRefs)
                 {
-                    var ms = m.GetSyntax() as MethodDeclarationSyntax;
-                    if (ms == null) continue;
+                    Debug.Assert(memberRef != null, "should not have got a null member reference here");
+                    Debug.Assert(memberRef.GetSyntax() != null, "should not have got a syntax-less member reference here");
 
-                    mb.Add(SourceOrdinaryMethodSymbol.CreateMethodSymbol(this, binder, ms, diagnostics));
+                    switch (memberRef.GetSyntax().Kind())
+                    {
+                        case SyntaxKind.MethodDeclaration:
+                            var ms = (MethodDeclarationSyntax)memberRef.GetSyntax();
+                            mb.Add(SourceOrdinaryMethodSymbol.CreateMethodSymbol(this, binder, ms, diagnostics));
+                            break;
+                        case SyntaxKind.OperatorDeclaration:
+                            var os = (OperatorDeclarationSyntax)memberRef.GetSyntax();
+                            mb.Add(SourceUserDefinedOperatorSymbol.CreateUserDefinedOperatorSymbol(this, os, diagnostics));
+                            break;
+                        default:
+                            throw ExceptionUtilities.UnexpectedValue(memberRef.GetSyntax().Kind());
+                    }
                 }
 
                 AddDeclarationDiagnostics(diagnostics);

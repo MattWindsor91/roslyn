@@ -86,23 +86,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
-        /// Attempts to find this concept's associated default struct in a binder.
+        /// Attempts to find this concept's associated default struct.
         /// </summary>
-        /// <param name="binder">
-        /// The binder in which we are looking up the default struct.
-        /// </param>
-        /// <param name="diagnose">
-        /// Whether the lookup should emit diagnostics into
-        /// <paramref name="useSiteDiagnostics"/>.
-        /// </param>
-        /// <param name="useSiteDiagnostics">
-        /// The set of use-site diagnostics to populate with any found during
-        /// lookup.
-        /// </param>
         /// <returns>
         /// Null, if the default struct was not found; the struct, otherwise.
         /// </returns>
-        internal NamedTypeSymbol GetDefaultStruct(Binder binder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        internal NamedTypeSymbol GetDefaultStruct()
         {
             Debug.Assert(IsConcept, "Should never get the default struct of a non-concept");
 

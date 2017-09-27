@@ -2993,7 +2993,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                                 builder.ConceptDefaultBodies.Add(methodSyntax.GetReference());
                             }
 
-
                             var method = SourceOrdinaryMethodSymbol.CreateMethodSymbol(this, bodyBinder, methodSyntax, diagnostics);
                             builder.NonTypeNonIndexerMembers.Add(method);
                         }
@@ -3192,6 +3191,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             {
                                 diagnostics.Add(ErrorCode.ERR_NamespaceUnexpected,
                                     new SourceLocation(operatorSyntax.OperatorKeyword));
+                            }
+
+                            // @t-mawind
+                            //   Concept methods can have bodies, in which case
+                            //   we forward the syntax to the default struct to
+                            //   build it there.  
+                            bool hasBody = operatorSyntax.Body != null || operatorSyntax.ExpressionBody != null;
+                            if (hasBody && IsConcept)
+                            {
+                                builder.ConceptDefaultBodies.Add(operatorSyntax.GetReference());
                             }
 
                             var method = SourceUserDefinedOperatorSymbol.CreateUserDefinedOperatorSymbol

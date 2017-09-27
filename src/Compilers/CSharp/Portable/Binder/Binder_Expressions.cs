@@ -5517,7 +5517,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             SeparatedSyntaxList<TypeSyntax> typeArgumentsSyntax,
             ImmutableArray<TypeSymbol> typeArguments,
             bool invoked,
-            DiagnosticBag diagnostics)
+            DiagnosticBag diagnostics,
+            // @MattWindsor91 (Concept-C# 2017)
+            //     Workaround to let us synthesise calls to operators.
+            bool allowInvokingSpecialMethod = false)
         {
             Debug.Assert(rightArity == (typeArguments.IsDefault ? 0 : typeArguments.Length));
             var leftType = boundLeft.Type;
@@ -5525,6 +5528,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (invoked)
             {
                 options |= LookupOptions.MustBeInvocableIfMember;
+            }
+            // @MattWindsor91 (Concept-C# 2017)
+            //     Aforementioned workaround.
+            if (allowInvokingSpecialMethod)
+            {
+                options |= LookupOptions.AllowSpecialMethods;
             }
 
             var lookupResult = LookupResult.GetInstance();

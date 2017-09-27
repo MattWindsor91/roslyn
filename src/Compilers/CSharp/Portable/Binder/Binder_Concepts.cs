@@ -34,7 +34,15 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// If the current scope has any 'using' statements, search through
             /// those too.
             /// </summary>
-            SearchUsings = 1 << 2
+            SearchUsings = 1 << 2,
+            /// <summary>
+            /// Consider concept extension methods only.
+            /// </summary>
+            ConceptExtensionsOnly = 1 << 3,
+            /// <summary>
+            /// Consider non-extension methods only.
+            /// </summary>
+            NoConceptExtensions = 1 << 4
         }
 
         /// <summary>
@@ -94,16 +102,19 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal virtual void LookupConceptMethodsInSingleBinder(LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
-            var instanceBuilder = ArrayBuilder<TypeSymbol>.GetInstance();
-            GetConceptInstances(ConceptSearchOptions.OnlyExplicitWitnesses | ConceptSearchOptions.SearchContainers | ConceptSearchOptions.SearchUsings, instanceBuilder, originalBinder, ref useSiteDiagnostics);
-            var instances = instanceBuilder.ToImmutableAndFree();
-            foreach (var instance in instances)
+            var conceptBuilder = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            GetConcepts(ConceptSearchOptions.SearchContainers | ConceptSearchOptions.SearchUsings, conceptBuilder, originalBinder, ref useSiteDiagnostics);
+            var concepts = conceptBuilder.ToImmutableAndFree();
+
+            foreach (var concept in concepts)
             {
-                // Currently only explicit witnesses, ie type parameters, may
-                // be probed for concept methods.
-                var tpInstance = instance as TypeParameterSymbol;
-                if (tpInstance == null) continue;
-                LookupSymbolsInWitness(tpInstance, result, name, arity, basesBeingResolved, options, originalBinder, diagnose, ref useSiteDiagnostics);
+                var methodBuilder = ArrayBuilder<MethodSymbol>.GetInstance();
+                AddConceptMethods(concept, methodBuilder, name, arity, options, ConceptSearchOptions.NoConceptExtensions);
+                foreach (var method in methodBuilder.ToImmutableAndFree())
+                {
+                    SingleLookupResult resultOfThisMethod = originalBinder.CheckViability(method, arity, options, concept, diagnose, ref useSiteDiagnostics, basesBeingResolved);
+                    result.MergeEqual(resultOfThisMethod);
+                }
             }
         }
 
@@ -148,7 +159,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Diagnostics set at the use-site.
         /// </param>
         internal void LookupSymbolsInWitness(
-        TypeParameterSymbol witness, LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            TypeParameterSymbol witness, LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             Debug.Assert(witness.IsConceptWitness);
 
@@ -181,8 +192,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                             SingleLookupResult resultOfThisProp = originalBinder.CheckViability(witnessProp, arity, options, witness, diagnose, ref useSiteDiagnostics, basesBeingResolved);
                             result.MergeEqual(resultOfThisProp);
                             break;
-                        // We don't allow other types to be fields of a
-                        // witness.
+                            // We don't allow other types to be fields of a
+                            // witness.
                     }
                 }
             }
@@ -222,6 +233,148 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // We didn't see any evidence of failed inference at this point.
             return false;
+        }
+
+        /// <summary>
+        /// Search this scope for any directly accessible concept instances
+        /// with extension methods, and add any matching Concept Extension
+        /// Methods into scope.
+        /// </summary>
+        /// <param name="searchUsingsNotNamespace">
+        /// If true, and we are looking inside a namespace, search its 'using'
+        /// imports for CEMs instead of the namespace instead.
+        /// </param>
+        /// <param name="methods">
+        /// The method array being populated.
+        /// Any found candidate CEMs are added here.
+        /// </param>
+        /// <param name="name">
+        /// The name of the method under lookup.
+        /// </param>
+        /// <param name="arity">
+        /// The arity of the method under lookup.
+        /// </param>
+        /// <param name="options">
+        /// The option set being used for this lookup.
+        /// </param>
+        /// <param name="originalBinder">
+        /// The binder at the scope of the original method invocation.
+        /// </param>
+        internal void GetCandidateConceptExtensionMethods(
+            bool searchUsingsNotNamespace,
+            ArrayBuilder<MethodSymbol> methods,
+            string name,
+            int arity,
+            LookupOptions options,
+            Binder originalBinder)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // We find CEMs by searching for all concepts in scope,
+            // picking any methods in those concepts that are
+            // candidates, and posing the search for an instance as a
+            // method type inference problem.
+            //
+            // This works, but has two problems:
+            //
+            // 1) Performance: we have to consider concepts that don't even
+            //    have scoped instances, let alone ones that don't have
+            //    viable ones.  We also have to do a run of concept inference
+            //    even if we already have a witness in the form of a type
+            //    parameter.
+            // 2) Integrity: the rewriting of the instance search as a MTI
+            //    problem needs us to mangle the method symbol heavily to make
+            //    it pass through to MTI in the first place, and de-mangle it
+            //    at the other end.
+            //
+            // If concept inference and overload resolution were perfectly
+            // aligned (eg. overload resolution will make the same decision on
+            // which method from which instance to use as we would make by
+            // picking the method and using concept inference), and there was a
+            // decent way to infer missing parameters in instances at this
+            // point, we could save a lot of time and compiler arm-twisting by
+            // letting the overload resolver work out these issues.
+
+            var sopts = searchUsingsNotNamespace ? ConceptSearchOptions.SearchUsings : ConceptSearchOptions.SearchContainers;
+
+            var concepts = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            HashSet<DiagnosticInfo> ignore = null;
+            GetConcepts(sopts, concepts, originalBinder, ref ignore);
+
+            foreach (var concept in concepts.ToImmutableAndFree())
+            {
+                AddConceptMethods(concept, methods, name, arity, options, ConceptSearchOptions.ConceptExtensionsOnly);
+            }
+        }
+
+        /// <summary>
+        /// Adds the concept extension methods available in a concept to a
+        /// candidate method list.
+        /// </summary>
+        /// <param name="concept">
+        /// The concept we are searching for CEMs.
+        /// </param>
+        /// <param name="methods">
+        /// The method array being populated.
+        /// Any found candidate CEMs are added here.
+        /// </param>
+        /// <param name="nameOpt">
+        /// The name of the method under lookup; may be null.
+        /// </param>
+        /// <param name="arity">
+        /// The arity of the method under lookup.
+        /// </param>
+        /// <param name="options">
+        /// The option set being used for this lookup.
+        /// </param>
+        /// <param name="conceptOptions">
+        /// The concept-level options set being used for this lookup.
+        /// </param>
+        private void AddConceptMethods(NamedTypeSymbol concept, ArrayBuilder<MethodSymbol> methods, string nameOpt, int arity, LookupOptions options, ConceptSearchOptions conceptOptions)
+        {
+            Debug.Assert(concept != null, "cannot get methods from null concept");
+            Debug.Assert(concept.IsConcept, "any named type concept must be declared as such");
+            Debug.Assert(0 <= arity, "arity cannot be negative");
+
+            // This part is mostly copied from DoGetExtensionMethods.
+            var members = nameOpt == null ? concept.GetMembersUnordered() : concept.GetSimpleNonTypeMembers(nameOpt);
+            foreach (var member in members)
+            {
+                if (member.Kind == SymbolKind.Method)
+                {
+                    var method = (MethodSymbol)member;
+
+                    var allowExtensions = (conceptOptions & ConceptSearchOptions.NoConceptExtensions) == 0;
+                    var allowNonExtensions = (conceptOptions & ConceptSearchOptions.ConceptExtensionsOnly) == 0;
+                    var extensionSituationOk = method.IsConceptExtensionMethod ? allowExtensions : allowNonExtensions;
+                    var arityOk = (options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity;
+                    if (extensionSituationOk && arityOk)
+                    {
+                        // @MattWindsor91 (Concept-C# 2017)
+                        //
+                        // `method` will look like
+                        //     `C<TC>.M<TM>(this TC x, ...)`.
+                        // The presence of concept-level type parameters like
+                        // TC makes it very hard for us to do type inference
+                        // on this candidate, AND we still need to work out an
+                        // instance for C.
+                        //
+                        // Our prototype solution is to use a synthesised
+                        // symbol that looks like
+                        //     `M<TM, TC, implicit I>(this TC x, ...)
+                        //          where I : C<TC>`
+                        // which pushes all of the issues into the method
+                        // type inferrer.  When we construct the method with
+                        // the inferred arguments, we de-mangle the method back
+                        // to normal.
+                        //
+                        // This is a nice party trick, but should eventually be
+                        // done properly: see the commentary in
+                        // `GetCandidateConceptExtensionMethods`.
+                        methods.Add(new SynthesizedImplicitConceptMethodSymbol(method));
+                    }
+                }
+            }
         }
     }
 }

@@ -11,14 +11,13 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         /// <summary>
         /// Tries to find candidate operators for a given operator name and
-        /// number of parameters in this scope's witnesses.
+        /// parameter list in the concepts in scope at this stage.
         /// </summary>
         /// <param name="name">
         /// The special name of the operator to find.
         /// </param>
-        /// <param name="numParams">
-        /// The number of parameters the operator takes: 1 for unary,
-        /// 2 for binary.
+        /// <param name="args">
+        /// The arguments being supplied to the operator.
         /// </param>
         /// <param name="useSiteDiagnostics">
         /// The set of diagnostics to populate with any use-site diagnostics
@@ -27,7 +26,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <returns>
         /// An array of possible matches for the given operator.
         /// </returns>
-        private ImmutableArray<MethodSymbol> GetWitnessOperators(string name, int numParams, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        private ImmutableArray<MethodSymbol> GetConceptOperators(string name, ImmutableArray<BoundExpression> args, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             var builder = ArrayBuilder<MethodSymbol>.GetInstance();
             var result = LookupResult.GetInstance();
@@ -44,21 +43,64 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     foreach (var candidate in result.Symbols)
                     {
-                        var meth = candidate as MethodSymbol;
-                        if (meth == null) continue;
-                        if (meth.MethodKind != MethodKind.UserDefinedOperator) continue;
-                        if (meth.ParameterCount != numParams) continue;
+                        if (candidate == null)
+                        {
+                            continue;
+                        }
+                        if (candidate.Kind != SymbolKind.Method)
+                        {
+                            continue;
+                        }
+                        var method = (MethodSymbol)candidate;
+                        if (method.MethodKind != MethodKind.UserDefinedOperator)
+                        {
+                            continue;
+                        }
+                        if (method.ParameterCount != args.Length)
+                        {
+                            continue;
+                        }
+
+                        // @MattWindsor91 (Concept-C# 2017)
+                        //
+                        // Unlike normal operator overloads, concept operators
+                        // will have missing type parameters: at the very least, the
+                        // witness parameter telling us which concept instance to
+                        // call into will be unknown.
+                        //
+                        // In this prototype, we just call a full round of method
+                        // type inference, and ignore the method if it doesn't infer.
+                        //
+                        // This probably doesn't handle nullability correctly.
+                        HashSet<DiagnosticInfo> ignore = null;
+                        // As with MethodCompiler.BindMethodBody, we need to
+                        // pull in the witnesses of a default struct into scope.
+                        var mtr = MethodTypeInferrer.Infer(_binder, method.TypeParameters, method.ContainingType, method.ParameterTypes, method.ParameterRefKinds, args, ref ignore);
+                        if (!mtr.Success)
+                        {
+                            continue;
+                        }
 
                         haveCandidates = true;
-                        builder.Add(meth);
+                        if (method is SynthesizedImplicitConceptMethodSymbol imethod)
+                        {
+                            builder.Add(imethod.ConstructAndRetarget(mtr.InferredTypeArguments));
+                        }
+                        else
+                        {
+                            builder.Add(method.Construct(mtr.InferredTypeArguments));
+                        }
                     }
-                    
+
                     // We're currently doing this fairly similarly to the way
                     // normal method lookup works: the moment any scope gives
                     // us at least one possible operator, use only that scope's
                     // results.  I'm not sure whether this is correct, but at
                     // least it's consistent.
-                    if (haveCandidates) return builder.ToImmutableAndFree();
+                    if (haveCandidates)
+                    {
+                        return builder.ToImmutableAndFree();
+                    }
                 }
             }
 

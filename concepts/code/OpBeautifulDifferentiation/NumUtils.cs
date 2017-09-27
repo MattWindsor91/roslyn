@@ -32,17 +32,6 @@ namespace OpBeautifulDifferentiation
         public static A Two<A, implicit NumA>() where NumA : Num<A> => FromInteger(2);
 
         /// <summary>
-        ///     Calculates the negation of a number.
-        /// </summary>
-        /// <param name="x">
-        ///     The number to negate.
-        /// </param>
-        /// <returns>
-        ///     The negation of <paramref name="x"/>.
-        /// </returns>
-        public static A Neg<A, implicit NumA>(A x) where NumA : Num<A> => FromInteger(-1) * x;
-
-        /// <summary>
         ///     Calculates the square of a number.
         /// </summary>
         /// <param name="x">

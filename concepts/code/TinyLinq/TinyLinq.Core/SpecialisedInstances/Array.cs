@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts;
 using System.Concepts.Enumerable;
 
 namespace TinyLinq.SpecialisedInstances
