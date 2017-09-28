@@ -397,16 +397,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // Default-struct sanity checking
             var conceptLoc = concept.Locations.IsEmpty ? Location.None : Locations[0];
             var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
-            if (dstr.Arity != concept.Arity + 1)
+            if (dstr.Arity != 1)
             {
                 // Don't use the default struct's location: it is an
                 // implementation detail and may not actually exist.
                 diagnostics.Add(ErrorCode.ERR_DefaultStructBadArity, conceptLoc, concept.Name, dstr.Arity, concept.Arity + 1);
                 return null;
             }
-
-            // Due to above, arity must be at least 1.
-            var witnessPar = dstr.TypeParameters[dstr.Arity - 1];
+            var witnessPar = dstr.TypeParameters[0];
             if (!witnessPar.IsConceptWitness)
             {
                 diagnostics.Add(ErrorCode.ERR_DefaultStructNoWitnessParam, conceptLoc, concept.Name);

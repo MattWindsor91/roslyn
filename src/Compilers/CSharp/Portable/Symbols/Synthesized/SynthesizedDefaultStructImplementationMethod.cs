@@ -60,16 +60,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     return;
                 }
 
-                Debug.Assert(defs.Arity == concept.Arity + 1, "should have already pre-checked default struct arity");
-                Debug.Assert(defs.TypeParameters[defs.Arity - 1].IsConceptWitness, "should have already pre-checked default struct witness parameter");
+                Debug.Assert(defs.Arity == 1, "should have already pre-checked default struct arity");
+                Debug.Assert(defs.TypeParameters[0].IsConceptWitness, "should have already pre-checked default struct witness parameter");
 
                 var newTypeArguments = GenerateDefaultTypeArguments();
-                Debug.Assert(newTypeArguments.Length == concept.TypeArguments.Length + 1,
-                    "Conversion from concept type parameters to default struct lost or gained some entries.");
+                Debug.Assert(newTypeArguments.Length == 1,
+                    "default struct should only have one type argument");
 
-                // Now make the receiver for the call.  As usual, it's a default().
+                // Now make the receiver for the call.
+                // We generate an empty local for it, and then call into that local.
+                // We then place the local into the block.
                 var recvType = defs.Construct(newTypeArguments);
-                var receiver = F.Default(recvType);
+                var recvLocal = F.SynthesizedLocal(recvType, syntax: F.Syntax, kind: SynthesizedLocalKind.ConceptDictionary);
+                var receiver = F.Local(recvLocal);
 
                 var arguments = GenerateInnerCallArguments(F);
                 Debug.Assert(arguments.Length == ImplementingMethod.Parameters.Length,
@@ -88,11 +91,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 BoundBlock block;
                 if (call.Type.SpecialType == SpecialType.System_Void)
                 {
-                    block = F.Block(F.ExpressionStatement(call), F.Return());
+                    block = F.Block(ImmutableArray.Create(receiver.LocalSymbol), F.ExpressionStatement(call), F.Return());
                 }
                 else
                 {
-                    block = F.Block(F.Return(call));
+                    block = F.Block(ImmutableArray.Create(receiver.LocalSymbol), F.Return(call));
                 }
 
                 F.CloseMethod(block);
@@ -117,7 +120,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private ImmutableArray<TypeSymbol> GenerateDefaultTypeArguments()
         {
             var newTypeArgumentsB = ArrayBuilder<TypeSymbol>.GetInstance();
-            newTypeArgumentsB.AddRange(ImplementingMethod.ContainingType.TypeArguments);
             // This should be the extra witness parameter, if the default
             // struct is well-formed,
             newTypeArgumentsB.Add(ContainingType);

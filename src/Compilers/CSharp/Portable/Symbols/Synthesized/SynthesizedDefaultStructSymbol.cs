@@ -34,10 +34,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             : base(
                   name,
                   that =>
-                      // We duplicate the type parameters of the concept itself,
-                      // as well as adding one for the calling witness, so the
+                      // We add a type parameter for the calling witness, so the
                       // default struct can call back into it.
-                      that.CreateTypeParameters(concept.Arity, true)
+                      ImmutableArray<TypeParameterSymbol>.Empty
                           .Add(
                           new SynthesizedWitnessParameterSymbol(
                               // @t-mawind
@@ -45,7 +44,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                               //   the parent scopes, hence generated name.
                               GeneratedNames.MakeAnonymousTypeParameterName("witness"),
                               Location.None,
-                              concept.Arity,
+                              0,
                               that,
                               _ => ImmutableArray.Create((TypeSymbol) concept),
                               _ => TypeParameterConstraintKind.ValueType
