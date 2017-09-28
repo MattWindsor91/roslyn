@@ -248,14 +248,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     if (implementingMember == null && interfaceMemberKind == SymbolKind.Method && IsInstance && @interface.IsConcept)
                     {
                         var conceptMethod = interfaceMember as MethodSymbol;
-                        var def = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember);
-                        if (def == null)
-                        {
-                            var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
-                            // TODO: wrong location?
-                            diagnostics.Add(ErrorCode.ERR_ConceptMethodNotImplementedAndNoDefault, instanceLoc, Name, @interface.Name, conceptMethod.ToDisplayString());
-                        } 
-                        else
+                        var def = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember, diagnostics: diagnostics);
+                        if (def != null)
                         {
                             synthesizedImplementations.Add(def);
                             implementingMember = def;
@@ -387,7 +381,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return synthesizedImplementations.ToImmutableAndFree();
         }
 
-        private SynthesizedDefaultStructImplementationMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod)
+        private SynthesizedDefaultStructImplementationMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
         {
             Debug.Assert(concept.IsConcept, "concept for default implementation synthesis must be an actual concept");
             Debug.Assert(IsInstance, "target for default implementation synthesis must be an instance");
@@ -395,8 +389,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var dstr = concept.GetDefaultStruct();
             if (dstr == null)
             {
+                // Don't bother returning an error, because we'll raise one
+                // anyway about a missing interface call.
                 return null;
             }
+
+            // Default-struct sanity checking
+            var conceptLoc = concept.Locations.IsEmpty ? Location.None : Locations[0];
+            var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
+            if (dstr.Arity != concept.Arity + 1)
+            {
+                // Don't use the default struct's location: it is an
+                // implementation detail and may not actually exist.
+                diagnostics.Add(ErrorCode.ERR_DefaultStructBadArity, conceptLoc, concept.Name, dstr.Arity, concept.Arity + 1);
+                return null;
+            }
+
+            // Due to above, arity must be at least 1.
+            var witnessPar = dstr.TypeParameters[dstr.Arity - 1];
+            if (!witnessPar.IsConceptWitness)
+            {
+                diagnostics.Add(ErrorCode.ERR_DefaultStructNoWitnessParam, conceptLoc, concept.Name);
+                return null;
+            }
+
+            // Now construct the default struct
+
 
             // Check that the defaults struct actually contains this method
             // TODO: check this works for properties

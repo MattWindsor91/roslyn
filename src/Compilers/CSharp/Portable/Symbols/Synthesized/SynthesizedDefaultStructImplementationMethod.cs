@@ -60,35 +60,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     return;
                 }
 
-                // Suppose the target concept is Foo<A, B>.
-                // Then, the default must take type parameters <A, B, FooAB>,
-                // where FooAB : Foo<A, B>.  Thus, the arity is one higher than
-                // the concept.
-                if (defs.Arity != concept.Arity + 1)
-                {
-                    // Don't use the default struct's location: it is an
-                    // implementation detail and may not actually exist.
-                    diagnostics.Add(ErrorCode.ERR_DefaultStructBadArity, conceptLoc, concept.Name, defs.Arity, concept.Arity + 1);
-                    F.CloseMethod(F.ThrowNull());
-                    return;
-                }
-
-                // Due to above, arity must be at least 1.
-
-                var witnessPar = defs.TypeParameters[defs.Arity - 1];
-                if (!witnessPar.IsConceptWitness)
-                {
-                    diagnostics.Add(ErrorCode.ERR_DefaultStructNoWitnessParam, conceptLoc, concept.Name);
-                    F.CloseMethod(F.ThrowNull());
-                    return;
-                }
+                Debug.Assert(defs.Arity == concept.Arity + 1, "should have already pre-checked default struct arity");
+                Debug.Assert(defs.TypeParameters[defs.Arity - 1].IsConceptWitness, "should have already pre-checked default struct witness parameter");
 
                 var newTypeArguments = GenerateDefaultTypeArguments();
                 Debug.Assert(newTypeArguments.Length == concept.TypeArguments.Length + 1,
                     "Conversion from concept type parameters to default struct lost or gained some entries.");
 
                 // Now make the receiver for the call.  As usual, it's a default().
-                var recvType = new ConstructedNamedTypeSymbol(defs, newTypeArguments);
+                var recvType = defs.Construct(newTypeArguments);
                 var receiver = F.Default(recvType);
 
                 var arguments = GenerateInnerCallArguments(F);
@@ -134,18 +114,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <returns>
         /// The list of type arguments for the default struct.
         /// </returns>
-        private ImmutableArray<TypeWithModifiers> GenerateDefaultTypeArguments()
+        private ImmutableArray<TypeSymbol> GenerateDefaultTypeArguments()
         {
-            var newTypeArgumentsB = ArrayBuilder<TypeWithModifiers>.GetInstance();
-            foreach (var ta in ImplementingMethod.ContainingType.TypeArguments)
-            {
-                // TODO: this is wrong, what if the types have modifiers?
-                newTypeArgumentsB.Add(new TypeWithModifiers(ta));
-            }
-
+            var newTypeArgumentsB = ArrayBuilder<TypeSymbol>.GetInstance();
+            newTypeArgumentsB.AddRange(ImplementingMethod.ContainingType.TypeArguments);
             // This should be the extra witness parameter, if the default
             // struct is well-formed,
-            newTypeArgumentsB.Add(new TypeWithModifiers(ContainingType));
+            newTypeArgumentsB.Add(ContainingType);
 
             return newTypeArgumentsB.ToImmutableAndFree();
         }
