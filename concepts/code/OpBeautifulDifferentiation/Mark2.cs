@@ -94,12 +94,12 @@ namespace OpBeautifulDifferentiation.Mark2
         D<A> Sin(D<A> x) => D<A>.Chain(Sin, Cos)(x);
 
         // d(sin x) = -sin x
-        D<A> Cos(D<A> x) => D<A>.Chain(Cos, Neg<Func<A, A>>(Sin))(x);
+        D<A> Cos(D<A> x) => D<A>.Chain(Cos, -(Sin))(x);
 
         // d(tan x) = 1 + tan^2 x
         D<A> Tan(D<A> x)
             => D<A>.Chain(
-                   Tan, Add(One<Func<A, A>>(), Square<Func<A, A>>(Tan))
+                   Tan, Add(One<Func<A, A>>(), Square(Tan))
                )(x);
 
         // d(asin x) = 1/sqrt(1 - x^2)
@@ -114,7 +114,7 @@ namespace OpBeautifulDifferentiation.Mark2
             => D<A>.Chain(
                    Acos,
                    Recip(
-                       Neg(
+                       -(
                            FloatF<A, A>.Sqrt(Sub(One<Func<A, A>>(), Square))
                        )
                    )
@@ -132,7 +132,7 @@ namespace OpBeautifulDifferentiation.Mark2
 
         // d(tanh x) = 1/(cosh^2 x)
         D<A> Tanh(D<A> x)
-            => D<A>.Chain(Tanh, Recip(Square<Func<A, A>>(Cosh)))(x);
+            => D<A>.Chain(Tanh, Recip(Square(Cosh)))(x);
 
         // d(asinh x) = 1 / sqrt(x^2 + 1)
         D<A> Asinh(D<A> x)

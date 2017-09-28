@@ -50,7 +50,7 @@ namespace TinyLinq
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
 
         private static bool Prop_SumSquaresEqualIntArray(int[] toSum)
-            => toSum.Select(x => x * x).Sum() == toSum.CSelect((int x) => x * x).CSum();
+            => toSum.Select<int, int>(x => x * x).Sum() == toSum.Select((int x) => x * x).CSum();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the sum of all odd numbers of an array.
@@ -59,7 +59,7 @@ namespace TinyLinq
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
 
         private static bool Prop_SumOddEqualIntArray(int[] toSum)
-            => toSum.Where<int>(x => x % 2 == 1).Sum() == toSum.CWhere((int x) => x % 2 == 1).CSum();
+            => toSum.Where<int>(x => x % 2 == 1).Sum() == toSum.Where((int x) => x % 2 == 1).CSum();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the sum of all squares of odd numbers
@@ -70,7 +70,7 @@ namespace TinyLinq
 
         private static bool Prop_SumSquaredOddEqualIntArray(int[] toSum)
             => toSum.Where<int>(x => x % 2 == 1).Select(x => x * x).Sum() ==
-               toSum.CWhere((int x) => x % 2 == 1).CSelect((int x) => x * x).CSum();
+               toSum.Where((int x) => x % 2 == 1).Select((int x) => x * x).CSum();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the sum of all odd squares
@@ -80,7 +80,7 @@ namespace TinyLinq
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
 
         private static bool Prop_SumOddSquaresEqualIntArray(int[] toSum)
-            => toSum.Select(x => x * x).Where(x => x % 2 == 1).Sum() ==
+            => toSum.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Sum() ==
                toSum.CSelect((int x) => x * x).CWhere((int x) => x % 2 == 1).CSum();
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace TinyLinq
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
 
         private static bool Prop_CountSquaresEqualIntArray(int[] toCount)
-            => toCount.Select(x => x * x).Count() == toCount.CSelect((int x) => x * x).CCount();
+            => toCount.Select<int, int>(x => x * x).Count() == toCount.CSelect((int x) => x * x).CCount();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the count of all odd numbers of an array.
@@ -118,7 +118,7 @@ namespace TinyLinq
 
         private static bool Prop_CountSquaredOddEqualIntArray(int[] toCount)
             => toCount.Where<int>(x => x % 2 == 1).Select(x => x * x).Count() ==
-               toCount.CWhere((int x) => x % 2 == 1).CSelect((int x) => x * x).CCount();
+               toCount.Where((int x) => x % 2 == 1).Select((int x) => x * x).CCount();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the count of all odd squares
@@ -128,8 +128,8 @@ namespace TinyLinq
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
 
         private static bool Prop_CountOddSquaresEqualIntArray(int[] toCount)
-            => toCount.Select(x => x * x).Where(x => x % 2 == 1).Count() ==
-               toCount.CSelect((int x) => x * x).CWhere((int x) => x % 2 == 1).CCount();
+            => toCount.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Count() ==
+               toCount.Select((int x) => x * x).Where((int x) => x % 2 == 1).CCount();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the average of an array.
@@ -150,7 +150,7 @@ namespace TinyLinq
         private static Imp<bool, Func<bool>> Prop_AverageSquaresEqualIntArray(int[] toAverage)
             => PBTHelpers.Implies(
                 0 < toAverage.Length,
-                (Func<bool>)(() => toAverage.Select(x => x * x).Average() == toAverage.CSelect((int x) => x * x).CAverage()));
+                (Func<bool>)(() => toAverage.Select<int, int>(x => x * x).Average() == toAverage.CSelect((int x) => x * x).CAverage()));
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the average of all odd numbers of an array.
@@ -186,9 +186,9 @@ namespace TinyLinq
 
         private static Imp<bool, Func<bool>> Prop_AverageOddSquaresEqualIntArray(int[] toAverage)
             => PBTHelpers.Implies(
-                0 < toAverage.Select(x => x * x).Where(x => x % 2 == 1).Count(),
-                (Func<bool>)(() => toAverage.Select(x => x * x).Where(x => x % 2 == 1).Average() ==
-                 toAverage.CSelect((int x) => x * x).CWhere((int x) => x % 2 == 1).CAverage()));
+                0 < toAverage.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Count(),
+                (Func<bool>)(() => toAverage.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Average() ==
+                 toAverage.Select(x => x * x).Where((int x) => x % 2 == 1).CAverage()));
 
         private static bool Prop_CartesianProductsEqualIntArray(int[] input)
         {

@@ -93,7 +93,7 @@ namespace OpBeautifulDifferentiation.Mark1
         D<A> Sin(D<A> x) => new D<A>(Sin(x.X), x.DX * Cos(x.X));
 
         // d(sin x) = -sin x
-        D<A> Cos(D<A> x) => new D<A>(Cos(x.X), x.DX * Neg(Sin(x.X)));
+        D<A> Cos(D<A> x) => new D<A>(Cos(x.X), x.DX * -(Sin(x.X)));
 
         // d(tan x) = 1 + tan^2 x
         D<A> Tan(D<A> x)
@@ -105,7 +105,7 @@ namespace OpBeautifulDifferentiation.Mark1
 
         // d(acos x) = -1/sqrt(1 - x^2)
         D<A> Acos(D<A> x)
-            => new D<A>(Acos(x.X), x.DX / Neg(Sqrt(One<A>() - Square(x.X))));
+            => new D<A>(Acos(x.X), x.DX / -(Sqrt(One<A>() - Square(x.X))));
 
         // d(atan x) = 1/(1 + x^2)
         D<A> Atan(D<A> x)

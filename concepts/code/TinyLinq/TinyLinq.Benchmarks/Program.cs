@@ -8,6 +8,8 @@ namespace TinyLinq
     {
         static void Main(string[] args)
         {
+            ConceptExtensionTests.Run();
+
             UnspecialisedArrayTests.Run();
             SpecialisedArrayTests.Run();
             LinqSyntaxTests.Run();

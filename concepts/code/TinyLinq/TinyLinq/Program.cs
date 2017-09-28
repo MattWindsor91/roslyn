@@ -64,7 +64,7 @@ namespace TinyLinq
         {
             var results =
                 items
-                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], int, ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], ArrayCursor<int>, int, Where<ArrayCursor<int>, int>, Where_Enumerator<ArrayCursor<int>>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
                 .CSelect((int i) => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
@@ -141,7 +141,7 @@ namespace TinyLinq
         {
             return
                 items
-                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], int, ArrayCursor<int>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], ArrayCursor<int>, int, Where<ArrayCursor<int>, int>, Where_Enumerator<ArrayCursor<int>>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
                 .CCount();
         }
 

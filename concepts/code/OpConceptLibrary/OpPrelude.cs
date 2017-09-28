@@ -184,7 +184,9 @@ namespace System.Concepts.OpPrelude
         ///     The result of subtracting <paramref name="y"/> from
         ///     <paramref name="x"/>: <c>x - y</c>.
         /// </returns>
-        A operator -(A x, A y);
+        A operator -(A x, A y) => FromInteger(0) + (-x);
+
+        A operator -(A x) => FromInteger(0) - x;
 
         // Haskell here allows either (-) or negate to be defined: we
         // currently just define Sub.

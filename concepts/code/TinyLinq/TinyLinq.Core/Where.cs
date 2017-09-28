@@ -97,14 +97,14 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Unspecialised instance for filtering over an enumerable, producing
-    /// a basic <see cref="Where{TEnum, TElem}"/>.
+    /// Adapts any Where over enumerators into one over enumerables.
     /// </summary>
     [Overlappable]
-    public instance Where_Enumerable<TSrc, [AssociatedType] TElem, [AssociatedType] TEnum, implicit E>
-        : CWhere<TSrc, TElem, Where<TEnum, TElem>>
-        where E : CEnumerable<TSrc, TEnum, TElem>
+    public instance Where_Enumerable<TColl, [AssociatedType] TSrc, [AssociatedType] TElem, [AssociatedType] TDst, implicit S, implicit E>
+        : CWhere<TColl, TElem, TDst>
+        where S : CWhere<TSrc, TElem, TDst>
+        where E : CEnumerable<TColl, TSrc, TElem>
     {
-        Where<TEnum, TElem> Where(this TSrc src, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = E.GetEnumerator(src), filter = filter, current = default };
+        TDst Where(this TColl t, Func<TElem, bool> filter) => S.Where(E.GetEnumerator(t), filter);
     }
 }
