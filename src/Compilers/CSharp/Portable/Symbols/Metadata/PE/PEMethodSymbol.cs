@@ -834,9 +834,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
                 // @t-mawind
                 //   Operators can be non-static if and only if they are being
-                //   defined on concepts or instances.
+                //   defined on concepts, instances, or default structs;
+                var isConceptOperator = ContainingType.IsConcept || ContainingType.IsInstance || ContainingType.IsDefaultStruct;
                 if (!this.HasRuntimeSpecialName &&
-                    (this.IsStatic || (ContainingType != null && (ContainingType.IsConcept || ContainingType.IsInstance))) &&
+                    (this.IsStatic || (ContainingType != null && isConceptOperator)) &&
                     this.DeclaredAccessibility == Accessibility.Public)
                 {
                     switch (_name)

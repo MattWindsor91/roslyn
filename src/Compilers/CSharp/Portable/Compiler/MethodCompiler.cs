@@ -1704,6 +1704,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (method.ContainingType.IsDefaultStruct)
                     {
                         inMethodBinder = new WithWitnessesBinder(method.ContainingType, inMethodBinder);
+                        inMethodBinder = new WithClassTypeParametersBinder(method.ContainingType, inMethodBinder);
                     }
 
                     var binder = new ExecutableCodeBinder(bodySyntax, sourceMethod, inMethodBinder);

@@ -69,6 +69,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="allowFieldsAndProperties">True to allow invocation of fields and properties of delegate type. Only methods are allowed otherwise.</param>
         /// <param name="allowUnexpandedForm">False to prevent selecting a params method in unexpanded form.</param>
         /// <returns>Synthesized method invocation expression.</returns>
+        /// <param name="allowInvokingSpecialMethod">True to allow invocation of special methods.</param>
         internal BoundExpression MakeInvocationExpression(
             SyntaxNode node,
             BoundExpression receiver,
@@ -79,11 +80,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<TypeSymbol> typeArgs = default(ImmutableArray<TypeSymbol>),
             CSharpSyntaxNode queryClause = null,
             bool allowFieldsAndProperties = false,
-            bool allowUnexpandedForm = true)
+            bool allowUnexpandedForm = true,
+            // @MattWindsor91 (Concept-C# 2017)
+            //     Workaround to let us synthesise calls to operators.
+            bool allowInvokingSpecialMethod = false)
         {
             Debug.Assert(receiver != null);
 
-            var boundExpression = BindInstanceMemberAccess(node, node, receiver, methodName, typeArgs.NullToEmpty().Length, typeArgsSyntax, typeArgs, true, diagnostics);
+            var boundExpression = BindInstanceMemberAccess(node, node, receiver, methodName, typeArgs.NullToEmpty().Length, typeArgsSyntax, typeArgs, true, diagnostics, allowInvokingSpecialMethod);
 
             // The other consumers of this helper (await and collection initializers) require the target member to be a method.
             if (!allowFieldsAndProperties && (boundExpression.Kind == BoundKind.FieldAccess || boundExpression.Kind == BoundKind.PropertyAccess))

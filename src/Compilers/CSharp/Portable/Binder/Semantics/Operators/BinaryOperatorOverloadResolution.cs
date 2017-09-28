@@ -33,11 +33,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return;
             }
 
-            // @t-mawind
-            //   Here, we add in the possibility of having access to a concept
-            //   witness defining the binary operator.
-            bool hadConceptCandidate = GetBinaryWitnessOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
-            
             // The following is a slight rewording of the specification to emphasize that not all
             // operands of a binary operation need to have a type.
 
@@ -45,7 +40,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             // SPEC: The set of candidate user-defined operators provided by the types (if any) of x and y for the 
             // SPEC operation operator op(x, y) is determined. 
 
-            bool hadUserDefinedCandidate = hadConceptCandidate || GetUserDefinedOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
+            bool hadUserDefinedCandidate = GetUserDefinedOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
+
+            // @t-mawind
+            //   Here, we add in the possibility of having access to a concept
+            //   witness defining the binary operator.
+            hadUserDefinedCandidate |= GetBinaryConceptOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
+
 
             // SPEC: If the set of candidate user-defined operators is not empty, then this becomes the set of candidate 
             // SPEC: operators for the operation. Otherwise, the predefined binary operator op implementations, including 
@@ -103,15 +104,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// True if we managed to find candidate operators from the concept
         /// witnesses in scope; false otherwise.
         /// </returns>
-        private bool GetBinaryWitnessOperators(BinaryOperatorKind kind, BoundExpression left, BoundExpression right, ArrayBuilder<BinaryOperatorAnalysisResult> results, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        private bool GetBinaryConceptOperators(BinaryOperatorKind kind, BoundExpression left, BoundExpression right, ArrayBuilder<BinaryOperatorAnalysisResult> results, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             Debug.Assert(left != null);
             Debug.Assert(right != null);
 
             string name = OperatorFacts.BinaryOperatorNameFromOperatorKind(kind);
+            var args = ArrayBuilder<BoundExpression>.GetInstance();
+            args.Add(left);
+            args.Add(right);
 
             var operators = ArrayBuilder<BinaryOperatorSignature>.GetInstance();
-            foreach (var method in GetWitnessOperators(name, 2, ref useSiteDiagnostics))
+            foreach (var method in GetConceptOperators(name, args.ToImmutableAndFree(), ref useSiteDiagnostics))
             {
                 // TODO: nullability
                 operators.Add(new BinaryOperatorSignature(BinaryOperatorKind.UserDefined | kind, method.ParameterTypes[0], method.ParameterTypes[1], method.ReturnType, method));

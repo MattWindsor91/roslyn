@@ -9,7 +9,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     internal sealed class SourceUserDefinedOperatorSymbol : SourceUserDefinedOperatorSymbolBase
     {
         public static SourceUserDefinedOperatorSymbol CreateUserDefinedOperatorSymbol(
-            SourceMemberContainerTypeSymbol containingType,
+            // @MattWindsor91 (Concept-C# 2017)
+            // See base class for comment on why this type has been relaxed.
+            NamedTypeSymbol containingType,
             OperatorDeclarationSyntax syntax,
             DiagnosticBag diagnostics)
         {
@@ -26,7 +28,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         // is bound lazily using binders from a BinderFactory (which will already include an
         // UnsafeBinder, if necessary).
         private SourceUserDefinedOperatorSymbol(
-            SourceMemberContainerTypeSymbol containingType,
+            // @MattWindsor91 (Concept-C# 2017)
+            // See base class for comment on why this type has been relaxed.
+            NamedTypeSymbol containingType,
             string name,
             Location location,
             OperatorDeclarationSyntax syntax,

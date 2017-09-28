@@ -98,7 +98,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<BoundExpression> args,
             DiagnosticBag diagnostics,
             ImmutableArray<TypeSymbol> typeArgs = default(ImmutableArray<TypeSymbol>),
-            bool allowUnexpandedForm = true)
+            bool allowUnexpandedForm = true,
+            // @MattWindsor91 (Concept-C# 2017)
+            //     Workaround to let us synthesise calls to operators.
+            bool allowInvokingSpecialMethod = false)
         {
             if (_binder == null || _binder.Flags != flags)
             {
@@ -113,7 +116,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnostics,
                 typeArgs: typeArgs,
                 allowFieldsAndProperties: false,
-                allowUnexpandedForm: allowUnexpandedForm);
+                allowUnexpandedForm: allowUnexpandedForm,
+                allowInvokingSpecialMethod: allowInvokingSpecialMethod);
         }
 
         /// <summary>

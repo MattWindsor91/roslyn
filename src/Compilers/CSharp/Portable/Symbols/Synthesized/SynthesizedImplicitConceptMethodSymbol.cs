@@ -137,7 +137,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// The original implicit method, with the new concept type arguments
         /// from <paramref name="typeArguments"/> substituted for the original
         /// concept parameters.
-        /// If the concept had no type parameters, this is a no-operation.
+        /// If the concept had no type parameters, or the type arguments are
+        /// equal to the type parameters, this is a no-operation.
         /// </returns>
         private MethodSymbol SubstituteForConstructAndRetarget(ImmutableArray<TypeSymbol> typeArguments)
         {
@@ -154,7 +155,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             var conceptTypeArguments = conceptTypeArgumentsB.ToImmutableAndFree();
             var constructedConcept = _concept.Construct(conceptTypeArguments);
-
+            if (constructedConcept == _concept)
+            {
+                // Construction was a no-op, so substituting would be an error.
+                return UnderlyingMethod;
+            }
             return new SubstitutedMethodSymbol(constructedConcept, UnderlyingMethod);
         }
 

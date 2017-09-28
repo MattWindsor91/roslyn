@@ -75,7 +75,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 Debug.Assert(arguments.Length == ImplementingMethod.Parameters.Length,
                     "Conversion from parameters to arguments lost or gained some entries.");
 
-                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, ImplementingMethod.Name, arguments, diagnostics, ImplementingMethod.TypeArguments);
+                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, ImplementingMethod.Name, arguments, diagnostics, ImplementingMethod.TypeArguments, allowInvokingSpecialMethod: true);
                 if (call.HasErrors)
                 {
                     F.CloseMethod(F.ThrowNull());

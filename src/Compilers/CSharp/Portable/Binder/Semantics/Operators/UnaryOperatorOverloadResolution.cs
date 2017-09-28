@@ -28,18 +28,23 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return;
             }
 
-            // @t-mawind
-            //   Here, we add in the possibility of having access to a concept
-            //   witness defining the unary operator.
-            bool hadConceptCandidate = GetUnaryWitnessOperators(kind, operand, result.Results, ref useSiteDiagnostics);
-
             // SPEC: An operation of the form op x or x op, where op is an overloadable unary operator,
             // SPEC: and x is an expression of type X, is processed as follows:
 
             // SPEC: The set of candidate user-defined operators provided by X for the operation operator 
             // SPEC: op(x) is determined using the rules of 7.3.5.
 
-            bool hadUserDefinedCandidate = hadConceptCandidate || GetUserDefinedOperators(kind, operand, result.Results, ref useSiteDiagnostics);
+            bool hadUserDefinedCandidate = GetUserDefinedOperators(kind, operand, result.Results, ref useSiteDiagnostics);
+
+            // @t-mawind
+            //   Here, we add in the possibility of having access to a concept
+            //   witness defining the unary operator.
+            //
+            // @MattWindsor91 (Concept-C# 2017)
+            //   Only do this if we didn't already have user-defined operators.
+            //   (TODO: maybe add both in, and tweak operator overloading so
+            //          concepts are deprioritised)
+            hadUserDefinedCandidate |= GetUnaryConceptOperators(kind, operand, result.Results, ref useSiteDiagnostics);
 
             // SPEC: If the set of candidate user-defined operators is not empty, then this becomes the 
             // SPEC: set of candidate operators for the operation. Otherwise, the predefined unary operator 
@@ -80,14 +85,16 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// True if we managed to find candidate operators from the concept
         /// witnesses in scope; false otherwise.
         /// </returns>
-        private bool GetUnaryWitnessOperators(UnaryOperatorKind kind, BoundExpression operand, ArrayBuilder<UnaryOperatorAnalysisResult> results, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        private bool GetUnaryConceptOperators(UnaryOperatorKind kind, BoundExpression operand, ArrayBuilder<UnaryOperatorAnalysisResult> results, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             Debug.Assert(operand != null);
 
             string name = OperatorFacts.UnaryOperatorNameFromOperatorKind(kind);
+            var args = ArrayBuilder<BoundExpression>.GetInstance();
+            args.Add(operand);
 
             var operators = ArrayBuilder<UnaryOperatorSignature>.GetInstance();
-            foreach (var method in GetWitnessOperators(name, 1, ref useSiteDiagnostics))
+            foreach (var method in GetConceptOperators(name, args.ToImmutableAndFree(), ref useSiteDiagnostics))
             {
                 // TODO: nullability
                 operators.Add(new UnaryOperatorSignature(UnaryOperatorKind.UserDefined | kind, method.ParameterTypes[0], method.ReturnType, method));
