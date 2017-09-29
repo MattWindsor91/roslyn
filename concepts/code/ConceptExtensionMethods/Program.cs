@@ -98,6 +98,7 @@ namespace ConceptExtensionMethods
             System.Console.WriteLine();
 
             System.Console.WriteLine(1.Minus(3));
+            System.Console.WriteLine(CMonoid<int>.Zero);
         }
     }
 }
