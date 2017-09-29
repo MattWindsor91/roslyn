@@ -6259,7 +6259,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     {
                         // Explicit witnesses
                         var r = (BoundTypeExpression)receiver;
-                        if (r.Type.IsConceptWitness)
+                        if (r.Type.IsConceptWitness || r.Type.IsInstanceType())
                         {
                             return false;
                         }
