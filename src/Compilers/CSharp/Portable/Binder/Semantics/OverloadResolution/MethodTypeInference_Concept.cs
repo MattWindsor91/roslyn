@@ -42,17 +42,28 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
 
-            var fixedMap = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
+            (var unfixedAssocs, var fixedMap) = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
             if (fixedMap == null)
             {
                 return false;
             }
 
+            var mustRerunNormalInf = false;
             for (int i = 0; i < _fixedResults.Length; i++)
             {
                 if (_fixedResults[i] != null)
                 {
                     // This type parameter was already fixed.
+                    continue;
+                }
+
+                if (!(unfixedAssocs == null || unfixedAssocs.IsEmpty) && unfixedAssocs.Contains(_methodTypeParameters[i]))
+                {
+                    // This type parameter is an associated type, but we
+                    // couldn't infer it.
+                    // We'll try to infer it through another pass of
+                    // phase 1 and 2 inference.
+                    mustRerunNormalInf = true;
                     continue;
                 }
 
@@ -77,6 +88,66 @@ namespace Microsoft.CodeAnalysis.CSharp
                   type parameters in each Qsort call as T->T, OrdT->OrdT.
                   These are exactly the same symbols. */
                 _fixedResults[i] = fixedMap.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
+            }
+
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Sometimes the concept inferrer might not be able to infer some
+            // top-level associated types, but, if we re-ran the first two
+            // inference phases again, we can fill them in.
+            //
+            // A typical example is when we have three types
+            // (TSrc, TSrcElem, TDstElem), whereby TSrcElem is related
+            // to TSrc through being an associated type (maybe TSrc is a
+            // container of TSrcElem), and TDstElem is related through
+            // being the range of a lambda TSrcElem -> TDstElem.
+            //
+            // Concept inference can infer TSrcElem, but normal inference must
+            // be re-run to get TDstElem.
+            //
+            // TODO: this rerun is done in a very ad-hoc way, and might be
+            // avoidable if we instead plumb concept inference into the normal
+            // inference system.
+            if (mustRerunNormalInf)
+            {
+                for (int i = 0; i < _fixedResults.Length; i++)
+                {
+                    if (_fixedResults[i] != null)
+                    {
+                        var tmp = _fixedResults[i];
+                        _fixedResults[i] = null;
+                        AddExactBound(_methodTypeParameters[i], tmp);
+                    }
+                }
+                _dependencies = null;
+                InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
+                if (!InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics))
+                {
+                    return false;
+                }
+
+                // The above will have fixed the associated types, but not
+                // propagated the associated types back into any uses of them
+                // in the other types.  For example, we might have a
+                // TDst which was fixed as Goo<TDstElem>: TDstElem is still
+                // unfixed inside.
+                //
+                // We have to correct that manually here.
+                //
+                // TODO: there must be an easier way of doing this.
+                var asmap = new MutableTypeMap();
+                for (int i = 0; i < _fixedResults.Length; i++)
+                {
+                    if (unfixedAssocs.Contains(_methodTypeParameters[i]))
+                    {
+                        Debug.Assert(_fixedResults[i] != null, "should have been able to fix this associated type");
+                        asmap.AddAndPropagate(_methodTypeParameters[i], new TypeWithModifiers(_fixedResults[i]));
+                    }
+                }
+                for (int i = 0; i < _fixedResults.Length; i++)
+                {
+                    _fixedResults[i] = asmap.SubstituteType(_fixedResults[i]).AsTypeSymbolOnly();
+                }
             }
 
             return true;
@@ -640,7 +711,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <returns>
         /// The final unification map if inference succeeded; the default map otherwise.
         /// </returns>
-        internal ImmutableTypeMap Infer(
+        internal (ImmutableHashSet<TypeParameterSymbol> unfixedAssocs, ImmutableTypeMap typeMap) Infer(
             ImmutableArray<TypeParameterSymbol> typeParams,
             ImmutableArray<TypeSymbol> typeArguments,
             ImmutableTypeMap existingFixedMap,
@@ -690,17 +761,18 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <returns>
         /// The final unification map if inference succeeded; the default map otherwise.
         /// </returns>
-        internal ImmutableTypeMap InferWithClassifiedParameters(
+        internal (ImmutableHashSet<TypeParameterSymbol> unfixedAssocs, ImmutableTypeMap typeMap) InferWithClassifiedParameters(
             ImmutableArray<TypeParameterSymbol> conceptParams,
             ImmutableArray<TypeParameterSymbol> associatedParams,
             ImmutableTypeMap existingFixedMap,
             ImmutableHashSet<NamedTypeSymbol> chain,
-            ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+            ref HashSet<DiagnosticInfo> useSiteDiagnostics,
+            bool atMethodTopLevel = false)
         {
             // Early out: if we don't have any concept indices, we can't infer.
             if (conceptParams.IsEmpty)
             {
-                return existingFixedMap;
+                return (ImmutableHashSet<TypeParameterSymbol>.Empty, existingFixedMap);
             }
 
             bool inferredAll;
@@ -751,7 +823,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Stop if we made no progress whatsoever.
                 if (!conceptProgress && !inferredAll)
                 {
-                    return default;
+                    return (ImmutableHashSet<TypeParameterSymbol>.Empty, default);
                 }
             } while (!inferredAll);
 
@@ -763,15 +835,15 @@ namespace Microsoft.CodeAnalysis.CSharp
              *       checking to see if currentSubstitution has fixed
              *       allTypeParameters[i] might be better.
              */
+            var unfixedAssocsB = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
             for (int i = 0; i < associatedParams.Length; i++)
             {
                 if (currentSubstitution.SubstituteType(associatedParams[i]).AsTypeSymbolOnly() == associatedParams[i])
                 {
-                    return default;
+                    unfixedAssocsB.Add(associatedParams[i]);
                 }
             }
-
-            return currentSubstitution;
+            return (unfixedAssocsB.ToImmutable(), currentSubstitution);
         }
 
         /// <summary>
@@ -1313,8 +1385,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableHashSet<NamedTypeSymbol> chain)
         {
             var diags = new HashSet<DiagnosticInfo>();
-            var unification = Infer(unfixedInstance.TypeParameters, unfixedInstance.TypeArguments, existingFixedMap, chain, ref diags);
-            if (unification == null)
+            (var unfixedAssocs, var unification) = Infer(unfixedInstance.TypeParameters, unfixedInstance.TypeArguments, existingFixedMap, chain, ref diags);
+            if (!(unfixedAssocs == null || unfixedAssocs.IsEmpty) || unification == null)
             {
                 // NB: diags might be empty at this stage (TODO: should it be?)
                 return new Candidate(diags);
@@ -1798,8 +1870,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // TODO: pass in diagnostics
             var ignore = new HashSet<DiagnosticInfo>();
-            var unification = InferWithClassifiedParameters(conceptParams, associatedParams, fixedMap.ToUnification(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref ignore);
-            if (unification == null)
+            (var unfixedAssocs, var unification) = InferWithClassifiedParameters(conceptParams, associatedParams, fixedMap.ToUnification(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref ignore);
+            if (!(unfixedAssocs == null || unfixedAssocs.IsEmpty) || unification == null)
             {
                 // In certain cases, we allow part-inference to return a result
                 // if it was only trying to infer associated types, but failed.

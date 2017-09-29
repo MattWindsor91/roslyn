@@ -7,18 +7,6 @@ using TinyLinq.SpecialisedInstances;
 
 namespace TinyLinq
 {
-    static class EExtensions
-    {
-
-        public static D Select<T, [AssociatedType]U, [AssociatedType] D, implicit M>(this T[] This, Func<T, U> f) where M : CSelect<T, U, T[], D>
-
-        {
-
-            return M.Select(This, f);
-
-        }
-    }
-
     public static class ConceptExtensionTests
     {
         public static void Run()
