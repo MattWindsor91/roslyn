@@ -80,7 +80,7 @@ namespace TinyLinq
 
         private static bool Prop_UnspecSumOddSquaresEqualIntArray(int[] toSum)
             => toSum.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Sum() ==
-               toSum.Select((int x) => x * x).Where((int x) => x % 2 == 1).CSum();
+               toSum.CSelect((int x) => x * x).Where((int x) => x % 2 == 1).CSum();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the length of an array.
@@ -128,7 +128,7 @@ namespace TinyLinq
 
         private static bool Prop_UnspecCountOddSquaresEqualIntArray(int[] toCount)
             => toCount.Select<int, int>(x => x * x).Where(x => x % 2 == 1).Count() ==
-               toCount.Select(x => x * x).Where((int x) => x % 2 == 1).CCount();
+               toCount.CSelect((int x) => x * x).Where((int x) => x % 2 == 1).CCount();
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the average of an array.
