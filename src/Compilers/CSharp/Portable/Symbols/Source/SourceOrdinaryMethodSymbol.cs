@@ -97,9 +97,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // @MattWindsor91 (Concept-C# 2017)
             //
             // A 'this' keyword on the first parameter of a concept or instance
-            // method is not an extension method: it's a concept extension
-            // method.
-            if (containingType != null && (containingType.IsConcept || containingType.IsInstance))
+            // method, or on a default struct, is not an extension method:
+            // it's a concept extension method.
+            if (containingType != null && (containingType.IsConcept || containingType.IsInstance || containingType.IsDefaultStruct))
             {
                 _isConceptExtensionMethod = isExtensionMethod;
                 isExtensionMethod = false;

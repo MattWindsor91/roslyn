@@ -43,7 +43,14 @@ namespace ConceptExtensionMethods
             return x.Plus(y);
         }
     }
-        
+
+    public concept Num<A>
+    {
+        A Add(this A x, A y);
+        A Sub(this A x, A y) => x.Add(y.Neg());
+        A Neg(this A x) => FromInteger(0).Sub(x);
+        A FromInteger(int x);
+    }
 
     class Program
     {
