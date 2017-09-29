@@ -12,12 +12,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     /// <summary>
     /// Base type of synthesised concept-witness type parameters.
     /// <para>
-    /// These symbols appear whenever we find a constraint <c>A: B</c> where
-    /// <c>B</c> is a concept and <c>A</c> is not in the formal type parameters
-    /// of the parent symbol.
+    /// These symbols appear primarily on default structs.
     /// </para>
     /// </summary>
-    internal abstract class SynthesizedWitnessParameterSymbolBase : TypeParameterSymbol
+    internal sealed class SynthesizedWitnessParameterSymbol : TypeParameterSymbol
     {
         //@t-mawind
         // This class is mainly based on (copies code from!) both
@@ -30,8 +28,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private TypeParameterBounds _lazyBounds = TypeParameterBounds.Unset;
         private SymbolCompletionState _state;
 
+        private Symbol _owner;
+
+        // The below are Funcs because, if they are coming from _owner,
+        // evaluating them at ctor time triggers an infinite loop.
+
+        private Func<int, ImmutableArray<TypeSymbol>> _constraintTypes;
+        private Func<int, TypeParameterConstraintKind> _constraintKind;
+
         /// <summary>
-        /// Constructs a new SynthesizedWitnessParameterSymbolBase.
+        /// Constructs a new SynthesizedWitnessParameterSymbol.
         /// </summary>
         /// <param name="name">
         /// The name of the type parameter.
@@ -42,11 +48,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <param name="ordinal">
         /// The ordinal of the type parameter.
         /// </param>
-        protected SynthesizedWitnessParameterSymbolBase(string name, Location clauseLocation, int ordinal)
+        /// <param name="owner">
+        /// The symbol containing this type parameter.
+        /// </param>
+        /// <param name="constraintTypes">
+        /// Func taking the ordinal and producing the constraint types constraining this symbol.
+        /// </param>
+        /// <param name="constraintKind">
+        /// Func taking the ordinal and  producing the constraint kind constraining this symbol.
+        /// </param>
+        internal SynthesizedWitnessParameterSymbol(
+            string name,
+            Location clauseLocation,
+            int ordinal,
+            Symbol owner,
+            Func<int, ImmutableArray<TypeSymbol>> constraintTypes,
+            Func<int, TypeParameterConstraintKind> constraintKind)
         {
             _name = name;
             _ordinal = (short)ordinal;
             _clauseLocation = clauseLocation;
+            _owner = owner;
+            _constraintTypes = constraintTypes;
+            _constraintKind = constraintKind;
         }
 
         public override ImmutableArray<Location> Locations => ImmutableArray<Location>.Empty;
@@ -91,11 +115,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected abstract ImmutableArray<TypeParameterSymbol> ContainerTypeParameters
-        {
-            get;
-        }
-
         private TypeParameterBounds GetBounds(ConsList<TypeParameterSymbol> inProgress)
         {
             Debug.Assert(!inProgress.ContainsReference(this));
@@ -120,8 +139,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             return _lazyBounds;
         }
-
-        protected abstract TypeParameterBounds ResolveBounds(ConsList<TypeParameterSymbol> inProgress, DiagnosticBag diagnostics);
 
         /// <summary>
         /// Check constraints of generic types referenced in constraint types. For instance,
@@ -262,76 +279,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Type of synthesised concept-witness type parameters.
-    /// </summary>
-    internal sealed class SynthesizedWitnessParameterSymbol : SynthesizedWitnessParameterSymbolBase
-    {
-        private Symbol _owner;
-
-        // The below are Funcs because, if they are coming from _owner,
-        // evaluating them at ctor time triggers an infinite loop.
-
-        private Func<int, ImmutableArray<TypeSymbol>> _constraintTypes;
-        private Func<int, TypeParameterConstraintKind> _constraintKind;
-
-        /// <summary>
-        /// Constructs a new SynthesizedWitnessParameterSymbol with an explicit constraint set.
-        /// </summary>
-        /// <param name="name">
-        /// The name of the type parameter.
-        /// </param>
-        /// <param name="clauseLocation">
-        /// The location of the clause creating this witness.
-        /// </param>
-        /// <param name="ordinal">
-        /// The ordinal of the type parameter.
-        /// </param>
-        /// <param name="owner">
-        /// The symbol containing this type parameter.
-        /// </param>
-        /// <param name="constraintTypes">
-        /// Func taking the ordinal and producing the constraint types constraining this symbol.
-        /// </param>
-        /// <param name="constraintKind">
-        /// Func taking the ordinal and  producing the constraint kind constraining this symbol.
-        /// </param>
-        internal SynthesizedWitnessParameterSymbol(
-            string name,
-            Location clauseLocation,
-            int ordinal,
-            Symbol owner,
-            Func<int, ImmutableArray<TypeSymbol>> constraintTypes,
-            Func<int, TypeParameterConstraintKind> constraintKind)
-            : base(name, clauseLocation, ordinal)
-        {
-            _owner = owner;
-            _constraintTypes = constraintTypes;
-            _constraintKind = constraintKind;
-        }
-
-        /// <summary>
-        /// Constructs a new SynthesizedWitnessParameterSymbol.
-        /// </summary>
-        /// <param name="name">
-        /// The name of the type parameter.
-        /// </param>
-        /// <param name="clauseLocation">
-        /// The location of the clause creating this witness.
-        /// </param>
-        /// <param name="ordinal">
-        /// The ordinal of the type parameter.
-        /// </param>
-        /// <param name="owner">
-        /// The symbol containing this type parameter.
-        /// </param>
-        internal SynthesizedWitnessParameterSymbol(string name, Location clauseLocation, int ordinal, SourceNamedTypeSymbol owner)
-            : this(name, clauseLocation, ordinal, owner, owner.GetTypeParameterConstraintTypes, owner.GetTypeParameterConstraints)
-        {
-        }
-
         public override TypeParameterKind TypeParameterKind => TypeParameterKind.Type;
 
         public override Symbol ContainingSymbol => _owner;
@@ -354,7 +301,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected override ImmutableArray<TypeParameterSymbol> ContainerTypeParameters
+        private ImmutableArray<TypeParameterSymbol> ContainerTypeParameters
         {
             get
             {
@@ -373,7 +320,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        protected override TypeParameterBounds ResolveBounds(ConsList<TypeParameterSymbol> inProgress, DiagnosticBag diagnostics) =>
+        private TypeParameterBounds ResolveBounds(ConsList<TypeParameterSymbol> inProgress, DiagnosticBag diagnostics) =>
             this.ResolveBounds(ContainingAssembly.CorLibrary, inProgress.Prepend(this), _constraintTypes(Ordinal), false, DeclaringCompilation, diagnostics);
 
         private TypeParameterConstraintKind GetDeclaredConstraints() => _constraintKind(Ordinal);
