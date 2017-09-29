@@ -66,8 +66,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             TypeMap = typeMap;
         }
 
-        // @t-mawind As is this accessibility change
-        internal ImmutableArray<TypeParameterSymbol> CreateTypeParameters(int parameterCount, bool returnsVoid)
+        private ImmutableArray<TypeParameterSymbol> CreateTypeParameters(int parameterCount, bool returnsVoid)
         {
             var typeParameters = ArrayBuilder<TypeParameterSymbol>.GetInstance(parameterCount + (returnsVoid ? 0 : 1));
             for (int i = 0; i < parameterCount; i++)
