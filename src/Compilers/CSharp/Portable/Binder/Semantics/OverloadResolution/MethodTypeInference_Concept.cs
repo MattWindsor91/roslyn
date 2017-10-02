@@ -40,43 +40,46 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var inferrer = new ConceptWitnessInferrer(binder);
 
-            ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
-
-            var result = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
-            if (result.ResultType == ConceptWitnessInferrer.Result.Type.Failed)
+            var needConceptInference = true;
+            while (needConceptInference)
             {
-                return false;
-            }
-            var mustRerunNormalInf = result.ResultType == ConceptWitnessInferrer.Result.Type.RepeatNormalInference;
-
-            FixFromConceptInference(result);
-
-            // @MattWindsor91 (Concept-C# 2017)
-            //
-            // Sometimes the concept inferrer might not be able to infer some
-            // top-level associated types, but, if we re-ran the first two
-            // inference phases again, we can fill them in.
-            //
-            // A typical example is when we have three types
-            // (TSrc, TSrcElem, TDstElem), whereby TSrcElem is related
-            // to TSrc through being an associated type (maybe TSrc is a
-            // container of TSrcElem), and TDstElem is related through
-            // being the range of a lambda TSrcElem -> TDstElem.
-            //
-            // Concept inference can infer TSrcElem, but normal inference must
-            // be re-run to get TDstElem.
-            //
-            // TODO: this rerun is done in a very ad-hoc way, and might be
-            // avoidable if we instead plumb concept inference into the normal
-            // inference system.
-            if (mustRerunNormalInf)
-            {
-                CleanUpForInferRepeat();
-                InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
-                if (!InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics))
+                ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
+                var result = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
+                if (result.ResultType == ConceptWitnessInferrer.Result.Type.Failed)
                 {
+                    // Concept inference has completely failed, and we can't
+                    // even rescue it by doing more inference.  Bail.
                     return false;
                 }
+                var numUnfixed = FixFromConceptInference(result);
+
+                // @MattWindsor91 (Concept-C# 2017)
+                //
+                // Sometimes the concept inferrer might not be able to infer some
+                // top-level associated types, but, if we re-ran the first two
+                // inference phases again, we can fill them in.
+                //
+                // A typical example is when we have three types
+                // (TSrc, TSrcElem, TDstElem), whereby TSrcElem is related
+                // to TSrc through being an associated type (maybe TSrc is a
+                // container of TSrcElem), and TDstElem is related through
+                // being the range of a lambda TSrcElem -> TDstElem.
+                //
+                // Concept inference can infer TSrcElem, but normal inference must
+                // be re-run to get TDstElem.
+                //
+                // TODO: this rerun is done in a very ad-hoc way, and might be
+                // avoidable if we instead plumb concept inference into the normal
+                // inference system.
+                if (result.ResultType == ConceptWitnessInferrer.Result.Type.Finished)
+                {
+                    // No need to re-run normal inference.
+                    break;
+                }
+
+                CleanUpForInferRepeat();
+                InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
+                var success = InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics);
 
                 // The above will have fixed the associated types, but not
                 // propagated the associated types back into any uses of them
@@ -85,9 +88,28 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // unfixed inside.
                 //
                 // We have to correct that manually here.
-                PropagateFixedParameters(result);
+                var numStillUnfixed = PropagateFixedParameters(result);
+
+                if (success)
+                {
+                    Debug.Assert(numStillUnfixed == 0,
+                        "if normal inference reported success, it should have fixed everything");
+                    needConceptInference = false;
+                }
+                else if (numStillUnfixed == numUnfixed)
+                {
+                    // We didn't make any progress in the last round of normal
+                    // inference, so give up.
+                    return false;
+                }
+                else
+                {
+                    needConceptInference = true;
+                }
             }
 
+            // If we got here, we inferred everything, either after concept
+            // witness inference or re-warmed method type inference.
             return true;
         }
 
@@ -105,7 +127,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// The result of concept witness inference, used to work out
         /// which parameters to propagate.
         /// </param>
-        private void PropagateFixedParameters(ConceptWitnessInferrer.Result result)
+        /// <returns>
+        /// The number of still-unfixed type parameters.
+        /// </returns>
+        private int PropagateFixedParameters(ConceptWitnessInferrer.Result result)
         {
             // TODO: there must be an easier way of doing this.
             var asmap = new MutableTypeMap();
@@ -117,10 +142,21 @@ namespace Microsoft.CodeAnalysis.CSharp
                     asmap.AddAndPropagate(_methodTypeParameters[i], new TypeWithModifiers(_fixedResults[i]));
                 }
             }
+
+            var numStillUnfixed = 0;
             for (int i = 0; i < arity; i++)
             {
-                _fixedResults[i] = asmap.SubstituteType(_fixedResults[i]).AsTypeSymbolOnly();
+                if (_fixedResults[i] == null)
+                {
+                    numStillUnfixed++;
+                }
+                else
+                {
+                    _fixedResults[i] = asmap.SubstituteType(_fixedResults[i]).AsTypeSymbolOnly();
+                }
             }
+
+            return numStillUnfixed;
         }
 
         /// <summary>
@@ -130,7 +166,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="result">
         /// The result from which we are taking fixings.
         /// </param>
-        private void FixFromConceptInference(ConceptWitnessInferrer.Result result)
+        /// <returns>
+        /// The number of unfixed results.
+        /// </returns>
+        private int FixFromConceptInference(ConceptWitnessInferrer.Result result)
         {
             Debug.Assert(result.ResultType != ConceptWitnessInferrer.Result.Type.Failed,
                 "if concept witness inference failed, we should have made an early out");
@@ -138,6 +177,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var arity = _fixedResults.Length;
             Debug.Assert(0 < arity, "method should be generic if we got this far");
 
+            var numUnfixed = 0;
             for (int i = 0; i < arity; i++)
             {
                 if (_fixedResults[i] != null)
@@ -148,10 +188,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (result.LeftUnfixed(_methodTypeParameters[i]))
                 {
-                    // This type parameter is an associated type, but we
-                    // couldn't infer it.
+                    // This type parameter is an associated type or concept
+                    // witness, but we couldn't infer it.
                     // We'll try to infer it through another pass of
                     // phase 1 and 2 inference.
+                    numUnfixed++;
                     continue;
                 }
 
@@ -177,6 +218,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // These are exactly the same symbols.
                 _fixedResults[i] = result.fixedMap.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
             }
+
+            return numUnfixed;
         }
 
         /// <summary>
@@ -842,7 +885,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// An optional diagnostics bag used to report details on failing inference.
         /// </param>
         /// <returns>
-        /// The final unification map if inference succeeded; the default map otherwise.
+        /// The <see cref="Result"/> summarising the progress made on inference.
         /// </returns>
         internal Result Infer(
             ImmutableArray<TypeParameterSymbol> typeParams,
@@ -899,7 +942,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// An optional diagnostics bag used to report details on failing inference.
         /// </param>
         /// <returns>
-        /// The final unification map if inference succeeded; the default map otherwise.
+        /// The <see cref="Result"/> summarising the progress made on inference.
         /// </returns>
         internal Result InferWithClassifiedParameters(
             ImmutableArray<TypeParameterSymbol> conceptParams,
@@ -915,8 +958,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 return new Result { fixedMap = existingFixedMap };
             }
-
-            bool inferredAll;
 
             // Our goal is to infer both associated types and concept witnesses
             // here.  We first do the latter, then the former.
@@ -945,37 +986,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             //    left, fail.  Otherwise, if no unfixed types remain, succeed.
             //    Otherwise, return to 1) with the substitution from 2).
             var currentSubstitution = existingFixedMap;
+            bool conceptProgress;
             do
             {
-                bool conceptProgress = false;
-                if (!conceptParams.IsEmpty)
-                {
-                    (var newConceptParameters, var newSubstitution) = TryInferConceptWitnesses(conceptParams, currentSubstitution, chain, ref useSiteDiagnostics);
-                    conceptProgress = conceptProgress || (newConceptParameters.Length < conceptParams.Length);
-                    conceptParams = newConceptParameters;
+                (var newConceptParameters, var newSubstitution) = TryInferConceptWitnesses(conceptParams, currentSubstitution, chain, ref useSiteDiagnostics);
+                conceptProgress = newConceptParameters.Length < conceptParams.Length;
+                conceptParams = newConceptParameters;
 
-                    // Make sure we use the new substitutions in the next
-                    // round -- associated types might have been fixed.
-                    currentSubstitution = newSubstitution;
-                }
-
-                inferredAll = conceptParams.IsEmpty;
-
-                // Stop if we made no progress whatsoever.
-                if (!conceptProgress && !inferredAll)
+                currentSubstitution = newSubstitution;
+                // Did we completely fail concept inference?
+                if (currentSubstitution == null)
                 {
                     return default;
                 }
-            } while (!inferredAll);
+            } while (conceptProgress && !conceptParams.IsEmpty);
 
-            /* Once we've inferred all concept witnesses, all associated types
-             * will either be fixed or not inferrable.  We double-check here.
-             *
-             * TODO: this is inefficient, as we do this substitution again
-             *       later at the top level.  Some more lightweight way of
-             *       checking to see if currentSubstitution has fixed
-             *       allTypeParameters[i] might be better.
-             */
+            // If we got here, we at least did some inference.
+            // Now work out what we left uninferred.
             var unfixedAssocsB = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
             for (int i = 0; i < associatedParams.Length; i++)
             {
@@ -986,7 +1013,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             return new Result {
                 unfixedAssocs = unfixedAssocsB.ToImmutable(),
-                unfixedConcepts = default,  // TODO: populate this.
+                unfixedConcepts = conceptParams.ToImmutableHashSet(),
                 fixedMap = currentSubstitution
             };
         }
