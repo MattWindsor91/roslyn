@@ -2985,7 +2985,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Pointless to part-infer without implicit type parameters.
             if (method.ImplicitTypeParameterCount == 0) return ImmutableArray<TypeSymbol>.Empty;
             
-            var allArguments = ConceptWitnessInferrer.ForBinder(_binder).PartInfer(typeArgumentsBuilder.ToImmutable(), method.TypeParameters);
+            var allArguments = new ConceptWitnessInferrer(_binder).PartInfer(typeArgumentsBuilder.ToImmutable(), method.TypeParameters);
 
             Debug.Assert(allArguments.IsEmpty || allArguments.Length == typeArgumentsBuilder.Count + method.ImplicitTypeParameterCount,
                 "Part-inference did not add in the expected number of new arguments");

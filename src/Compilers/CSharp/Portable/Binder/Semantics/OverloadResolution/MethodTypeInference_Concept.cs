@@ -38,9 +38,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!AllFixed(),
                 "Concept witness inference is pointless if there is nothing to infer");
 
-            var arity = _fixedResults.Length;
-
-            var inferrer = ConceptWitnessInferrer.ForBinder(binder);
+            var inferrer = new ConceptWitnessInferrer(binder);
 
             ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
 
@@ -51,45 +49,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             var mustRerunNormalInf = result.ResultType == ConceptWitnessInferrer.Result.Type.RepeatNormalInference;
 
-            for (int i = 0; i < arity; i++)
-            {
-                if (_fixedResults[i] != null)
-                {
-                    // This type parameter was already fixed.
-                    continue;
-                }
-
-                if (mustRerunNormalInf && result.LeftUnfixed(_methodTypeParameters[i]))
-                {
-                    // This type parameter is an associated type, but we
-                    // couldn't infer it.
-                    // We'll try to infer it through another pass of
-                    // phase 1 and 2 inference.
-                    continue;
-                }
-
-                /* Note: One might be tempted to put in an assertion here that
-                   the map can't assign to _fixedResults[i] the same thing as
-                   _methodTypeParameters[i].  However, sometimes it can!
-
-                   For example, consider
-
-                   private static void Qsort<T, implicit OrdT>
-                       (T[] xs, int lo, int hi) where OrdT : Ord<T>
-                   {
-                       if (lo < hi)
-                       {
-                           var p = Partition(xs, lo, hi);
-                           Qsort(xs, lo, p - 1);
-                           Qsort(xs, p + 1, hi);
-                       }
-                  }
-
-                  In this case, the map will resolve the missing
-                  type parameters in each Qsort call as T->T, OrdT->OrdT.
-                  These are exactly the same symbols. */
-                _fixedResults[i] = result.fixedMap.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
-            }
+            FixFromConceptInference(result);
 
             // @MattWindsor91 (Concept-C# 2017)
             //
@@ -111,16 +71,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // inference system.
             if (mustRerunNormalInf)
             {
-                for (int i = 0; i < arity; i++)
-                {
-                    if (_fixedResults[i] != null)
-                    {
-                        var tmp = _fixedResults[i];
-                        _fixedResults[i] = null;
-                        AddExactBound(_methodTypeParameters[i], tmp);
-                    }
-                }
-                _dependencies = null;
+                CleanUpForInferRepeat();
                 InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
                 if (!InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics))
                 {
@@ -134,26 +85,123 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // unfixed inside.
                 //
                 // We have to correct that manually here.
-                //
-                // TODO: there must be an easier way of doing this.
-                var asmap = new MutableTypeMap();
-                for (int i = 0; i < arity; i++)
-                {
-                    // TODO: make aware of possible concepts
-                    // and failures.
-                    if (result.unfixedAssocs.Contains(_methodTypeParameters[i]))
-                    {
-                        Debug.Assert(_fixedResults[i] != null, "should have been able to fix this associated type");
-                        asmap.AddAndPropagate(_methodTypeParameters[i], new TypeWithModifiers(_fixedResults[i]));
-                    }
-                }
-                for (int i = 0; i < arity; i++)
-                {
-                    _fixedResults[i] = asmap.SubstituteType(_fixedResults[i]).AsTypeSymbolOnly();
-                }
+                PropagateFixedParameters(result);
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Ensures every newly fixed type parameter, after a revisit to
+        /// method type inference, is propagated to parameters concept witness
+        /// inference already inferred.
+        /// </summary>
+        /// <remarks>
+        /// This papers over a deficiency in the way we invoke repeated
+        /// inference: normal method type inference doesn't expect to need to
+        /// propagate its results to already-fixed parameters.
+        /// </remarks>
+        /// <param name="result">
+        /// The result of concept witness inference, used to work out
+        /// which parameters to propagate.
+        /// </param>
+        private void PropagateFixedParameters(ConceptWitnessInferrer.Result result)
+        {
+            // TODO: there must be an easier way of doing this.
+            var asmap = new MutableTypeMap();
+            var arity = _fixedResults.Length;
+            for (int i = 0; i < arity; i++)
+            {
+                if (result.LeftUnfixed(_methodTypeParameters[i]) && _fixedResults[i] != null)
+                {
+                    asmap.AddAndPropagate(_methodTypeParameters[i], new TypeWithModifiers(_fixedResults[i]));
+                }
+            }
+            for (int i = 0; i < arity; i++)
+            {
+                _fixedResults[i] = asmap.SubstituteType(_fixedResults[i]).AsTypeSymbolOnly();
+            }
+        }
+
+        /// <summary>
+        /// Applies the available fixings from a concept witness inference
+        /// result.
+        /// </summary>
+        /// <param name="result">
+        /// The result from which we are taking fixings.
+        /// </param>
+        private void FixFromConceptInference(ConceptWitnessInferrer.Result result)
+        {
+            Debug.Assert(result.ResultType != ConceptWitnessInferrer.Result.Type.Failed,
+                "if concept witness inference failed, we should have made an early out");
+
+            var arity = _fixedResults.Length;
+            Debug.Assert(0 < arity, "method should be generic if we got this far");
+
+            for (int i = 0; i < arity; i++)
+            {
+                if (_fixedResults[i] != null)
+                {
+                    // This type parameter was already fixed.
+                    continue;
+                }
+
+                if (result.LeftUnfixed(_methodTypeParameters[i]))
+                {
+                    // This type parameter is an associated type, but we
+                    // couldn't infer it.
+                    // We'll try to infer it through another pass of
+                    // phase 1 and 2 inference.
+                    continue;
+                }
+
+                // NOTE: One might be tempted to put in an assertion here that
+                // the map can't assign to _fixedResults[i] the same thing as
+                // _methodTypeParameters[i].  However, sometimes it can!
+                //
+                // For example, consider
+                //
+                // private static void Qsort<T, implicit OrdT>
+                //     (T[] xs, int lo, int hi) where OrdT : Ord<T>
+                // {
+                //     if (lo < hi)
+                //     {
+                //         var p = Partition(xs, lo, hi);
+                //         Qsort(xs, lo, p - 1);
+                //         Qsort(xs, p + 1, hi);
+                //     }
+                // }
+                //
+                // In this case, the map will resolve the missing
+                // type parameters in each Qsort call as T->T, OrdT->OrdT.
+                // These are exactly the same symbols.
+                _fixedResults[i] = result.fixedMap.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
+            }
+        }
+
+        /// <summary>
+        /// Cleans the inferrer up for a repeat of first and second phase
+        /// inference.
+        /// </summary>
+        /// <remarks>
+        /// This method is a quick-fix to let us re-run two phases that were
+        /// never supposed to be re-run.
+        ///
+        /// It might be a better idea to refactor inference to be repeatable,
+        /// or at least move concept inference into second round inference.
+        /// </remarks>
+        private void CleanUpForInferRepeat()
+        {
+            for (int i = 0; i < _fixedResults.Length; i++)
+            {
+                if (_fixedResults[i] != null)
+                {
+                    var tmp = _fixedResults[i];
+                    _fixedResults[i] = null;
+                    AddExactBound(_methodTypeParameters[i], tmp);
+                }
+            }
+            _dependencies = null;
         }
 
         /// <summary>
@@ -527,40 +575,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         /// <summary>
-        /// Constructs a new ConceptWitnessInferrer.
-        /// </summary>
-        /// <param name="allInstances">
-        /// The list of all instances in scope for this inferrer.
-        /// </param>
-        /// <param name="boundParams">
-        /// The set of all type parameters in scope that are bound, and
-        /// cannot be substituted out in unification.
-        /// </param>
-        /// <param name="conversions">
-        /// The conversions in scope at the point where we are doing inference.
-        /// </param>
-        public ConceptWitnessInferrer(ImmutableArray<TypeSymbol> allInstances, ImmutableHashSet<TypeParameterSymbol> boundParams, ConversionsBase conversions)
-        {
-            _allInstances = allInstances;
-            _boundParams = boundParams;
-            _conversions = conversions;
-        }
-
-        #region Setup from binder
-
-        /// <summary>
         /// Constructs a new ConceptWitnessInferrer taking its instance pool
         /// and bound parameter set from a given binder.
         /// </summary>
         /// <param name="binder">
         /// The binder providing scope for the new inferrer.
         /// </param>
-        /// <returns>
-        /// An inferrer that will consider all instances in scope at the given
-        /// binder, and refuse to unify on any type parameters bound in methods
-        /// or classes in the binder's vicinity.
-        /// </returns>
-        public static ConceptWitnessInferrer ForBinder(Binder binder)
+        public ConceptWitnessInferrer(Binder binder)
         {
             // We need two things from the outer scope:
             // 1) All instances visible to this method call;
@@ -569,8 +590,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             // TODO: Ideally this should be cached at some point, perhaps on the
             // compilation or binder.
             (var allInstances, var boundParams) = SearchScopeForInstancesAndParams(binder);
-            return new ConceptWitnessInferrer(allInstances, boundParams, binder.Conversions);
+            _allInstances = allInstances;
+            _boundParams = boundParams;
+            _conversions = binder.Conversions;
         }
+
+        #region Setup from binder
 
         /// <summary>
         /// Traverses the scope induced by the given binder for visible
