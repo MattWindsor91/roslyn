@@ -5242,7 +5242,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 var requiredConcepts = ImmutableArray.Create(boundLeft.Type);
 
-                var candidate = ConceptWitnessInferrer.ForBinder(this).InferOneWitnessFromRequiredConcepts(requiredConcepts, new ImmutableTypeMap(), null);
+                var candidate = new ConceptWitnessInferrer(this).InferWitnessSatisfyingConcepts(requiredConcepts, new ImmutableTypeMap(), new ConceptWitnessInferrer.AbsentMethodInfo(), chainOpt: null);
                 if (!candidate.Viable)
                 {
                     if (!candidate.Diagnostics.IsNullOrEmpty())

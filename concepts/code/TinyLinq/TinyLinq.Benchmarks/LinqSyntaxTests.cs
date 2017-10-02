@@ -15,9 +15,9 @@ namespace TinyLinq
             List<int> l = new List<int>(new int[] { 1, 2, 3 });
 
 
-            //var l1 = from x in l where x % 2 == 0 select (double) x;
+            var l1 = from x in l where x % 2 == 0 select (double) x;
 
-            //var a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
+            var a1 = from x in l from y in l select Tuple.Create(x,y); // needs SelectMany
 
             // Array queries
             int[] a = new int[] { 1, 2, 3 };
@@ -29,7 +29,7 @@ namespace TinyLinq
 
             int[] b = new int[] { 1, 2, 3 };
 
-            // var a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
+            var a3 = from x in a from y in b select Tuple.Create(x, y);  // needs SelectMany
 
             int[] c = new int[] { 1, 2, 3 };
             var a4 = from x in a where x % 2 == 0  select (double) x;
