@@ -39,77 +39,73 @@ namespace Microsoft.CodeAnalysis.CSharp
                 "Concept witness inference is pointless if there is nothing to infer");
 
             var inferrer = new ConceptWitnessInferrer(binder);
-
-            var needConceptInference = true;
-            while (needConceptInference)
+            ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
+            var result = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
+            if (result.ResultType == ConceptWitnessInferrer.Result.Type.Failed)
             {
-                ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
-                var result = inferrer.Infer(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), ImmutableHashSet<NamedTypeSymbol>.Empty, ref useSiteDiagnostics);
-                if (result.ResultType == ConceptWitnessInferrer.Result.Type.Failed)
-                {
-                    // Concept inference has completely failed, and we can't
-                    // even rescue it by doing more inference.  Bail.
-                    return false;
-                }
-                var numUnfixed = FixFromConceptInference(result);
+                // Concept inference has completely failed, and we can't
+                // even rescue it by doing more inference.  Bail.
+                return false;
+            }
+            var numUnfixed = FixFromConceptInference(result);
 
-                // @MattWindsor91 (Concept-C# 2017)
-                //
-                // Sometimes the concept inferrer might not be able to infer some
-                // top-level associated types, but, if we re-ran the first two
-                // inference phases again, we can fill them in.
-                //
-                // A typical example is when we have three types
-                // (TSrc, TSrcElem, TDstElem), whereby TSrcElem is related
-                // to TSrc through being an associated type (maybe TSrc is a
-                // container of TSrcElem), and TDstElem is related through
-                // being the range of a lambda TSrcElem -> TDstElem.
-                //
-                // Concept inference can infer TSrcElem, but normal inference must
-                // be re-run to get TDstElem.
-                //
-                // TODO: this rerun is done in a very ad-hoc way, and might be
-                // avoidable if we instead plumb concept inference into the normal
-                // inference system.
-                if (result.ResultType == ConceptWitnessInferrer.Result.Type.Finished)
-                {
-                    // No need to re-run normal inference.
-                    break;
-                }
+            // @MattWindsor91 (Concept-C# 2017)
+            //
+            // Sometimes the concept inferrer might not be able to infer some
+            // top-level associated types, but, if we re-ran the first two
+            // inference phases again, we can fill them in.
+            //
+            // A typical example is when we have three types
+            // (TSrc, TSrcElem, TDstElem), whereby TSrcElem is related
+            // to TSrc through being an associated type (maybe TSrc is a
+            // container of TSrcElem), and TDstElem is related through
+            // being the range of a lambda TSrcElem -> TDstElem.
+            //
+            // Concept inference can infer TSrcElem, but normal inference must
+            // be re-run to get TDstElem.
+            //
+            // TODO: this rerun is done in a very ad-hoc way, and might be
+            // avoidable if we instead plumb concept inference into the normal
+            // inference system.
+            if (result.ResultType == ConceptWitnessInferrer.Result.Type.Finished)
+            {
+                // No need to re-run normal inference.
+                return true;
+            }
 
-                CleanUpForInferRepeat();
-                InferTypeArgsFirstPhase(binder, ref useSiteDiagnostics);
-                var success = InferTypeArgsSecondPhase(binder, ref useSiteDiagnostics);
-
-                // The above will have fixed the associated types, but not
-                // propagated the associated types back into any uses of them
-                // in the other types.  For example, we might have a
-                // TDst which was fixed as Goo<TDstElem>: TDstElem is still
-                // unfixed inside.
-                //
-                // We have to correct that manually here.
-                var numStillUnfixed = PropagateFixedParameters(result);
-
-                if (success)
+            var tpb = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+            var container = result.fixedMap.SubstituteNamedType(_constructedContainingTypeOfMethod);
+            for (var i = 0; i < _methodTypeParameters.Length; i++)
+            {
+                if (_fixedResults[i] == null)
                 {
-                    Debug.Assert(numStillUnfixed == 0,
-                        "if normal inference reported success, it should have fixed everything");
-                    needConceptInference = false;
+                    tpb.Add(_methodTypeParameters[i]);
                 }
-                else if (numStillUnfixed == numUnfixed)
+            }
+            var tps = tpb.ToImmutableAndFree();
+
+            var fpb = ArrayBuilder<TypeSymbol>.GetInstance();
+            for (var i = 0; i < _formalParameterTypes.Length; i++)
+            {
+                fpb.Add(result.fixedMap.SubstituteType(_formalParameterTypes[i]).AsTypeSymbolOnly());
+            }
+            var fps = fpb.ToImmutableAndFree();
+
+            var recur = new MethodTypeInferrer(_conversions, tps, _constructedContainingTypeOfMethod, fps, _formalParameterRefKinds, _arguments);
+            var recurResult = recur.InferTypeArgs(binder, ref useSiteDiagnostics);
+            if (!recurResult.Success)
+            {
+                return false;
+            }
+            var j = 0;
+            for (var i = 0; i < _formalParameterTypes.Length; i++)
+            {
+                if (_fixedResults[i] == null)
                 {
-                    // We didn't make any progress in the last round of normal
-                    // inference, so give up.
-                    return false;
-                }
-                else
-                {
-                    needConceptInference = true;
+                    _fixedResults[i] = recurResult.InferredTypeArguments[j++];
                 }
             }
 
-            // If we got here, we inferred everything, either after concept
-            // witness inference or re-warmed method type inference.
             return true;
         }
 
@@ -952,11 +948,20 @@ namespace Microsoft.CodeAnalysis.CSharp
             ref HashSet<DiagnosticInfo> useSiteDiagnostics,
             bool atMethodTopLevel = false)
         {
-            // Early out: if we don't have any concept indices, we have already
-            // succeeded in inferring.
+            // Early outs for when we have no concept parameters:
             if (conceptParams.IsEmpty)
             {
-                return new Result { fixedMap = existingFixedMap };
+                // If we have no associated parameters either, inference has
+                // automatically succeeded: we already made an early out
+                // if we had any other unfixed parameters.
+                if (associatedParams.IsEmpty)
+                {
+                    return new Result { fixedMap = existingFixedMap };
+                }
+
+                // Otherwise, we can't possibly make progress on the associated
+                // parameters, so we fail.
+                return default;
             }
 
             // Our goal is to infer both associated types and concept witnesses
@@ -987,10 +992,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             //    Otherwise, return to 1) with the substitution from 2).
             var currentSubstitution = existingFixedMap;
             bool conceptProgress;
+            bool anyProgress = false;
             do
             {
                 (var newConceptParameters, var newSubstitution) = TryInferConceptWitnesses(conceptParams, currentSubstitution, chain, ref useSiteDiagnostics);
                 conceptProgress = newConceptParameters.Length < conceptParams.Length;
+                anyProgress |= conceptProgress;
                 conceptParams = newConceptParameters;
 
                 currentSubstitution = newSubstitution;
@@ -1000,6 +1007,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return default;
                 }
             } while (conceptProgress && !conceptParams.IsEmpty);
+
+            if (!anyProgress)
+            {
+                return default;
+            }
 
             // If we got here, we at least did some inference.
             // Now work out what we left uninferred.
