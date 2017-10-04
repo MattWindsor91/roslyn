@@ -1059,9 +1059,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             // keep iterating over the concept witnesses and any insights from
             // the associated types will be applied automatically.
             var currentSubstitution = existingFixedMap;
-            // Make sure _methodInfo is reduced by any fixings made in the
+
+            // Make sure methodInfo is reduced by any fixings made in the
             // previous phases of inference.
             partition.methodInfo = partition.methodInfo.ApplySubstitution(currentSubstitution);
+            (var initMethodProgress, var initMethodSubstitution) = partition.methodInfo.DoMethodTypeInference(ref useSiteDiagnostics);
+            if (initMethodProgress)
+            {
+                currentSubstitution = currentSubstitution.Compose(initMethodSubstitution);
+                partition.methodInfo = partition.methodInfo.ApplySubstitution(currentSubstitution);
+            }
+
             bool conceptProgress;
             do
             {
