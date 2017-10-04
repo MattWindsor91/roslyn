@@ -4,8 +4,8 @@ using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
-    public concept CSelect<[AssociatedType] T,
-                           [AssociatedType] U,
+    public concept CSelect<T,
+                           U,
                            S, [AssociatedType] D>
     {
         D Select(this S src, Func<T, U> f);

@@ -28,7 +28,7 @@ namespace TinyLinq
     /// Type of the enumerator over <typeparamref name="TInner"/>
     /// that the selection returns.
     /// </typeparam>
-    public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, [AssociatedType] TProj, [AssociatedType] TDest>
+    public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, TProj, [AssociatedType] TDest>
     {
         TDest SelectMany(this TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
     }
