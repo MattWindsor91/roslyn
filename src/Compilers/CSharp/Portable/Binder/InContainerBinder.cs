@@ -243,6 +243,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
+        internal override uint LocalScopeDepth => Binder.ExternalScope;
+
         internal override void GetConceptInstances(ConceptSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
             var onlyExplicitWitnesses = (options & ConceptSearchOptions.OnlyExplicitWitnesses) != 0;

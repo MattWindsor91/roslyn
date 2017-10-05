@@ -318,6 +318,16 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             get { return false; }
         }
 
+        internal sealed override bool IsByRefLikeType
+        {
+            get { return false; }
+        }
+
+        internal sealed override bool IsReadOnly
+        {
+            get { return false; }
+        }
+
         public override bool IsSealed
         {
             get { return true; }
@@ -332,6 +342,8 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
         {
             get { return false; }
         }
+
+        internal override bool HasCodeAnalysisEmbeddedAttribute => false;
 
         internal override bool IsConcept => false; //@t-mawind correct?
         internal override bool IsInstance => false; //@t-mawind correct?

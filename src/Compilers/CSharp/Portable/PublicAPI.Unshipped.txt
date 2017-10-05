@@ -1,3 +1,11 @@
+Microsoft.CodeAnalysis.CSharp.Conversion.ToCommonConversion() -> Microsoft.CodeAnalysis.Semantics.CommonConversion
+Microsoft.CodeAnalysis.CSharp.LanguageVersion.CSharp7_2 = 702 -> Microsoft.CodeAnalysis.CSharp.LanguageVersion
+static Microsoft.CodeAnalysis.CSharp.CSharpExtensions.GetConversion(this Microsoft.CodeAnalysis.Semantics.IConversionExpression conversionExpression) -> Microsoft.CodeAnalysis.CSharp.Conversion
+Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax.ReadOnlyKeyword.get -> Microsoft.CodeAnalysis.SyntaxToken
+Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax.Update(Microsoft.CodeAnalysis.SyntaxToken refKeyword, Microsoft.CodeAnalysis.SyntaxToken readOnlyKeyword, Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax
+Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax.WithReadOnlyKeyword(Microsoft.CodeAnalysis.SyntaxToken readOnlyKeyword) -> Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax
+static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.RefType(Microsoft.CodeAnalysis.SyntaxToken refKeyword, Microsoft.CodeAnalysis.SyntaxToken readOnlyKeyword, Microsoft.CodeAnalysis.CSharp.Syntax.TypeSyntax type) -> Microsoft.CodeAnalysis.CSharp.Syntax.RefTypeSyntax
+Microsoft.CodeAnalysis.CSharp.Conversion.IsStackAlloc.get -> bool
 Microsoft.CodeAnalysis.CSharp.Syntax.ConceptDeclarationSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.ConceptDeclarationSyntax.AddAttributeLists(params Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.ConceptDeclarationSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.ConceptDeclarationSyntax.AddBaseListTypes(params Microsoft.CodeAnalysis.CSharp.Syntax.BaseTypeSyntax[] items) -> Microsoft.CodeAnalysis.CSharp.Syntax.ConceptDeclarationSyntax
@@ -84,4 +92,3 @@ Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax.ImplicitKeyword.get -> 
 Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax.Update(Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.SyntaxToken varianceKeyword, Microsoft.CodeAnalysis.SyntaxToken implicitKeyword, Microsoft.CodeAnalysis.SyntaxToken identifier) -> Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax
 Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax.WithImplicitKeyword(Microsoft.CodeAnalysis.SyntaxToken implicitKeyword) -> Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax
 static Microsoft.CodeAnalysis.CSharp.SyntaxFactory.TypeParameter(Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.SyntaxToken varianceKeyword, Microsoft.CodeAnalysis.SyntaxToken implicitKeyword, Microsoft.CodeAnalysis.SyntaxToken identifier) -> Microsoft.CodeAnalysis.CSharp.Syntax.TypeParameterSyntax
-Microsoft.CodeAnalysis.CSharp.LanguageVersion.CSharp7_2 = 702 -> Microsoft.CodeAnalysis.CSharp.LanguageVersion

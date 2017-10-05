@@ -265,6 +265,12 @@ namespace Microsoft.CodeAnalysis
         Microsoft_CodeAnalysis_Runtime_Instrumentation,
         System_Runtime_CompilerServices_ReferenceAssemblyAttribute,
 
+        System_Runtime_CompilerServices_IsReadOnlyAttribute,
+        System_Runtime_CompilerServices_IsByRefLikeAttribute,
+        System_Runtime_InteropServices_InAttribute,
+        System_ObsoleteAttribute,
+        System_Span_T,
+
         System_Concepts_ConceptAttribute, //@t-mawind
         System_Concepts_ConceptInstanceAttribute, //@t-mawind
         System_Concepts_AssociatedTypeAttribute, //@t-mawind
@@ -544,6 +550,12 @@ namespace Microsoft.CodeAnalysis
 
             "System.Runtime.CompilerServices.ReferenceAssemblyAttribute",
 
+            "System.Runtime.CompilerServices.IsReadOnlyAttribute",
+            "System.Runtime.CompilerServices.IsByRefLikeAttribute",
+            "System.Runtime.InteropServices.InAttribute",
+            "System.ObsoleteAttribute",
+            "System.Span`1",
+
             //@t-mawind
             "System.Concepts.ConceptAttribute",
             "System.Concepts.ConceptInstanceAttribute",
@@ -563,7 +575,6 @@ namespace Microsoft.CodeAnalysis
             // Concept extension attributes
             //
             "System.Concepts.ConceptExtensionAttribute"
-            // End concept extension attributes           
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);

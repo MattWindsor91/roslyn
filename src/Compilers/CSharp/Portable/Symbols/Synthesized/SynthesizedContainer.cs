@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Microsoft.CodeAnalysis.CSharp.Emit;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
@@ -88,9 +89,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal sealed override bool IsInterface => this.TypeKind == TypeKind.Interface;
 
-        internal override void AddSynthesizedAttributes(ModuleCompilationState compilationState, ref ArrayBuilder<SynthesizedAttributeData> attributes)
+        internal override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<SynthesizedAttributeData> attributes)
         {
-            base.AddSynthesizedAttributes(compilationState, ref attributes);
+            base.AddSynthesizedAttributes(moduleBuilder, ref attributes);
 
             if (ContainingSymbol.Kind == SymbolKind.NamedType && ContainingSymbol.IsImplicitlyDeclared)
             {
@@ -132,6 +133,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal override bool HasTypeArgumentsCustomModifiers => false;
 
+        internal override bool HasCodeAnalysisEmbeddedAttribute => false;
+
         public override ImmutableArray<CustomModifier> GetTypeArgumentCustomModifiers(int ordinal) => GetEmptyTypeArgumentCustomModifiers(ordinal);
  
         public override ImmutableArray<Symbol> GetMembers()
@@ -172,6 +175,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public override Accessibility DeclaredAccessibility => Accessibility.Private;
 
         public override bool IsStatic => false;
+
+        internal sealed override bool IsByRefLikeType => false;
+
+        internal sealed override bool IsReadOnly => false;
 
         internal override ImmutableArray<NamedTypeSymbol> InterfacesNoUseSiteDiagnostics(ConsList<Symbol> basesBeingResolved) => ImmutableArray<NamedTypeSymbol>.Empty;
 

@@ -197,6 +197,22 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             }
         }
 
+        internal sealed override bool IsByRefLikeType
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        internal sealed override bool IsReadOnly
+        {
+            get
+            {
+                return false;
+            }
+        }
+
         public override bool IsAbstract
         {
             get
@@ -245,6 +261,8 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         {
             throw new NotImplementedException();
         }
+
+        internal override bool HasCodeAnalysisEmbeddedAttribute => false;
 
         internal sealed override bool IsManagedType
         {
