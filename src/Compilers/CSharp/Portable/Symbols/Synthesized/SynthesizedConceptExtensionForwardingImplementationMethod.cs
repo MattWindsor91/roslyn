@@ -8,19 +8,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     /// <summary>
     /// A synthesized concept instance method that, when generated,
-    /// calls into a corresponding method on a concept default struct.
+    /// calls into a corresponding method on its this-parameter.
     /// </summary>
-    internal sealed class SynthesizedDefaultStructImplementationMethod : SynthesizedImplementationForwardingMethod
+    internal sealed class SynthesizedConceptExtensionForwardingImplementationMethod : SynthesizedImplementationForwardingMethod
     {
-        /// <summary>
-        /// The default struct into which this method will call.
-        /// </summary>
-        private NamedTypeSymbol _defaultStruct;
-
-        public SynthesizedDefaultStructImplementationMethod(MethodSymbol conceptMethod, NamedTypeSymbol defaultStruct, NamedTypeSymbol implementingType)
+        public SynthesizedConceptExtensionForwardingImplementationMethod(MethodSymbol conceptMethod, NamedTypeSymbol implementingType)
             : base(conceptMethod, conceptMethod, implementingType)
         {
-            _defaultStruct = defaultStruct;
         }
 
         public override Accessibility DeclaredAccessibility => Accessibility.Public;
@@ -37,43 +31,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal override void GenerateMethodBody(TypeCompilationState compilationState, DiagnosticBag diagnostics)
         {
-            var concept = ImplementingMethod.ContainingType;
-            var conceptLoc = concept.Locations.IsEmpty ? Location.None : concept.Locations[0];
-            // TODO: wrong location?
-
-            Debug.Assert(concept.IsConcept, "Tried to synthesise default struct implementation on a non-concept interface");
-            
-            var instance = ContainingType;
-            var instanceLoc = instance.Locations.IsEmpty ? Location.None : instance.Locations[0];
-            // TODO: wrong location?
-
-            Debug.Assert(instance.IsInstance, "Tried to synthesise default struct implementation for a non-instance");
+            Debug.Assert(0 < ParameterCount,
+                "method should have at least one parameter, eg. its 'this' parameter");
 
             SyntheticBoundNodeFactory F = new SyntheticBoundNodeFactory(this, this.GetNonNullSyntaxNode(), compilationState, diagnostics);
             F.CurrentMethod = OriginalDefinition;
 
             try
             {
-
-                // Now try to find the default struct using the instance's scope...
-                var binder = new BinderFactory(compilationState.Compilation, instance.GetNonNullSyntaxNode().SyntaxTree).GetBinder(instance.GetNonNullSyntaxNode());
-
-                Debug.Assert(_defaultStruct.Arity == 1, "should have already pre-checked default struct arity");
-                Debug.Assert(_defaultStruct.TypeParameters[0].IsConceptWitness, "should have already pre-checked default struct witness parameter");
-
-                // Now make the receiver for the call.
-                // The receiver has one argument, namely the calling witness.
-                // We generate an empty local for it, and then call into that local.
-                // We then place the local into the block.
-                var recvType = _defaultStruct.Construct(ImmutableArray.Create<TypeSymbol>(instance));
-                var recvLocal = F.SynthesizedLocal(recvType, syntax: F.Syntax, kind: SynthesizedLocalKind.ConceptDictionary);
-                var receiver = F.Local(recvLocal);
+                // The receiver for the call is the first parameter to this method,
+                // as we're bridging from a concept extension method to a real
+                // instance method.
+                var receiver = F.Parameter(Parameters[0]);
 
                 var arguments = GenerateInnerCallArguments(F);
-                Debug.Assert(arguments.Length == ImplementingMethod.Parameters.Length,
+                Debug.Assert(arguments.Length == Parameters.Length - 1,
                     "Conversion from parameters to arguments lost or gained some entries.");
 
-                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, ImplementingMethod.Name, arguments, diagnostics, ImplementingMethod.TypeArguments, allowInvokingSpecialMethod: true);
+                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, Name, arguments, diagnostics, TypeArguments);
                 if (call.HasErrors)
                 {
                     F.CloseMethod(F.ThrowNull());
@@ -86,11 +61,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 BoundBlock block;
                 if (call.Type.SpecialType == SpecialType.System_Void)
                 {
-                    block = F.Block(ImmutableArray.Create(receiver.LocalSymbol), F.ExpressionStatement(call), F.Return());
+                    block = F.Block(F.ExpressionStatement(call), F.Return());
                 }
                 else
                 {
-                    block = F.Block(ImmutableArray.Create(receiver.LocalSymbol), F.Return(call));
+                    block = F.Block(F.Return(call));
                 }
 
                 F.CloseMethod(block);
@@ -115,7 +90,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f)
         {
             var argumentsB = ArrayBuilder<BoundExpression>.GetInstance();
-            foreach (var p in ImplementingMethod.Parameters) argumentsB.Add(f.Parameter(p));
+            for (int i = 1; i < ParameterCount; i++)
+            {
+                argumentsB.Add(f.Parameter(Parameters[i]));
+            }
             return argumentsB.ToImmutableAndFree();
         }
     }

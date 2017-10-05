@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -13,22 +14,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class SourceMemberContainerTypeSymbol
     {
-        internal ImmutableArray<SynthesizedDefaultStructImplementationMethod> GetSynthesizedDefaultImplementations(
+        // TODO: make new class for default forwards.
+        internal ImmutableArray<SynthesizedImplementationForwardingMethod> GetSynthesizedDefaultImplementations(
             CancellationToken cancellationToken)
         {
             if (_lazySynthesizedDefaultImplementations.IsDefault)
             {
-                var builder = ArrayBuilder<SynthesizedDefaultStructImplementationMethod>.GetInstance();
+                var builder = ArrayBuilder<SynthesizedImplementationForwardingMethod>.GetInstance();
                 var all = GetSynthesizedImplementations(cancellationToken);
                 foreach (var impl in all)
                 {
-                    if (impl is SynthesizedDefaultStructImplementationMethod) builder.Add(impl as SynthesizedDefaultStructImplementationMethod);
+                    // TODO: make this not a type switch?
+                    if (impl is SynthesizedDefaultStructImplementationMethod d)
+                    {
+                        builder.Add(d);
+                    }
+                    else if (impl is SynthesizedConceptExtensionForwardingImplementationMethod c)
+                    {
+                        builder.Add(c);
+                    }
+
                 }
 
                 if (ImmutableInterlocked.InterlockedCompareExchange(
                         ref _lazySynthesizedDefaultImplementations,
                         builder.ToImmutableAndFree(),
-                        default(ImmutableArray<SynthesizedDefaultStructImplementationMethod>)).IsDefault)
+                        default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
                 {
                     // @t-mawind do nothing here?
                 }
@@ -381,19 +392,110 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return synthesizedImplementations.ToImmutableAndFree();
         }
 
-        private SynthesizedDefaultStructImplementationMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
+        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
         {
             Debug.Assert(concept.IsConcept, "concept for default implementation synthesis must be an actual concept");
             Debug.Assert(IsInstance, "target for default implementation synthesis must be an instance");
 
-            var dstr = concept.GetDefaultStruct();
-            if (dstr == null)
+            if (conceptMethod.IsConceptExtensionMethod)
             {
-                // Don't bother returning an error, because we'll raise one
-                // anyway about a missing interface call.
-                return null;
+                var emeth = SynthesizeDefaultImplementationMethodOnExtension(concept, conceptMethod, diagnostics);
+                if (emeth != null)
+                {
+                    return emeth;
+                }
             }
 
+            var dstr = concept.GetDefaultStruct();
+            if (dstr != null)
+            {
+                var dmeth = SynthesizeDefaultImplementationMethodOnDefaultStruct(dstr, concept, conceptMethod, diagnostics);
+                if (dmeth != null)
+                {
+                    return dmeth;
+                }
+            }
+
+            // Couldn't create a default method of any form: bail.
+            return null;
+        }
+
+        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethodOnExtension(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
+        {
+            Debug.Assert(conceptMethod.IsConceptExtensionMethod,
+                "shouldn't try synthesising this on a static concept method");
+
+            Debug.Assert(0 < conceptMethod.ParameterCount,
+                "concept extension method should have a 'this' parameter");
+            var target = conceptMethod.ParameterTypes[0];
+
+            var eco = MemberSignatureComparer.CSharpImplicitImplementationComparer;
+            foreach (var member in target.GetMembers(conceptMethod.Name))
+            {
+                // Comparing is a bit difficult, because one of these is a
+                // method A.B(C, D) and the other an extension B(A, C, D).
+
+                // TODO: can we use binders here?  I don't think we can,
+                // but it would make things much more robust.
+
+                if (member.Kind != SymbolKind.Method)
+                {
+                    continue;
+                }
+
+                var method = (MethodSymbol)member;
+
+                // Lightweight checks first.
+                if (method.IsStatic)
+                {
+                    continue;
+                }
+                if (method.Arity != conceptMethod.Arity)
+                {
+                    continue;
+                }
+                // TODO: is this too strict?
+                if (method.DeclaredAccessibility != Accessibility.Public)
+                {
+                    continue;
+                }
+                // Remember: the target method has an implicit 'this',
+                // the concept one does not.
+                if (method.ParameterCount != conceptMethod.ParameterCount - 1)
+                {
+                    continue;
+                }
+
+                // To compare, we must rewrite the concept method from
+                // B(A, C, D) to A.B(C, D).
+                var extParamsB = ArrayBuilder<ParameterSymbol>.GetInstance();
+                extParamsB.AddRange(conceptMethod.Parameters.Skip(1));
+                var extParams = extParamsB.ToImmutableAndFree();
+                var extMethodSig = new SignatureOnlyMethodSymbol(
+                    conceptMethod.Name,
+                    conceptMethod.ContainingType,
+                    conceptMethod.MethodKind,
+                    conceptMethod.CallingConvention,
+                    conceptMethod.TypeParameters,
+                    extParams,
+                    conceptMethod.RefKind,
+                    conceptMethod.ReturnType,
+                    conceptMethod.ReturnTypeCustomModifiers,
+                    conceptMethod.RefCustomModifiers,
+                    conceptMethod.ExplicitInterfaceImplementations);
+                if (!eco.Equals(extMethodSig, method))
+                {
+                    continue;
+                }
+
+                return new SynthesizedConceptExtensionForwardingImplementationMethod(conceptMethod, this);
+            }
+
+            return null;
+        }
+
+        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethodOnDefaultStruct(NamedTypeSymbol dstr, NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
+        {
             // Default-struct sanity checking
             var conceptLoc = concept.Locations.IsEmpty ? Location.None : Locations[0];
             var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
@@ -439,7 +541,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return null;
             }
 
-            return new SynthesizedDefaultStructImplementationMethod(conceptMethod, this);
+            return new SynthesizedDefaultStructImplementationMethod(conceptMethod, dstr, this);
         }
 
         protected abstract Location GetCorrespondingBaseListLocation(NamedTypeSymbol @base);
