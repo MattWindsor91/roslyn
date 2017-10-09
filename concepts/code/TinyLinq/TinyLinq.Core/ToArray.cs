@@ -102,7 +102,7 @@ namespace TinyLinq
         TElem[] ToArray(this TEnum e)
         {
             E.Reset(ref e);
-            var len = S.Count(ref e);
+            var len = Count(e); // TODO: why doesn't e.Count work?
             var result = new TElem[len];
             for (var i = 0; i < len; i++)
             {

@@ -21,6 +21,49 @@ namespace System.Concepts.Enumerable
     }
 
     /// <summary>
+    /// Concept for enumerators that can be shallow-copied.
+    /// </summary>
+    public concept CCopyEnumerator<TState, [AssociatedType] TElem> : CEnumerator<TState, TElem>
+    {
+        /// <summary>
+        /// Shallow-copies the enumerator.
+        /// </summary>
+        /// <remarks>
+        /// As this method does not take its enumerator by reference,
+        /// value-type enumerators can just in-place modify and
+        /// return <paramref name="enumerator"/>.
+        /// </remarks>
+        /// <param name="enumerator">
+        /// The enumerator to shallow-copy.
+        /// </param>
+        /// <returns>
+        /// A copy of the enumerator.
+        /// The copy can hold the same reference to the original data
+        /// as the previous copy, but must have separate storage for its
+        /// enumeration state.
+        /// </returns>
+        TState Copy(this TState enumerator);
+
+        /// <summary>
+        /// Shallow-copies the enumerator, also resetting it.
+        /// </summary>
+        /// <param name="enumerator">
+        /// The enumerator to shallow-copy.
+        /// </param>
+        /// <returns>
+        /// A reset copy of the enumerator.
+        /// </returns>
+        TState CopyAndReset(this TState enumerator)
+        {
+            // TODO: enumerator.Copy() should work
+            // TODO: var en = this.Copy(enumerator) gives an occurs check violation
+            var en = Copy(enumerator);
+            Reset(ref en);
+            return en;
+        }
+    }
+
+    /// <summary>
     ///     Concept for types which may be enumerated.
     /// </summary>
     /// <typeparam name="TColl">
@@ -38,20 +81,113 @@ namespace System.Concepts.Enumerable
     }
 
     /// <summary>
+    /// A generic range.
+    /// </summary>
+    /// <typeparam name="TNum">
+    /// Type of numbers in the range.
+    /// </typeparam>
+    public struct Range<TNum>
+    {
+        /// <summary>
+        /// The start of the range.
+        /// </summary>
+        public TNum start;
+        /// <summary>
+        /// The number of items in the range.
+        /// </summary>
+        public int count;
+    }
+
+    /// <summary>
     /// Instances for common enumerables.
     /// </summary>
     public static class Instances
     {
+        // TODO: this should be TColl where TColl : IEnumerable<TElem>
+        //       but the current inferrer can't relate TColl and TElem
+        //       properly using the constraint.
         [Overlappable]
-        public instance Enumerable_IEnumerable<TColl, TElem> : CEnumerable<TColl, IEnumerator<TElem>, TElem>
-            where TColl : IEnumerable<TElem>
+        public instance Enumerable_IEnumerable<TElem> : CEnumerable<IEnumerable<TElem>, IEnumerator<TElem>, TElem>
+
         {
-            IEnumerator<TElem> GetEnumerator(TColl coll) => coll.GetEnumerator();
+            IEnumerator<TElem> GetEnumerator(IEnumerable<TElem> coll) => coll.GetEnumerator();
             void Reset(ref IEnumerator<TElem> e) => e.Reset();
             bool MoveNext(ref IEnumerator<TElem> e) => e.MoveNext();
             TElem Current(ref IEnumerator<TElem> e) => e.Current;
             void Dispose(ref IEnumerator<TElem> e) => e.Dispose();
         }
+
+        #region Ranges
+
+        public struct RangeCursor<TNum>
+        {
+            /// <summary>
+            /// The range over which we are iterating.
+            /// </summary>
+            public Range<TNum> range;
+            /// <summary>
+            /// The cached end of the range.
+            /// </summary>
+            public TNum end;
+            /// <summary>
+            /// The current item in the range.
+            /// </summary>
+            public TNum current;
+            /// <summary>
+            /// Whether we are one below the first item in the range.
+            /// </summary>
+            public bool reset;
+            /// <summary>
+            /// Whether we are one after the last item in the range.
+            /// </summary>
+            public bool finished;
+        }
+
+        /// <summary>
+        /// Various enumerator instances for ranges.
+        /// </summary>
+        public instance Enumerable_Range<TNum, implicit N, implicit E> : CEnumerable<Range<TNum>, RangeCursor<TNum>, TNum>, CCopyEnumerator<RangeCursor<TNum>, TNum>
+            where N : Prelude.Num<TNum>
+            where E : Prelude.Eq<TNum>
+        {
+            // TODO: catch inverted ranges and overflows
+            // TODO: better optimisation if range is empty
+
+            RangeCursor<TNum> GetEnumerator(Range<TNum> range) => new RangeCursor<TNum> { range = range, end = Add(range.start, FromInteger(range.count)), reset = true, finished = false };
+            void Reset(ref RangeCursor<TNum> e)
+            {
+                e.reset = true;
+                e.finished = false;
+            }
+            bool MoveNext(ref RangeCursor<TNum> e)
+            {
+                if (e.finished)
+                {
+                    return false;
+                }
+
+                if (e.reset)
+                {
+                    e.current = e.range.start;
+                    e.reset = false;
+                }
+                else
+                {
+                    e.current = Add(e.current, FromInteger(1));
+                }
+
+                e.finished = Equals(e.end, e.current);
+                return !e.finished;
+            }
+                
+            TNum Current(ref RangeCursor<TNum> e) => e.current;
+            void Dispose(ref RangeCursor<TNum> e) { }
+
+            // RangeCursor is a value type.
+            RangeCursor<TNum> Copy(this RangeCursor<TNum> e) => e;
+        }
+
+        #endregion Ranges
 
         #region Arrays
 

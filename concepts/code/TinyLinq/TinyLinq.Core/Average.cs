@@ -18,7 +18,7 @@ namespace TinyLinq
         /// <returns>
         /// The average of all elements reachable by the enumerator.
         /// </returns>
-        TElem Average(ref TEnum e);        
+        TElem Average(this TEnum e);        
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ namespace TinyLinq
     public instance Average_Enumerator_Int<TEnum, implicit E> : CAverage<TEnum, double>
         where E : CEnumerator<TEnum, int>
     {
-        double Average(ref TEnum e)
+        double Average(this TEnum e)
         {
             var sum = 0;
             var count = 0;
@@ -52,13 +52,12 @@ namespace TinyLinq
     public instance Average_Enumerator_Int<TColl, [AssociatedType]TEnum, implicit E> : CAverage<TColl, double>
         where E : CEnumerable<TColl, TEnum, int>
     {
-        double Average(ref TColl c)
+        double Average(this TColl c)
         {
             var sum = 0;
             var count = 0;
 
             var e = E.GetEnumerator(c);
-            E.Reset(ref e);
             while (E.MoveNext(ref e))
             {
                 count++;
@@ -76,7 +75,7 @@ namespace TinyLinq
         where E : CEnumerator<TEnum, TElem>
         where F : Fractional<TElem>
     {
-        TElem Average(ref TEnum e)
+        TElem Average(this TEnum e)
         {
             var sum = F.FromInteger(0);
             var count = 0;
@@ -100,7 +99,7 @@ namespace TinyLinq
         where E : CEnumerable<TColl, TEnum, TElem>
         where F : Fractional<TElem>
     {
-        TElem Average(ref TColl c)
+        TElem Average(this TColl c)
         {
             var e = E.GetEnumerator(c);
 

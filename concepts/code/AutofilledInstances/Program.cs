@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AutofilledInstances
 {
@@ -33,6 +29,10 @@ namespace AutofilledInstances
     {
         static void Main(string[] args)
         {
+            var p1 = new Pair { x = 30, y = 31 };
+            var p2 = new Pair { x = 95, y = 98 };
+
+            Console.WriteLine($"{p1.Plus(p2).x}, {p1.Plus(p2).y}");
         }
     }
 }

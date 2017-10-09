@@ -49,7 +49,7 @@ namespace TinyLinq
         [Benchmark(Description = "LINQ")]
         public int Linq()
         {
-            var results = items.Where<int>(i => i % 10 == 0).Select(i => i + 5);
+            var results = items.Where<int>(i => i % 10 == 0).Select<int, int>(i => i + 5);
             var counter = 0;
             foreach (var result in results)
             {
@@ -59,13 +59,14 @@ namespace TinyLinq
             return counter;
         }
 
+        /*
         [Benchmark(Description = "TinyLINQ (Unspec)")]
         public int TinyLinq_Unspecialised()
         {
             var results =
                 items
-                .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], ArrayCursor<int>, int, Where<ArrayCursor<int>, int>, Where_Enumerator<ArrayCursor<int>>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
-                .CSelect((int i) => i + 5);
+                .Where<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], ArrayCursor<int>, int, Where<ArrayCursor<int>, int>, Where_Enumerator<ArrayCursor<int>>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
+                .Select((int i) => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
             while (CEnumerator<SelectOfWhere<ArrayCursor<int>, int, int>>.MoveNext(ref results))
@@ -75,11 +76,12 @@ namespace TinyLinq
 
             return counter;
         }
+        */
 
         [Benchmark(Description = "TinyLINQ (Spec)")]
         public int TinyLinq()
         {
-            var results = items.CWhere((int i) => i % 10 == 0).CSelect((int i) => i + 5);
+            var results = items.Where(i => i % 10 == 0).Select(i => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
             while (CEnumerator<ArraySelectOfWhere<int, int>, int>.MoveNext(ref results))
@@ -92,7 +94,7 @@ namespace TinyLinq
 
         [Benchmark(Description = "TinyLINQ (Sum)")]
         public int TinyLinq_Sum() =>
-            items.CWhere((int i) => i % 10 == 0).CSelect((int i) => i + 5).CSum();
+            items.Where(i => i % 10 == 0).Select(i => i + 5).Sum();
     }
 
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
@@ -136,6 +138,7 @@ namespace TinyLinq
             return items.Where<int>(i => i % 10 == 0).Count();
         }
 
+        /*
         [Benchmark(Description = "TinyLINQ (Unspec)")]
         public int TinyLinq_Unspecialised()
         {
@@ -144,11 +147,12 @@ namespace TinyLinq
                 .CWhere<int[], int, Where<ArrayCursor<int>, int>, Where_Enumerable<int[], ArrayCursor<int>, int, Where<ArrayCursor<int>, int>, Where_Enumerator<ArrayCursor<int>>, Enumerable_Array<int>>>((int i) => i % 10 == 0)
                 .CCount();
         }
+        */
 
         [Benchmark(Description = "TinyLINQ (Spec)")]
         public int TinyLinq()
         {
-            return items.CWhere((int i) => i % 10 == 0).CCount();
+            return items.Where(i => i % 10 == 0).Count();
         }
     }
 

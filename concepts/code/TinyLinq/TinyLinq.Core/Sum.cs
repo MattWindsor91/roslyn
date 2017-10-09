@@ -19,7 +19,7 @@ namespace TinyLinq
         /// <returns>
         /// The sum of all elements reachable by the enumerator.
         /// </returns>
-        TElem Sum(ref TEnum e);        
+        TElem Sum(this TEnum e);        
     }
 
     public class MonoidInstances
@@ -32,7 +32,7 @@ namespace TinyLinq
             where E : CEnumerator<TEnum, TElem>
             where M : Monoid<TElem>
         {
-            TElem Sum(ref TEnum e)
+            TElem Sum(this TEnum e)
             {
                 var sum = M.Empty;
 
@@ -54,7 +54,7 @@ namespace TinyLinq
             where E : CEnumerable<TColl, TEnum, TElem>
             where M : Monoid<TElem>
         {
-            TElem Sum(ref TColl c)
+            TElem Sum(this TColl c)
             {
                 var e = E.GetEnumerator(c);
 
@@ -78,7 +78,7 @@ namespace TinyLinq
         where E : CEnumerator<TEnum, TElem>
         where N : Num<TElem>
     {
-        TElem Sum(ref TEnum e)
+        TElem Sum(this TEnum e)
         {
             var sum = N.FromInteger(0);
             var count = 0;
@@ -101,7 +101,7 @@ namespace TinyLinq
         where E : CEnumerable<TColl, TEnum, TElem>
         where N : Num<TElem>
     {
-        TElem Sum(ref TColl c)
+        TElem Sum(this TColl c)
         {
             var e = E.GetEnumerator(c);
 

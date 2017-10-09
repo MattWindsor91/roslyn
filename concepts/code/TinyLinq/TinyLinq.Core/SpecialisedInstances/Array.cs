@@ -359,7 +359,7 @@ namespace TinyLinq.SpecialisedInstances
     /// </typeparam>
     instance Count_ArrayWhere<TElem> : CCount<ArrayWhere<TElem>>
     {
-        int Count(ref ArrayWhere<TElem> aw)
+        int Count(this ArrayWhere<TElem> aw)
         {
             var count = 0;
             foreach (var s in aw.source)

@@ -27,7 +27,7 @@ namespace TinyLinq
         /// The total number of elements accessible from this enumerator,
         /// including any previously moved-over.
         /// </returns>
-        int Count(ref TEnum t);
+        int Count(this TEnum t);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ namespace TinyLinq
     [Overlappable]
     public instance Count_Enumerator<TEnum, [AssociatedType]TElem, implicit E> : CCount<TEnum> where E : CEnumerator<TEnum, TElem>
     {
-        int Count(ref TEnum t)
+        int Count(this TEnum t)
         {
             E.Reset(ref t);
             var count = 0;
@@ -71,7 +71,7 @@ namespace TinyLinq
     /// </typeparam>
     public instance StaticCount_Array<TElem> : CStaticCount<TElem[]>
     {
-        int Count(ref TElem[] t) => t.Length;
+        int Count(this TElem[] t) => t.Length;
     }
 
     /// <summary>
@@ -82,7 +82,29 @@ namespace TinyLinq
     /// </typeparam>
     public instance StaticCount_ArrayCursor<TElem> : CStaticCount<Instances.ArrayCursor<TElem>>
     {
-        int Count(ref Instances.ArrayCursor<TElem> t) => t.hi;
+        int Count(this Instances.ArrayCursor<TElem> t) => t.hi;
+    }
+
+    /// <summary>
+    /// Instance for O(1) length lookup of ranges.
+    /// </summary>
+    /// <typeparam name="TNum">
+    /// Type of the number in the range.
+    /// </typeparam>
+    public instance StaticCount_Range<TNum> : CStaticCount<Range<TNum>>
+    {
+        int Count(this Range<TNum> t) => t.count;
+    }
+
+    /// <summary>
+    /// Instance for O(1) length lookup of range cursors.
+    /// </summary>
+    /// <typeparam name="TNum">
+    /// Type of the number in the range.
+    /// </typeparam>
+    public instance StaticCount_RangeCursor<TNum> : CStaticCount<Instances.RangeCursor<TNum>>
+    {
+        int Count(this Instances.RangeCursor<TNum> t) => t.range.count;
     }
 
     /// <summary>
@@ -104,6 +126,6 @@ namespace TinyLinq
     public instance CBounded_Select<TEnum, TElem, TProj, implicit S> : CStaticCount<Select<TEnum, TElem, TProj>>
         where S : CStaticCount<TEnum>
     {
-        int Count(ref Select<TEnum, TElem, TProj> sel) => S.Count(ref sel.source);
+        int Count(this Select<TEnum, TElem, TProj> sel) => S.Count(sel.source);
     }
 }
