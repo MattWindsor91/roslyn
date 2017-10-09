@@ -40,24 +40,28 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!AllFixed(),
                 "Concept witness inference is pointless if there is nothing to infer");
 
-            var unfixedParamsB = ArrayBuilder<TypeParameterSymbol>.GetInstance();
-            for (var i = 0; i < _methodTypeParameters.Length; i++)
-            {
-                var tp = _methodTypeParameters[i];
-                if (_fixedResults[i] == null && !tp.IsAssociatedType && !tp.IsConceptWitness)
-                {
-                    unfixedParamsB.Add(tp);
-                }
-            }
-            var unfixedParams = unfixedParamsB.ToImmutableAndFree();
-
+            var methodInfo = MakeMethodInfo(binder);
             var inferrer = new ConceptWitnessInferrer(binder);
+            var fixedWithHeuristics = FixedArgsWithHeuristics(binder);
+            var round = inferrer.NewRound(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), methodInfo);
+            var result = round.Infer(ref useSiteDiagnostics);
 
-            ImmutableArray<TypeSymbol> fixedWithHeuristics = FixedArgsWithHeuristics(binder);
+            return FixFromResult(result);
+        }
 
-            var methodInfo = new ConceptWitnessInferrer.PresentMethodInfo(binder, _constructedContainingTypeOfMethod, unfixedParams, _formalParameterTypes, _formalParameterRefKinds, _arguments);
-            var result = inferrer.NewRound(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), methodInfo).Infer(ref useSiteDiagnostics);
-
+        /// <summary>
+        /// Applies a witness inference result to this type inference question.
+        /// </summary>
+        /// <param name="result">
+        /// The result to apply.
+        /// </param>
+        /// <returns>
+        /// True if the witness inference succeeded (fixed all unfixed type
+        /// parameters).
+        /// Otherwise, false.
+        /// </returns>
+        private bool FixFromResult(ConceptWitnessInferrer.Result result)
+        {
             var arity = _fixedResults.Length;
             Debug.Assert(0 < arity, "method should be generic if we got this far");
 
@@ -65,40 +69,50 @@ namespace Microsoft.CodeAnalysis.CSharp
             // we managed to fix for error reporting purposes.
             for (int i = 0; i < arity; i++)
             {
-                if (_fixedResults[i] != null)
+                if (_fixedResults[i] == null)
                 {
-                    // This type parameter was already fixed.
-                    continue;
+                    // NB: this will set the slot to null if fixing failed.
+                    _fixedResults[i] = result.TryFix(_methodTypeParameters[i]);
                 }
-
-                if (result.LeftUnfixed(_methodTypeParameters[i]))
-                {
-                    return false;
-                }
-
-                // NOTE: One might be tempted to put in an assertion here that
-                // the map can't assign to _fixedResults[i] the same thing as
-                // _methodTypeParameters[i].  However, sometimes it can!
-                // For example, consider
-                //
-                // private static void Qsort<T, implicit OrdT>
-                //     (T[] xs, int lo, int hi) where OrdT : Ord<T>
-                // {
-                //     if (lo < hi)
-                //     {
-                //         var p = Partition(xs, lo, hi);
-                //         Qsort(xs, lo, p - 1);
-                //         Qsort(xs, p + 1, hi);
-                //     }
-                // }
-                //
-                // In this case, the map will resolve the missing
-                // type parameters in each Qsort call as T->T, OrdT->OrdT.
-                // These are exactly the same symbols.
-                _fixedResults[i] = result.Map.SubstituteType(_methodTypeParameters[i]).AsTypeSymbolOnly();
             }
 
             return result.FixedEverything;
+        }
+
+        /// <summary>
+        /// Generates a method info object for concept inference, using
+        /// the method data from this round of method type inference.
+        /// </summary>
+        /// <param name="binder">
+        /// The binder at the scope of this type inference round, used
+        /// for recursive type inference calls.
+        /// </param>
+        /// <returns>
+        /// An appropriate <see cref="ConceptWitnessInferrer.MethodInfo"/>
+        /// struct for this method.
+        /// </returns>
+        private ConceptWitnessInferrer.MethodInfo MakeMethodInfo(Binder binder)
+        {
+            var unfixedParamsB = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+            var initialFixedMap = new MutableTypeMap();
+            for (var i = 0; i < _methodTypeParameters.Length; i++)
+            {
+                var tp = _methodTypeParameters[i];
+                if (_fixedResults[i] != null)
+                {
+                    initialFixedMap.AddAndPropagate(_methodTypeParameters[i], new TypeWithModifiers(_fixedResults[i]));
+                }
+                else if (!tp.IsAssociatedType && !tp.IsConceptWitness)
+                {
+                    unfixedParamsB.Add(tp);
+                }
+            }
+            var unfixedParams = unfixedParamsB.ToImmutableAndFree();
+            // Make sure everything in the method info is as fully substituted
+            // as possible.
+            // TODO: slightly inefficient, but doesn't duplicate code.
+            var methodInfo = new ConceptWitnessInferrer.PresentMethodInfo(binder, _constructedContainingTypeOfMethod, unfixedParams, _formalParameterTypes, _formalParameterRefKinds, _arguments);
+            return methodInfo.ApplySubstitution(initialFixedMap);
         }
 
         /// <summary>
@@ -327,14 +341,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             private readonly ImmutableTypeMap _fixedMap;
 
             /// <summary>
+            /// The map of inferred fixings.
+            /// </summary>
+            internal ImmutableTypeMap Map => _fixedMap;
+
+            /// <summary>
             /// Any type parameters that failed initial classification.
             /// </summary>
             private readonly ImmutableArray<TypeParameterSymbol> _unclassifiableParams;
-
-            /// <summary>
-            /// The map of inferred fixings.
-            /// </summary>
-            public ImmutableTypeMap Map => _fixedMap;
 
             /// <summary>
             /// Creates a result.
@@ -396,7 +410,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// True if <paramref name="t"/> has been left unfixed;
             /// false otherwise.
             /// </returns>
-            public bool LeftUnfixed(TypeParameterSymbol t)
+            private bool LeftUnfixed(TypeParameterSymbol t)
             {
                 if (_unfixedAssocs.Contains(t))
                 {
@@ -411,6 +425,44 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return true;
                 }
                 return (!_unclassifiableParams.IsDefaultOrEmpty && _unclassifiableParams.Contains(t));
+            }
+
+            /// <summary>
+            /// Tries to fix the given type parameter using this result.
+            /// </summary>
+            /// <param name="t">
+            /// The type parameter to fix.
+            /// </param>
+            /// <returns>
+            /// The resulting type symbol, if this result fixed
+            /// <paramref name="t"/>.
+            /// Otherwise, null.
+            /// </returns>
+            public TypeSymbol TryFix(TypeParameterSymbol t)
+            {
+                if (LeftUnfixed(t))
+                {
+                    return null;
+                }
+                // One might be tempted to put in an assertion here that
+                // the map can't return t.  However, sometimes it can!
+                // For example, consider
+                //
+                // private static void Qsort<T, implicit OrdT>
+                //     (T[] xs, int lo, int hi) where OrdT : Ord<T>
+                // {
+                //     if (lo < hi)
+                //     {
+                //         var p = Partition(xs, lo, hi);
+                //         Qsort(xs, lo, p - 1);
+                //         Qsort(xs, p + 1, hi);
+                //     }
+                // }
+                //
+                // In this case, the map will resolve the missing
+                // type parameters in each Qsort call as T->T, OrdT->OrdT.
+                // These are exactly the same symbols.
+                return _fixedMap.SubstituteType(t).AsTypeSymbolOnly();
             }
 
             /// <summary>
@@ -1054,6 +1106,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return _rigidParams.Contains(typeArgument as TypeParameterSymbol);
         }
 
+        /// <summary>
+        /// A collection of state relating to a single round of concept
+        /// inference.
+        /// </summary>
         internal abstract class InferRound
         {
             /// <summary>
@@ -1061,7 +1117,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// </summary>
             protected ImmutableTypeMap _fixedMap;
 
-            public InferRound(ImmutableTypeMap existingFixedMap)
+            /// <summary>
+            /// Internal constructor for inference rounds.
+            /// </summary>
+            /// <param name="existingFixedMap">
+            /// The fixed map at the start of this inference round.
+            /// </param>
+            protected InferRound(ImmutableTypeMap existingFixedMap)
             {
                 _fixedMap = existingFixedMap;
             }
@@ -1087,6 +1149,15 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             private ImmutableArray<TypeParameterSymbol> _unclassifiableParams;
 
+            /// <summary>
+            /// Creates a failed infer round.
+            /// </summary>
+            /// <param name="unclassifiableParams">
+            /// The parameters that were supplied to this inference question.
+            /// </param>
+            /// <param name="existingFixedMap">
+            /// The fixed map at the start of inference.
+            /// </param>
             public FailedInferRound(ImmutableArray<TypeParameterSymbol> unclassifiableParams, ImmutableTypeMap existingFixedMap)
                 : base(existingFixedMap)
             {
@@ -1123,6 +1194,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             /// <summary>
             /// The current set of associated types needing to be inferred.
+            /// This shrinks as progress is made.
             /// </summary>
             private ImmutableHashSet<TypeParameterSymbol> _associatedTypes;
 
@@ -1159,13 +1231,38 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // Early out for when we have no concept parameters.
                 if (_conceptWitnesses.IsEmpty)
                 {
-                    return new Result(
-                        unfixedAssocs: _associatedTypes,
-                        unfixedConcepts: ImmutableHashSet<TypeParameterSymbol>.Empty,
-                        unfixedMethodParams: _methodInfo.Unfixed,
-                        fixedMap: _fixedMap
-                    );
+                    return AsResult();
                 }
+
+                // TODO:
+                //   This round of MTI should not be necessary unless we're
+                //   coming from a recursive call, but currently MTI seems to
+                //   leave some things uninferred that can be inferred with a
+                //   second call.
+                //
+                //   I suspect this is the second phase early-outing because of
+                //   associated types/concept witnesses but haven't been able
+                //   to investigate yet.
+
+                // For the recursive call, we must make sure that any
+                // fixings that happened when unifying for this instance
+                // are propagated to the method, and that any possible
+                // method type inference is done.
+                // Failing to do so means that, when we start inferring
+                // instances, we're missing some of the type information
+                // we might need.
+                _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+                (var initMethodProgress, var initMethodSubstitution) = _methodInfo.DoMethodTypeInference(ref useSiteDiagnostics);
+                if (initMethodProgress)
+                {
+                    _fixedMap = _fixedMap.Compose(initMethodSubstitution);
+                    _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+                    // If we don't do this, we'll think the type parameters we
+                    // just fixed through MTI are unfixable, since they're no
+                    // longer present in the method info.
+                    //unfixedInstance = initMethodSubstitution.SubstituteNamedType(unfixedInstance);
+                }
+
 
                 // Our goal is to infer both associated types and concept witnesses
                 // here.  We first do the latter, then the former.
@@ -1201,12 +1298,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if (conceptProgress)
                     {
                         _conceptWitnesses = remainingConceptsB.ToImmutable();
-                        _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+                        PropagateFixedMap();
                     }
                     // If we didn't make any progress this round, but we're
                     // in a method and have unfixed type parameters, try a
                     // round of normal method type inference.
-                    //
                     // Since this recursive MTI won't try to fix any concepts,
                     // it should terminate.
                     else
@@ -1214,16 +1310,55 @@ namespace Microsoft.CodeAnalysis.CSharp
                         (var mtiProgress, var methodSubstitution) = _methodInfo.DoMethodTypeInference(ref useSiteDiagnostics);
                         conceptProgress |= mtiProgress;
                         _fixedMap = _fixedMap.Compose(methodSubstitution);
-                        _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+                        PropagateFixedMap();
                     }
 
                     if (!conceptProgress)
                     {
                         break;
                     }
-                } while (!_conceptWitnesses.IsEmpty || _methodInfo.HasUnfixed);
+                } while (!FixedEverything);
 
-                // Work out if we still have pending associated types.
+                return AsResult();
+            }
+
+            /// <summary>
+            /// Converts this inference round to a result.
+            /// </summary>
+            /// <returns>
+            /// A <see cref="Result"/> representing this round.
+            /// </returns>
+            private Result AsResult() =>
+                new Result(
+                    unfixedAssocs: _associatedTypes,
+                    unfixedConcepts: _conceptWitnesses,
+                    unfixedMethodParams: _methodInfo.Unfixed,
+                    fixedMap: _fixedMap
+                );
+
+            /// <summary>
+            /// True if all type parameters have been fixed.
+            /// </summary>
+            private bool FixedEverything
+            {
+                get
+                {
+                    if (_methodInfo.HasUnfixed)
+                    {
+                        return false;
+                    }
+                    return _associatedTypes.IsEmpty && _conceptWitnesses.IsEmpty;
+                }
+            }
+
+            /// <summary>
+            /// Updates the method context and associated types with the
+            /// current substitution.
+            /// </summary>
+            private void PropagateFixedMap()
+            {
+                _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+
                 var assocsB = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
                 foreach (var associatedParam in _associatedTypes)
                 {
@@ -1232,14 +1367,22 @@ namespace Microsoft.CodeAnalysis.CSharp
                         assocsB.Add(associatedParam);
                     }
                 }
-                return new Result(
-                    unfixedAssocs: assocsB.ToImmutable(),
-                    unfixedConcepts: _conceptWitnesses,
-                    unfixedMethodParams: _methodInfo.Unfixed,
-                    fixedMap: _fixedMap
-                );
+                _associatedTypes = assocsB.ToImmutable();
             }
 
+            /// <summary>
+            /// Try inferring a single witness parameter.
+            /// </summary>
+            /// <param name="conceptWitness">
+            /// The witness parameter to infer.
+            /// </param>
+            /// <param name="useSiteDiagnostics">
+            /// The use-site diagnostics set to emit diagnostics to.
+            /// </param>
+            /// <returns>
+            /// True if inference succeeded.
+            /// Otherwise, false.
+            /// </returns>
             private bool InferWitness(TypeParameterSymbol conceptWitness, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
             {
                 var requiredConcepts = GetRequiredConceptsFor(conceptWitness, _fixedMap);
@@ -1569,7 +1712,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var requiredConcept in requiredConcepts)
             {
-                if (!IsRequiredConceptProvided(requiredConcept, providedConcepts, ref subst, boundAndUnfixedParams)) return false;
+                if (!IsRequiredConceptProvided(requiredConcept, providedConcepts, ref subst, boundAndUnfixedParams))
+                {
+                    return false;
+                }
             }
 
             // If we got here, all required concepts must have been provided.
@@ -1608,7 +1754,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var providedConcept in providedConcepts)
             {
-                if (TypeUnification.CanUnify(providedConcept, requiredConcept, ref unifyingSubstitutions, boundAndUnfixedParams)) return true;
+                if (TypeUnification.CanUnify(providedConcept, requiredConcept, ref unifyingSubstitutions, boundAndUnfixedParams))
+                {
+                    return true;
+                }
             }
 
             return false;
@@ -1649,64 +1798,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             var secondPassInstanceBuilder = new ArrayBuilder<Candidate>();
             foreach (var candidate in candidateInstances)
             {
-                // Type parameters have no prerequisites to be satisfiable
-                // instances.
-                if (candidate.Instance.Kind == SymbolKind.TypeParameter)
+                Candidate fixedInstance = InferRecursively(candidate, methodInfo, chain);
+                if (fixedInstance.Viable)
                 {
-                    secondPassInstanceBuilder.Add(candidate);
-                    continue;
+                    secondPassInstanceBuilder.Add(fixedInstance);
                 }
-
-                Debug.Assert(candidate.Instance.Kind == SymbolKind.NamedType,
-                    "If an instance is not a parameter, it should be a named type.");
-
-                var nt = (NamedTypeSymbol)candidate.Instance;
-
-                // If we have no type parameters, we can't have any unfixed
-                // witnesses.
-                if (nt.TypeParameters.IsEmpty)
-                {
-                    secondPassInstanceBuilder.Add(candidate);
-                    continue;
-                }
-
-                // @t-mawi TODO: generalise constraint solution?
-
-                // Do cycle detection: have we already set up a recursive
-                // call for this instance with these type parameters?
-                if (chain.Contains(nt))
-                {
-                    return default;
-                }
-
-                // Assumption: no witness parameter can depend on any other
-                // witness parameter, so we can do recursive inference in
-                // one pass.
-
-                /* We need to pass the old fixed map into the new recursion.
-                    * Recursive inference using associated types seemingly
-                    * can't be driven entirely from the fixed parameters of the
-                    * candidate instance.
-                    *
-                    * TODO: understand exactly why this is.
-                    * TODO: maybe we only need to keep the fixed map around, not
-                    *       the whole unification?
-                    */
-                Candidate fixedInstance = InferRecursively(nt, candidate.Unification, methodInfo, chain);
-                if (!fixedInstance.Viable)
-                {
-                    continue;
-                }
-
-                // Finally, check constraints on the fully fixed instance.
-                // We do this here in case the constraint satisfaction depends
-                // on the recursive inference.
-                if (!fixedInstance.Instance.CheckAllConstraints(_conversions))
-                {
-                    continue;
-                }
-
-                secondPassInstanceBuilder.Add(fixedInstance);
             }
             return secondPassInstanceBuilder.ToImmutableAndFree();
         }
@@ -1714,11 +1810,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Prepares a recursive inference round on an instance.
         /// </summary>
-        /// <param name="unfixedInstance">
-        /// The candidate instance, which must be a named type with unfixed type parameters.
-        /// </param>
-        /// <param name="existingFixedMap">
-        /// The map of type substitutions that was used when instantiating the instance.
+        /// <param name="candidate">
+        /// The candidate instance that needs recursive inference.
         /// </param>
         /// <param name="chain">
         /// The set of instances we've passed through recursively to get here,
@@ -1730,40 +1823,63 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// substitutions.
         /// </returns>
         internal Candidate InferRecursively(
-            NamedTypeSymbol unfixedInstance,
-            ImmutableTypeMap existingFixedMap,
+            Candidate candidate,
             MethodInfo methodInfo,
             ImmutableHashSet<NamedTypeSymbol> chain)
         {
-            var diags = new HashSet<DiagnosticInfo>();
-
-            // For the recursive call, we must make sure that any
-            // fixings that happened when unifying for this instance
-            // are propagated to the method, and that any possible
-            // method type inference is done.
-            //
-            // Failing to do so means that, when we start inferring
-            // instances, we're missing some of the type information
-            // we might need.
-            var newMethodInfo = methodInfo.ApplySubstitution(existingFixedMap);
-            (var initMethodProgress, var initMethodSubstitution) = newMethodInfo.DoMethodTypeInference(ref diags);
-            if (initMethodProgress)
+            // Early out: if the instance is a type param, we need not recur.
+            if (candidate.Instance.Kind == SymbolKind.TypeParameter)
             {
-                existingFixedMap = existingFixedMap.Compose(initMethodSubstitution);
-                newMethodInfo = newMethodInfo.ApplySubstitution(existingFixedMap);
+                return candidate;
             }
 
-            var result = NewRound(unfixedInstance.TypeParameters, unfixedInstance.TypeArguments, existingFixedMap, newMethodInfo, chain.Add(unfixedInstance)).Infer(ref diags);
+            Debug.Assert(candidate.Instance.Kind == SymbolKind.NamedType,
+                "If an instance is not a parameter, it should be a named type.");
+
+            var nt = (NamedTypeSymbol)candidate.Instance;
+
+            // Early out: if we have no type parameters, we need not recur. 
+            if (nt.TypeParameters.IsEmpty)
+            {
+                return candidate;
+            }
+
+            // Do cycle detection: have we already set up a recursive
+            // call for this instance with these type parameters?
+            if (chain.Contains(nt))
+            {
+                return default;
+            }
+
+            // We need to pass the old fixed map into the new recursion.
+            // Recursive inference using associated types seemingly
+            // can't be driven entirely from the fixed parameters of the
+            // candidate instance.
+            //
+            // TODO: understand exactly why this is.
+            // TODO: maybe we only need to keep the fixed map around, not
+            //       the whole unification?
+            var round = NewRound(nt.TypeParameters, nt.TypeArguments, candidate.Unification, methodInfo, chain.Add(nt));
+            var diags = new HashSet<DiagnosticInfo>();
+            var result = round.Infer(ref diags);
             if (!result.Success)
             {
-                // We don't care if we failed to fix some method type
-                // parameters.
-
+                // We don't care if we failed to fix method type parameters.
+                // They might be fixable by other instances.
+                // TODO: consistency ramifications of the above.
                 // NB: diags might be empty at this stage (TODO: should it be?)
                 return new Candidate(diags);
             }
 
-            var fixedInstance = result.Map.SubstituteType(unfixedInstance).AsTypeSymbolOnly();
+            var fixedInstance = result.Map.SubstituteNamedType(nt);
+            // Finally, check constraints on the fully fixed instance.
+            // We do this here in case the constraint satisfaction depends
+            // on the recursive inference.
+            if (!fixedInstance.CheckAllConstraints(_conversions))
+            {
+                return default;
+            }
+
             return new Candidate(fixedInstance, result.Map);
         }
 
