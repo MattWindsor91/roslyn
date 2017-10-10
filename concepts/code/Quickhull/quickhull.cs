@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Concepts.OpPrelude;
-using static System.Concepts.OpPrelude.Verbose;
-using System.Concepts.OpMonoid;
+using System.Concepts.Prelude;
+using static System.Concepts.Prelude.Verbose;
+using System.Concepts.Monoid;
 using System.Linq;
-using static System.Concepts.OpMonoid.Utils;
+using static System.Concepts.Monoid.Utils;
 using static Utils;
 
 /// <summary>

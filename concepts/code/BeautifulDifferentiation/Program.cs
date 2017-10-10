@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Concepts.OpPrelude;
+using System.Concepts.Prelude;
 
 /// <summary>
 ///     Implementation of parts of Conal Elliot's Beautiful Differentiation.

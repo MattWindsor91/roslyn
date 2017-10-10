@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Concepts;
-using System.Concepts.OpPrelude;
+using System.Concepts.Prelude;
 
 using ExpressionUtils;
 using static ExpressionUtils.Utils;

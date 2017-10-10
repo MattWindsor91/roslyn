@@ -53,9 +53,9 @@
       <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
       <Name>ConceptAttributes</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpConceptLibrary\OpConceptLibrary.csproj">
+    <ProjectReference Include="..\ConceptLibrary\ConceptLibrary.csproj">
       <Project>{dc8d5061-841a-4f36-afc6-7f9ab04266fb}</Project>
-      <Name>OpConceptLibrary</Name>
+      <Name>ConceptLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

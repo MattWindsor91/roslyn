@@ -1,5 +1,5 @@
 ﻿/// <summary>
-///     Prelude of common concepts.
+///     Prelude of common concepts with operator overloading.
 /// </summary>
 /// <remarks>
 ///     This prelude is heavily inspired by that of Haskell 98, but
@@ -8,6 +8,21 @@
 /// </remarks>
 namespace System.Concepts.Prelude
 {
+    /// <summary>
+    ///     Verbose forms of Prelude operators.
+    /// </summary>
+    public struct Verbose
+    {
+        public static bool Eq<A, implicit W>(A x, A y)  where W : Eq<A>         => x == y;
+        public static bool Neq<A, implicit W>(A x, A y) where W : Eq<A>         => x != y;
+        public static bool Leq<A, implicit W>(A x, A y) where W : Ord<A>        => x <= y;
+        public static bool Geq<A, implicit W>(A x, A y) where W : Ord<A>        => x >= y;
+        public static A    Add<A, implicit W>(A x, A y) where W : Num<A>        => x + y;
+        public static A    Sub<A, implicit W>(A x, A y) where W : Num<A>        => x - y;
+        public static A    Mul<A, implicit W>(A x, A y) where W : Num<A>        => x * y;
+        public static A    Div<A, implicit W>(A x, A y) where W : Fractional<A> => x / y;
+    }
+
     #region Eq
 
     /// <summary>
@@ -16,14 +31,10 @@ namespace System.Concepts.Prelude
     /// <typeparam name="A">
     ///     The type for which equality is being defined.
     /// </typeparam>
-    /// <remarks>
-    ///     Minimal complete definition is either
-    ///     <see cref="Equals"/> or <see cref="NotEquals"/>.
-    /// </remarks>
     public concept Eq<A>
     {
         /// <summary>
-        ///     Returns true iff <paramref name="x"/> equals
+        ///     Returns true if <paramref name="x"/> equals
         ///     <paramref name="y"/>.
         /// </summary>
         /// <param name="x">
@@ -33,17 +44,13 @@ namespace System.Concepts.Prelude
         ///     The second item to compare for equality.
         /// </param>
         /// <returns>
-        ///     True iff <paramref name="a"/> equals
+        ///     True if <paramref name="a"/> equals
         ///     <paramref name="y"/>: <c>x == y</c>.
         /// </returns>
-        /// <remarks>
-        ///     If this is not defined, the default is
-        ///     to take the negation of <see cref="NotEquals"/>.
-        /// </remarks>
-        bool Equals(A x, A y) => !NotEquals(x, y);
+        bool operator ==(A x, A y);
 
         /// <summary>
-        ///     Returns false iff <paramref name="x"/> equals
+        ///     Returns true if <paramref name="x"/> does not equal
         ///     <paramref name="y"/>.
         /// </summary>
         /// <param name="x">
@@ -53,14 +60,10 @@ namespace System.Concepts.Prelude
         ///     The second item to compare for disequality.
         /// </param>
         /// <returns>
-        ///     False iff <paramref name="a"/> equals
+        ///     True if <paramref name="a"/> does not equal
         ///     <paramref name="y"/>: <c>x != y</c>.
         /// </returns>
-        /// <remarks>
-        ///     If this is not defined, the default is
-        ///     to take the negation of <see cref="Equals"/>.
-        /// </remarks>
-        bool NotEquals(A x, A y) => !Equals(x, y);
+        bool operator !=(A x, A y);
     }
 
     // Subconcept implementations of Eq:
@@ -73,17 +76,19 @@ namespace System.Concepts.Prelude
     /// </summary>
     public instance EqArray<A, implicit EqA> : Eq<A[]> where EqA: Eq<A>
     {
-        bool Equals(A[] x, A[] y)
+        bool operator ==(A[] x, A[] y)
         {
             if (x == null) return y == null;
             if (y == null) return false;
             if (x.Length != y.Length) return false;
             for (int i = 0; i < x.Length; i++)
             {
-                if (!EqA.Equals(x[i], y[i])) return false;
+                if (!Verbose.Eq(x[i], y[i])) return false;
             }
             return true;
         }
+
+        bool operator !=(A[] x, A[] y) => !(x == y);
     }
 
     #endregion Eq
@@ -97,13 +102,8 @@ namespace System.Concepts.Prelude
     /// <typeparam name="A">
     ///     The type for which ordering is being defined.
     /// </typeparam>
-    /// <remarks>
-    ///    Minimal complete definition is <see cref="Leq"/>.
-    /// </remarks>
     public concept Ord<A> : Eq<A>
     {
-        // TODO: compare
-
         /// <summary>
         ///     Returns true if <paramref name="x"/> is less than or
         ///     equal to <paramref name="y"/>.
@@ -118,11 +118,11 @@ namespace System.Concepts.Prelude
         ///     True if <paramref name="x"/> is less than or equal to
         ///     <paramref name="y"/>: <c>x <= y</c>.
         /// </returns>
-        bool Leq(A x, A y);
+        bool operator <=(A x, A y);
 
         /// <summary>
-        ///     Returns true if <paramref name="x"/> is less than
-        ///     <paramref name="y"/>.
+        ///     Returns true if <paramref name="x"/> is greater than or
+        ///     equal to <paramref name="y"/>.
         /// </summary>
         /// <param name="x">
         ///     The first item to compare.
@@ -131,11 +131,10 @@ namespace System.Concepts.Prelude
         ///     The second item to compare.
         /// </param>
         /// <returns>
-        ///     True if <paramref name="x"/> is less than
-        ///     <paramref name="y"/>: <c>x < y</c>.
+        ///     True if <paramref name="x"/> is greater than or equal to
+        ///     <paramref name="y"/>: <c>x <= y</c>.
         /// </returns>
-        bool Lt(A x, A y) => Leq(x, y) && !NotEquals(x, y);
-
+        bool operator >=(A x, A y);
     }
 
     // Subconcept implementations of Ord:
@@ -153,10 +152,6 @@ namespace System.Concepts.Prelude
     /// <typeparam name="A">
     ///     The type for which numeric operations are being defined.
     /// </typeparam>
-    /// <remarks>
-    ///     Minimal complete definition is all except either
-    ///     <see cref="Sub"/> or <see cref="Neg"/>.
-    /// </remarks>
     public concept Num<A>
     {
         /// <summary>
@@ -172,7 +167,7 @@ namespace System.Concepts.Prelude
         ///     The result of adding <paramref name="y"/> to
         ///     <paramref name="x"/>: <c>x + y</c>.
         /// </returns>
-        A Add(A x, A y);
+        A operator +(A x, A y);
 
         /// <summary>
         ///     Subtracts <paramref name="y"/> from
@@ -189,23 +184,9 @@ namespace System.Concepts.Prelude
         ///     The result of subtracting <paramref name="y"/> from
         ///     <paramref name="x"/>: <c>x - y</c>.
         /// </returns>
-        A Sub(A x, A y) => Add(x, Neg(y));
+        A operator -(A x, A y) => FromInteger(0) + (-x);
 
-
-        /// <summary>
-        ///     Negates <paramref name="x"/>.
-        /// </summary>
-        /// <param name="x">
-        ///     The quantity to negate.
-        /// </param>
-        /// <returns>
-        ///     The result of negating <paramref name="x"/>: <c>-x</c>.
-        /// </returns>
-        /// <remarks>
-        ///     If not defined, the default is to subtract
-        ///     <paramref name="x"/> from zero.
-        /// </remarks>
-        A Neg(A x) => Sub(FromInteger(0), x);
+        A operator -(A x) => FromInteger(0) - x;
 
         // Haskell here allows either (-) or negate to be defined: we
         // currently just define Sub.
@@ -226,7 +207,7 @@ namespace System.Concepts.Prelude
         ///     The result of multiplying <paramref name="x"/> and
         ///     <paramref name="y"/>: <c>x * y</c>.
         /// </returns>
-        A Mul(A x, A y);
+        A operator *(A x, A y);
 
         /// <summary>
         ///     Takes the absolute value of <paramref name="x"/>.
@@ -303,11 +284,6 @@ namespace System.Concepts.Prelude
     /// <typeparam name="A">
     ///     The type for which fractional operations are being defined.
     /// </typeparam>
-    /// <remarks>
-    ///     Minimum complete definition:
-    ///     <see cref="FromRational"/> and either <see cref="Recip"/> or
-    ///     <see cref="Div"/>.
-    /// </remarks>
     public concept Fractional<A> : Num<A>
     {
         /// <summary>
@@ -324,26 +300,7 @@ namespace System.Concepts.Prelude
         ///     The result of fractionally dividing <paramref name="x"/>
         ///     by <paramref name="y"/>: <c>x / y</c>.
         /// </returns>
-        /// <remarks>
-        ///     If not defined, the default is to take the multiplication of
-        ///     <paramref name="x"/> by the reciprocal of <paramref name="y"/>.
-        /// </remarks>
-        A Div(A x, A y) => Mul(x, Recip(y));
-
-        /// <summary>
-        ///     Takes the reciprocal of <paramref name="x"/>.
-        /// </summary>
-        /// <param name="x">
-        ///     The value to be reciprocated.
-        /// </param>
-        /// <returns>
-        ///     The reciprocal of <paramref name="x"/>.
-        /// </returns>
-        /// <remarks>
-        ///     If not defined, the default is to divide 1 by
-        ///     <paramref name="x"/>.
-        /// </remarks>
-        A Recip(A x) => Div(FromInteger(1), x);
+        A operator /(A x, A y);
 
         // Haskell also allows the reciprocal to be defined, but, for
         // now, we don't.
@@ -378,23 +335,6 @@ namespace System.Concepts.Prelude
     /// <typeparam name="A">
     ///     The type for which floating operations are being defined.
     /// </typeparam>
-    /// <remarks>
-    ///     The minimum complete definition is
-    ///     <see cref="pi"/>,
-    ///     <see cref="exp"/>,
-    ///     <see cref="log"/>,
-    ///     <see cref="sin"/>,
-    ///     <see cref="cos"/>,
-    ///     <see cref="sinh"/>,
-    ///     <see cref="sinh"/>,
-    ///     <see cref="cosh"/>,
-    ///     <see cref="asin"/>,
-    ///     <see cref="acos"/>,
-    ///     <see cref="atan"/>,
-    ///     <see cref="asinh"/>,
-    ///     <see cref="acosh"/>, and
-    ///     <see cref="atanh"/>.
-    ///  </remarks>
     public concept Floating<A> : Fractional<A>
     {
         /// <summary>
@@ -453,11 +393,7 @@ namespace System.Concepts.Prelude
         /// <returns>
         ///     The value of <c>x^y</c>.
         /// </returns>
-        /// <remarks>
-        ///     If not defined, the default is defined in terms of the natural
-        ///     logarithm and exponential function.
-        /// </remarks>
-        A Pow(A x, A y) => Exp(Mul(Log(x), y));
+        A Pow(A x, A y);
 
         /// <summary>
         ///     Calculates the logarithm of a value with respect to an
@@ -473,11 +409,10 @@ namespace System.Concepts.Prelude
         /// <returns>
         ///     The value of <c>log b (x)</c>.
         /// </returns>
-        /// <remarks>
-        ///     If not defined, the default is defined in terms of the natural
-        ///     logarithm.
-        /// </remarks>
-        A LogBase(A b, A x) => Div(Log(x), Log(b));
+        A LogBase(A b, A x);
+
+        // Both of these can be defined in terms of Exp/Log in Haskell.
+        // We're not quite there yet!
 
         /// <summary>
         ///     Calculates the sine of an angle.
@@ -510,10 +445,7 @@ namespace System.Concepts.Prelude
         /// <returns>
         ///     The value of <c>tan(x)</c>.
         /// </returns>
-        /// <remarks>
-        ///     If left undefined, the default is sine over cosine.
-        /// </remarks>
-        A Tan(A x) => Div(Sin(x), Cos(x));
+        A Tan(A x);
 
         /// <summary>
         ///     Calculates an arcsine.
@@ -582,10 +514,7 @@ namespace System.Concepts.Prelude
         /// <returns>
         ///     The value of <c>tanh(x)</c>.
         /// </returns>
-        /// <remarks>
-        ///     If left undefined, the default is sinh over cosh.
-        /// </remarks>
-        A Tanh(A x) => Div(Sinh(x), Cosh(x));
+        A Tanh(A x);
 
         /// <summary>
         ///     Calculates an area hyperbolic sine.
@@ -641,10 +570,13 @@ namespace System.Concepts.Prelude
     public instance PreludeBool : Ord<bool>
     {
         // Eq (via Ord)
-        bool Equals(bool x, bool y) => x == y;
+        bool operator ==(bool x, bool y) => x == y;
+        bool operator !=(bool x, bool y) => x != y;
+
 
         // Ord
-        bool Leq(bool x, bool y) => !x || y;
+        bool operator <=(bool x, bool y) => !x || y;
+        bool operator >=(bool x, bool y) => !y || x;
     }
 
     /// <summary>
@@ -656,22 +588,25 @@ namespace System.Concepts.Prelude
         //
         // Eq (via Ord)
         //
-        bool Equals(int x, int y) => x == y;
+        bool operator ==(int x, int y) => x == y;
+        bool operator !=(int x, int y) => x != y;
+
 
         //
         // Ord
         //
-        bool Leq(int x, int y) => x <= y;
+        bool operator <=(int x, int y) => x <= y;
+        bool operator >=(int x, int y) => x >= y;
 
         //
         // Num
         //
-        int Add(int x, int y)  => x + y;
-        int Sub(int x, int y)  => x - y;
-        int Mul(int x, int y)  => x * y;
-        int Abs(int x)         => Math.Abs(x);
-        int Signum(int x)      => Math.Sign(x);
-        int FromInteger(int x) => x;
+        int operator +(int x, int y) => x + y;
+        int operator -(int x, int y) => x - y;
+        int operator *(int x, int y) => x * y;
+        int Abs(int x)               => Math.Abs(x);
+        int Signum(int x)            => Math.Sign(x);
+        int FromInteger(int x)       => x;
     }
 
     /// <summary>
@@ -683,27 +618,30 @@ namespace System.Concepts.Prelude
         //
         // Eq (via Ord)
         //
-        bool Equals(double x, double y) => x == y;
+        bool operator ==(double x, double y) => x == y;
+        bool operator !=(double x, double y) => x != y;
 
         //
         // Ord
         //
-        bool Leq(double x, double y) => x <= y;
+        bool operator <=(double x, double y) => x <= y;
+        bool operator >=(double x, double y) => x >= y;
+
 
         //
         // Num (via Floating)
         //
-        double Add(double x, double y)     => x + y;
-        double Sub(double x, double y)     => x - y;
-        double Mul(double x, double y)     => x * y;
-        double Abs(double x)               => Math.Abs(x);
-        double Signum(double x)            => Math.Sign(x);
-        double FromInteger(int x)          => (double)x;
+        double operator +(double x, double y) => x + y;
+        double operator -(double x, double y) => x - y;
+        double operator *(double x, double y) => x * y;
+        double Abs(double x)                  => Math.Abs(x);
+        double Signum(double x)               => Math.Sign(x);
+        double FromInteger(int x)             => (double)x;
 
         //
         // Fractional (via Floating)
         //
-        double Div(double x, double y)     => x / y;
+        double operator /(double x, double y) => x / y;
         double FromRational(Ratio<int> x)  => x.num / x.den;
 
         //

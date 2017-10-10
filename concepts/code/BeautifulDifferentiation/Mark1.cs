@@ -1,5 +1,5 @@
-﻿using System.Concepts.OpPrelude;
-using static System.Concepts.OpPrelude.Verbose;
+﻿using System.Concepts.Prelude;
+using static System.Concepts.Prelude.Verbose;
 
 /// <summary>
 ///     Mark 1 beautiful differentiation.

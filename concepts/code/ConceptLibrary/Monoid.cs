@@ -35,7 +35,7 @@ namespace System.Concepts.Monoid
         /// <returns>
         ///     The result of the operation.
         /// </returns>
-        A Append(A x, A y);
+        A Append(this A x, A y);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ namespace System.Concepts.Monoid
     public instance All : Monoid<bool>
     {
         bool Empty => true;
-        bool Append(bool x, bool y) => x && y;
+        bool Append(this bool x, bool y) => x && y;
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ namespace System.Concepts.Monoid
     public instance Any : Monoid<bool>
     {
         bool Empty => true;
-        bool Append(bool x, bool y) => x || y;
+        bool Append(this bool x, bool y) => x || y;
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ namespace System.Concepts.Monoid
     public instance Min<A, implicit OrdA> : Semigroup<A> where OrdA : Ord<A>
     {
         // Is this actually associative?
-        A Append(A x, A y) => Leq(x, y) ? x : y;
+        A Append(this A x, A y) => x <= y ? x : y;
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ namespace System.Concepts.Monoid
     public instance Max<A, implicit OrdA> : Semigroup<A> where OrdA : Ord<A>
     {
         // Is this actually associative?
-        A Append(A x, A y) => Leq(x, y) ? y : x;
+        A Append(this A x, A y) => x <= y ? y : x;
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ namespace System.Concepts.Monoid
     public instance Sum<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
         A Empty => FromInteger(0);
-        A Append(A x, A y) => Add(x, y);
+        A Append(this A x, A y) => x + y;
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ namespace System.Concepts.Monoid
     public instance Product<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
         A Empty => FromInteger(1);
-        A Append(A x, A y) => Mul(x, y);
+        A Append(this A x, A y) => x * y;
     }
 
 #endregion Instances
@@ -221,7 +221,7 @@ namespace System.Concepts.Monoid
             A result = Empty;
             foreach (A x in xs)
             {
-                result = Append(result, x);
+                result = result.Append(x);
             }
             return result;
         }
@@ -251,7 +251,7 @@ namespace System.Concepts.Monoid
             A result = Empty;
             foreach (B x in xs)
             {
-                result = Append(result, f(x));
+                result = result.Append(f(x));
             }
             return result;
         }

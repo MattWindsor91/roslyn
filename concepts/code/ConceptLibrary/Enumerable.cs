@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Concepts;
+using System.Concepts.Prelude;
 
 namespace System.Concepts.Enumerable
 {
@@ -147,13 +148,13 @@ namespace System.Concepts.Enumerable
         /// Various enumerator instances for ranges.
         /// </summary>
         public instance Enumerable_Range<TNum, implicit N, implicit E> : CEnumerable<Range<TNum>, RangeCursor<TNum>, TNum>, CCopyEnumerator<RangeCursor<TNum>, TNum>
-            where N : Prelude.Num<TNum>
-            where E : Prelude.Eq<TNum>
+            where N : Num<TNum>
+            where E : Eq<TNum>
         {
             // TODO: catch inverted ranges and overflows
             // TODO: better optimisation if range is empty
 
-            RangeCursor<TNum> GetEnumerator(Range<TNum> range) => new RangeCursor<TNum> { range = range, end = Add(range.start, FromInteger(range.count)), reset = true, finished = false };
+            RangeCursor<TNum> GetEnumerator(Range<TNum> range) => new RangeCursor<TNum> { range = range, end = range.start + FromInteger(range.count), reset = true, finished = false };
             void Reset(ref RangeCursor<TNum> e)
             {
                 e.reset = true;
@@ -173,7 +174,7 @@ namespace System.Concepts.Enumerable
                 }
                 else
                 {
-                    e.current = Add(e.current, FromInteger(1));
+                    e.current += FromInteger(1);
                 }
 
                 e.finished = Equals(e.end, e.current);

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Concepts.OpPrelude;
-using System.Concepts.OpNumerics;
+using System.Concepts.Prelude;
+using System.Concepts.Numerics;
 using System.Numerics;
 
 namespace OpsTestbed

@@ -1,10 +1,10 @@
 ﻿// Examples using System.Concepts.Monoid.
 
-using System.Concepts.OpPrelude;
-using System.Concepts.OpMonoid;
+using System.Concepts.Prelude;
+using System.Concepts.Monoid;
 using System.Text;
 using System;
-using static System.Concepts.OpMonoid.Utils;
+using static System.Concepts.Monoid.Utils;
 using static ArrayHelp;
 
 static class ArrayHelp

@@ -1,6 +1,6 @@
 ﻿using System.Concepts;
 using System.Concepts.Enumerable;
-using System.Concepts.OpPrelude;
+using System.Concepts.Prelude;
 
 namespace TinyLinq
 {

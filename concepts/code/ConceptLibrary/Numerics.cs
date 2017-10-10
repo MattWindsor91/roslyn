@@ -1,10 +1,10 @@
-﻿using System.Concepts.OpPrelude;
+﻿using System.Concepts.Prelude;
 using System.Numerics;
 
 /// <summary>
 ///     Prelude instances for <see cref="System.Numerics" /> classes.
 /// </summary>
-namespace System.Concepts.OpNumerics
+namespace System.Concepts.Numerics
 {
     public instance CIVector2 : Eq<Vector2>, Num<Vector2>, Fractional<Vector2>
     {

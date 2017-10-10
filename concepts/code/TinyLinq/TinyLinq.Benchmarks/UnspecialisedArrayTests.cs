@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Concepts;
-using System.Concepts.OpPrelude;
+using System.Concepts.Prelude;
 using System.Concepts.Enumerable;
 using static System.Concepts.Enumerable.Instances;
 using System.Concepts.Showable;

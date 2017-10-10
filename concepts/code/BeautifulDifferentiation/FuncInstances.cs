@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Concepts;
-using System.Concepts.OpPrelude;
-using static System.Concepts.OpPrelude.Verbose;
+using System.Concepts.Prelude;
+using static System.Concepts.Prelude.Verbose;
 
 /// <summary>
 ///     Numeric tower instances for functions.

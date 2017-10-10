@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Concepts.OpPrelude;
-using static System.Concepts.OpPrelude.Verbose;
+using System.Concepts.Prelude;
+using static System.Concepts.Prelude.Verbose;
 
 // Add +
 // Mul *
