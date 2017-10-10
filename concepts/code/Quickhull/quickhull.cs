@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Concepts.Prelude;
-using System.Concepts.Monoid;
-using static System.Concepts.Monoid.Utils;
+using System.Concepts.OpPrelude;
+using static System.Concepts.OpPrelude.Verbose;
+using System.Concepts.OpMonoid;
+using System.Linq;
+using static System.Concepts.OpMonoid.Utils;
 using static Utils;
 
 /// <summary>
@@ -123,19 +125,11 @@ public struct Line<A>
         where NumA : Num<A>
     {
         // From http://stackoverflow.com/questions/1560492/
-        return Leq(
-            FromInteger(1),
+        return (
+            FromInteger(0) <=
             Signum(
-                Sub(
-                    Mul(
-                        Sub(P2.X, P1.X),
-                        Sub(point.Y, P1.Y)
-                    ),
-                    Mul(
-                        Sub(P2.Y, P1.Y),
-                        Sub(point.X, P1.X)
-                    )
-                )
+                ((P2.X - P1.X) * (point.Y - P1.Y)) -
+                ((P2.Y - P1.Y) * (point.X - P1.X))
             )
         );
     }
@@ -153,24 +147,14 @@ public struct Line<A>
         where OrdA : Ord<A>
         where FloatA : Floating<A>
     {
-        return Div(
+        return (
             Abs(
-                Add(
-                    Sub(
-                        Mul(Sub(P2.Y, P1.Y), point.X),
-                        Mul(Sub(P2.X, P1.X), point.Y)
-                    ),
-                    Sub(
-                        Mul(P2.X, P1.Y),
-                        Mul(P2.Y, P1.X)
-                    )
-                )
-            ),
+                (((P2.Y - P1.Y) * point.X) - ((P2.X - P1.X) * point.Y))
+                + ((P2.X * P1.Y) - (P2.Y * P1.X))
+            ) /
             Sqrt(
-                Add(
-                    Mul(Sub(P2.Y, P1.Y), Sub(P2.Y, P1.Y)),
-                    Mul(Sub(P2.X, P1.X), Sub(P2.X, P1.X))
-                )
+                ((P2.Y - P1.Y) * (P2.Y - P1.Y)) +
+                ((P2.X - P1.X) * (P2.X - P1.X))
             )
         );
     }
@@ -181,8 +165,10 @@ public struct Line<A>
 /// </summary>
 instance OrdPointX<A, implicit OrdA> : Ord<Point<A>> where OrdA : Ord<A>
 {
-    bool Equals(Point<A> x, Point<A> y) => Equals(x.X, y.X);
-    bool Leq(Point<A> x, Point<A> y)    => Leq(x.X, y.X);
+    bool operator ==(Point<A> x, Point<A> y) => x.X == y.X;
+    bool operator !=(Point<A> x, Point<A> y) => x.X != y.X;
+    bool operator <=(Point<A> x, Point<A> y) => x.X <= y.X;
+    bool operator >=(Point<A> x, Point<A> y) => x.X >= y.X;
 }
 
 /// <summary>
@@ -190,8 +176,10 @@ instance OrdPointX<A, implicit OrdA> : Ord<Point<A>> where OrdA : Ord<A>
 /// </summary>
 instance OrdPointY<A, implicit OrdA> : Ord<Point<A>> where OrdA : Ord<A>
 {
-    bool Equals(Point<A> x, Point<A> y) => Equals(x.Y, y.Y);
-    bool Leq(Point<A> x, Point<A> y)    => Leq(x.Y, y.Y);
+    bool operator ==(Point<A> x, Point<A> y) => x.Y == y.Y;
+    bool operator !=(Point<A> x, Point<A> y) => x.Y != y.Y;
+    bool operator <=(Point<A> x, Point<A> y) => x.Y <= y.Y;
+    bool operator >=(Point<A> x, Point<A> y) => x.Y >= y.Y;
 }
 
 /// <summary>
@@ -272,8 +260,10 @@ public instance DrawEnum<A, implicit DA> : Drawable<IEnumerable<A>>
 public instance Ord21<A, B, implicit OrdA> : Ord<Tuple<A, B>>
     where OrdA : Ord<A>
 {
-    bool Equals(Tuple<A, B> a, Tuple<A, B> b) => Equals(a.Item1, b.Item1);
-    bool Leq(Tuple<A, B> a, Tuple<A, B> b) => Leq(a.Item1, b.Item1);
+    bool operator ==(Tuple<A, B> a, Tuple<A, B> b) => a.Item1 == b.Item1;
+    bool operator !=(Tuple<A, B> a, Tuple<A, B> b) => a.Item1 != b.Item1;
+    bool operator <=(Tuple<A, B> a, Tuple<A, B> b) => a.Item1 <= b.Item1;
+    bool operator >=(Tuple<A, B> a, Tuple<A, B> b) => a.Item1 >= b.Item1;
 }
 
 static class Utils

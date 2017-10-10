@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Quickhull")]
+[assembly: AssemblyTitle("OpQuickhull")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Quickhull")]
+[assembly: AssemblyProduct("OpQuickhull")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("f80554be-0ffe-4769-9003-cf67e1735f43")]
+[assembly: Guid("0b70bfc3-9257-488f-addc-bb8b9bd887eb")]
 
 // Version information for an assembly consists of the following four values:
 //
