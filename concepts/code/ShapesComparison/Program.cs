@@ -682,6 +682,65 @@ namespace ShapesComparison
         Mads
         */
 
+        // Some testing code follows
+
+        // This code is derived from
+        // https://msdn.microsoft.com/en-us/library/4d7sx9hd(v=vs.110).aspx
+
+        public class Temperature : IComparable<Temperature>
+        {
+            // Implement the generic CompareTo method with the Temperature 
+            // class as the Type parameter. 
+            //
+            public int CompareTo(Temperature other)
+            {
+                // If other is not a valid object reference, this instance is greater.
+                if (other == null) return 1;
+
+                // The temperature comparison depends on the comparison of 
+                // the underlying Double values. 
+                return m_value.CompareTo(other.m_value);
+            }
+
+            // The underlying temperature value.
+            protected double m_value = 0.0;
+
+            public double Celsius
+            {
+                get
+                {
+                    return m_value - 273.15;
+                }
+            }
+
+            public double Kelvin
+            {
+                get
+                {
+                    return m_value;
+                }
+                set
+                {
+                    if (value < 0.0)
+                    {
+                        throw new ArgumentException("Temperature cannot be less than absolute zero.");
+                    }
+                    else
+                    {
+                        m_value = value;
+                    }
+                }
+            }
+
+            public Temperature(double kelvins)
+            {
+                Kelvin = kelvins;
+            }
+        }
+
+        static bool Gt<A, B, implicit W>(A x, B y) where W : CComparable<A, B>
+            => W.CompareTo(x, y) > 0;
+
         static void Main(string[] args)
         {
             InlineTest1();
@@ -697,6 +756,20 @@ namespace ShapesComparison
             s.Add(1);
             s.Add(6);
             s.Add(95);
+
+            // Concept-C# has a few issues with variance and subtyping at the
+            // moment.
+            //
+            // We can't do
+            //   new Temperature(2017.15) > new Temperature(0)
+            // because > requires both sides to be the same type, and the
+            // only instance for comparison between temperatures compares
+            // IComparable<Temperature> to Temperature.
+            //
+            // The fact that Temperature is, itself, an
+            // IComparable<Temperature> doesn't seem to gel properly yet.
+            IComparable<Temperature> ict = new Temperature(2017.15);
+            WriteLine(Gt(ict, new Temperature(0)));
         }
     }
 }
