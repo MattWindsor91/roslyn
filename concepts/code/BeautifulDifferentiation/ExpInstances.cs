@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Concepts;
-using System.Concepts.Prelude;
+using System.Concepts.OpPrelude;
 
 using ExpressionUtils;
 using static ExpressionUtils.Utils;
@@ -9,33 +9,19 @@ using static ExpressionUtils.Utils;
 /// </summary>
 namespace BeautifulDifferentiation.ExpInstances
 {
-    instance NumExp : Num<Exp<double>>
-    {
-        Exp<double> Add(Exp<double> e1, Exp<double> e2) =>
-            Prim((d1, d2) => d1 + d2, e1, e2);
-        Exp<double> Sub(Exp<double> e1, Exp<double> e2) =>
-            Prim((d1, d2) => d1 - d2, e1, e2);
-        Exp<double> Mul(Exp<double> e1, Exp<double> e2) =>
-            Prim((d1, d2) => d1 * d2, e1, e2);
-        Exp<double> FromInteger(int i) =>
-           new Constant<double>(i);
-        Exp<double> Signum(Exp<double> e1) => //TBR
-           Prim(d => (double)Math.Sign(d), e1);
-        Exp<double> Abs(Exp<double> e1) =>
-           Prim(d => Math.Abs(d), e1);
-    }
-
     [Overlapping]
     public instance ExpDouble : Floating<Exp<double>>
     {
         //
         // Num (via Floating)
         //
-        Exp<double> Add(Exp<double> x, Exp<double> y) =>
+        Exp<double> operator +(Exp<double> x, Exp<double> y) =>
                Prim((d1, d2) => d1 + d2, x, y);
-        Exp<double> Sub(Exp<double> x, Exp<double> y) =>
+        Exp<double> operator -(Exp<double> x) =>
+               Prim(d1 => -d1, x);
+        Exp<double> operator -(Exp<double> x, Exp<double> y) =>
                Prim((d1, d2) => d1 - d2, x, y);
-        Exp<double> Mul(Exp<double> x, Exp<double> y) =>
+        Exp<double> operator *(Exp<double> x, Exp<double> y) =>
                Prim((d1, d2) => d1 * d2, x, y);
         Exp<double> Abs(Exp<double> x) =>
                Prim(d => Math.Abs(d), x);
@@ -47,7 +33,7 @@ namespace BeautifulDifferentiation.ExpInstances
         //
         // Fractional (via Floating)
         //
-        Exp<double> Div(Exp<double> x, Exp<double> y) =>
+        Exp<double> operator /(Exp<double> x, Exp<double> y) =>
             Prim((d1, d2) => d1 / d2, x, y);
         Exp<double> FromRational(Ratio<int> x) =>
             new Constant<double>(x.num / x.den);
@@ -93,13 +79,8 @@ namespace BeautifulDifferentiation.ExpInstances
             Prim(d => Math.Log(d + Math.Sqrt((d * d) - 1.0)), x);
         Exp<double> Atanh(Exp<double> x) =>
             Prim(d => 0.5 * Math.Log((1.0 + d) / (1.0 - d)), x);
-
     }
-
-
-
-
-
+    
     /// <summary>
     ///     Numeric instance for functions.
     /// </summary>
@@ -112,12 +93,14 @@ namespace BeautifulDifferentiation.ExpInstances
     instance NumF<A, B, implicit NumB> : Num<Exp<Func<A, B>>>
             where NumB : Num<Exp<B>>
     {
-        Exp<Func<A, B>> Add(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
-            => Lam<A, B>((x) => Add(f.Apply(x), g.Apply(x)));
-        Exp<Func<A, B>> Sub(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
-            => Lam<A, B>(x => Sub(f.Apply(x), g.Apply(x)));
-        Exp<Func<A, B>> Mul(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
-            => Lam<A, B>(x => Mul(f.Apply(x), g.Apply(x)));
+        Exp<Func<A, B>> operator +(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) + g.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => - f.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) - g.Apply(x));
+        Exp<Func<A, B>> operator *(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) * g.Apply(x));
         Exp<Func<A, B>> Abs(Exp<Func<A, B>> f)
             => Lam<A, B>(x => Abs(f.Apply(x)));
         Exp<Func<A, B>> Signum(Exp<Func<A, B>> f)
@@ -138,18 +121,27 @@ namespace BeautifulDifferentiation.ExpInstances
     instance FracF<A, B, implicit FracB> : Fractional<Exp<Func<A, B>>>
         where FracB : Fractional<Exp<B>>
     {
-        Exp<Func<A, B>> Add(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
-             => NumF<A, B>.Add(f, g);
-        Exp<Func<A, B>> Sub(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => NumF<A, B>.Sub(f, g);
-        Exp<Func<A, B>> Mul(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => NumF<A, B>.Mul(f, g);
-        Exp<Func<A, B>> Abs(Exp<Func<A, B>> f) => NumF<A, B>.Abs(f);
-        Exp<Func<A, B>> Signum(Exp<Func<A, B>> f) => NumF<A, B>.Signum(f);
-        Exp<Func<A, B>> FromInteger(int k) => NumF<A, B>.FromInteger(k);
+        // TODO: delegate to NumF somehow
+        Exp<Func<A, B>> operator +(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) + g.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => -f.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) - g.Apply(x));
+        Exp<Func<A, B>> operator *(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) * g.Apply(x));
+        Exp<Func<A, B>> Abs(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => Abs(f.Apply(x)));
+        Exp<Func<A, B>> Signum(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => Signum(f.Apply(x)));
+        Exp<Func<A, B>> FromInteger(int k)
+            => Lam<A, B>(x => FromInteger(k));
+        // End TODO
 
         Exp<Func<A, B>> FromRational(Ratio<int> k)
              => Lam<A, B>(x => FromRational(k));
-        Exp<Func<A, B>> Div(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
-             => Lam<A, B>(x => Div(f.Apply(x), g.Apply(x)));
+        Exp<Func<A, B>> operator /(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+             => Lam<A, B>(x => f.Apply(x) / g.Apply(x));
     }
 
     /// <summary>
@@ -164,14 +156,26 @@ namespace BeautifulDifferentiation.ExpInstances
     instance FloatF<A, B, implicit FloatB> : Floating<Exp<Func<A, B>>>
         where FloatB : Floating<Exp<B>>
     {
-        Exp<Func<A, B>> Add(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => FracF<A, B>.Add(f, g);
-        Exp<Func<A, B>> Sub(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => FracF<A, B>.Sub(f, g);
-        Exp<Func<A, B>> Mul(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => FracF<A, B>.Mul(f, g);
-        Exp<Func<A, B>> Abs(Exp<Func<A, B>> f) => FracF<A, B>.Abs(f);
-        Exp<Func<A, B>> Signum(Exp<Func<A, B>> f) => FracF<A, B>.Signum(f);
-        Exp<Func<A, B>> FromInteger(int k) => FracF<A, B>.FromInteger(k);
-        Exp<Func<A, B>> FromRational(Ratio<int> k) => FracF<A, B>.FromRational(k);
-        Exp<Func<A, B>> Div(Exp<Func<A, B>> f, Exp<Func<A, B>> g) => FracF<A, B>.Div(f, g);
+        // TODO: delegate to FracF somehow
+        Exp<Func<A, B>> operator +(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) + g.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => -f.Apply(x));
+        Exp<Func<A, B>> operator -(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) - g.Apply(x));
+        Exp<Func<A, B>> operator *(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+            => Lam<A, B>(x => f.Apply(x) * g.Apply(x));
+        Exp<Func<A, B>> Abs(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => Abs(f.Apply(x)));
+        Exp<Func<A, B>> Signum(Exp<Func<A, B>> f)
+            => Lam<A, B>(x => Signum(f.Apply(x)));
+        Exp<Func<A, B>> FromInteger(int k)
+            => Lam<A, B>(x => FromInteger(k));
+        Exp<Func<A, B>> FromRational(Ratio<int> k)
+             => Lam<A, B>(x => FromRational(k));
+        Exp<Func<A, B>> operator /(Exp<Func<A, B>> f, Exp<Func<A, B>> g)
+             => Lam<A, B>(x => f.Apply(x) / g.Apply(x));
+        // End TODO
 
         Exp<Func<A, B>> Pi() => Lam<A, B>(x => Pi());
         Exp<Func<A, B>> Sqrt(Exp<Func<A, B>> f) => Lam<A, B>(x => Sqrt(f.Apply(x)));
@@ -195,5 +199,4 @@ namespace BeautifulDifferentiation.ExpInstances
         Exp<Func<A, B>> Acosh(Exp<Func<A, B>> f) => Lam<A, B>(x => Acosh(f.Apply(x)));
         Exp<Func<A, B>> Atanh(Exp<Func<A, B>> f) => Lam<A, B>(x => Atanh(f.Apply(x)));
     }
-
 }

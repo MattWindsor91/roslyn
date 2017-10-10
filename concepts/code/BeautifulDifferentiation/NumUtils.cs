@@ -1,4 +1,4 @@
-﻿using System.Concepts.Prelude;
+﻿using System.Concepts.OpPrelude;
 
 namespace BeautifulDifferentiation
 {
@@ -40,6 +40,17 @@ namespace BeautifulDifferentiation
         /// <returns>
         ///     The square of <paramref name="x"/>.
         /// </returns>
-        public static A Square<A, implicit NumA>(A x) where NumA : Num<A> => Mul(x, x);
+        public static A Square<A, implicit NumA>(A x) where NumA : Num<A> => x * x;
+
+        /// <summary>
+        ///     Calculates the reciprocal of a number.
+        /// </summary>
+        /// <param name="x">
+        ///     The number to reciprocate.
+        /// </param>
+        /// <returns>
+        ///     The reciprocal of <paramref name="x"/>.
+        /// </returns>
+        public static A Recip<A, implicit FracA>(A x) where FracA : Fractional<A> => One<A>() / x;
     }
 }

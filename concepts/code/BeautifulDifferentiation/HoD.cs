@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Concepts.Prelude;
+using System.Concepts.OpPrelude;
 
 namespace BeautifulDifferentiation
 {
@@ -94,6 +94,6 @@ namespace BeautifulDifferentiation
         /// </returns>
         public static Func<HoD<A>, HoD<A>> Chain<implicit NumHoDA>(Func<A, A> f, Func<HoD<A>, HoD<A>> df)
             where NumHoDA : Num<HoD<A>>
-            => (d) => new HoD<A>(f(d.X), () => Mul(d.DX.Value, df(d)));
+            => (d) => new HoD<A>(f(d.X), () => d.DX.Value * df(d));
     }
 }

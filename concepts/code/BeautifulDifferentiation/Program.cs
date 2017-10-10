@@ -1,19 +1,18 @@
-using System;
-using System.Concepts.Prelude;
+﻿using System;
+using System.Concepts.OpPrelude;
 
 /// <summary>
 ///     Implementation of parts of Conal Elliot's Beautiful Differentiation.
-///     This version uses the experimental operator-overloaded prelude.
 /// </summary>
 namespace BeautifulDifferentiation
 {
     public class Program
     {
         public static A F<A, implicit FloatA>(A z) where FloatA : Floating<A>
-            => Sqrt(Mul(FromInteger(3), Sin(z)));
+            => Sqrt(FromInteger(3) * Sin(z));
 
         public static A G<A, implicit FloatA>(A z) where FloatA : Floating<A>
-            => Mul(Mul(FromInteger(3), Asinh(z)), Log(z));
+            => (FromInteger(3) * Asinh(z)) * Log(z);
 
         public static void Test<implicit FDA>() where FDA : Floating<D<double>>
         {
@@ -44,6 +43,7 @@ namespace BeautifulDifferentiation
             Test<Mark1.FloatingDA<double>>();
             Test<Mark2.FloatingDA<double>>();
             TestHigherOrder<HoMark2.FloatingDA<double>>();
+            Test<Mark3.FloatingDA<double>>();
         }
     }
 }

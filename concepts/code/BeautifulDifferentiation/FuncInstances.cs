@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Concepts;
-using System.Concepts.Prelude;
+using System.Concepts.OpPrelude;
+using static System.Concepts.OpPrelude.Verbose;
 
 /// <summary>
 ///     Numeric tower instances for functions.
@@ -19,14 +20,12 @@ namespace BeautifulDifferentiation.FuncInstances
     instance NumF<A, B, implicit NumB> : Num<Func<A, B>>
         where NumB : Num<B>
     {
-        Func<A, B> Add(Func<A, B> f, Func<A, B> g)
-            => (x) => Add(f(x), g(x));
-        Func<A, B> Sub(Func<A, B> f, Func<A, B> g)
-            => (x) => Sub(f(x), g(x));
-        Func<A, B> Neg(Func<A, B> f)
-            => (x) => Neg(f(x));
-        Func<A, B> Mul(Func<A, B> f, Func<A, B> g)
-            => (x) => Mul(f(x), g(x));
+        Func<A, B> operator +(Func<A, B> f, Func<A, B> g)
+            => (x) => f(x) + g(x);
+        Func<A, B> operator -(Func<A, B> f, Func<A, B> g)
+            => (x) => f(x) - g(x);
+        Func<A, B> operator *(Func<A, B> f, Func<A, B> g)
+            => (x) => f(x) * g(x);
         Func<A, B> Abs(Func<A, B> f)
             => (x) => Abs(f(x));
         Func<A, B> Signum(Func<A, B> f)
@@ -48,20 +47,18 @@ namespace BeautifulDifferentiation.FuncInstances
     instance FracF<A, B, implicit FracB> : Fractional<Func<A, B>>
         where FracB : Fractional<B>
     {
-        Func<A, B> Add(Func<A, B> f, Func<A, B> g) => NumF<A, B>.Add(f, g);
-        Func<A, B> Neg(Func<A, B> f) => NumF<A, B>.Neg(f);
-        Func<A, B> Sub(Func<A, B> f, Func<A, B> g) => NumF<A, B>.Sub(f, g);
-        Func<A, B> Mul(Func<A, B> f, Func<A, B> g) => NumF<A, B>.Mul(f, g);
+        Func<A, B> operator +(Func<A, B> f, Func<A, B> g) => Add<Func<A, B>, NumF<A, B>>(f, g);
+        Func<A, B> operator -(Func<A, B> f, Func<A, B> g) => Sub<Func<A, B>, NumF<A, B>>(f, g);
+        Func<A, B> operator *(Func<A, B> f, Func<A, B> g) => Mul<Func<A, B>, NumF<A, B>>(f, g);
+
         Func<A, B> Abs(Func<A, B> f) => NumF<A, B>.Abs(f);
         Func<A, B> Signum(Func<A, B> f) => NumF<A, B>.Signum(f);
         Func<A, B> FromInteger(int k) => NumF<A, B>.FromInteger(k);
 
         Func<A, B> FromRational(Ratio<int> k)
             => (x) => FromRational(k);
-        Func<A, B> Div(Func<A, B> f, Func<A, B> g)
-            => (x) => Div(f(x), g(x));
-        Func<A, B> Recip(Func<A, B> f)
-            => (x) => Recip(f(x));
+        Func<A, B> operator /(Func<A, B> f, Func<A, B> g)
+            => (x) => f(x) / g(x);
     }
 
     /// <summary>
@@ -77,16 +74,14 @@ namespace BeautifulDifferentiation.FuncInstances
     instance FloatF<A, B, implicit FloatB> : Floating<Func<A, B>>
         where FloatB : Floating<B>
     {
-        Func<A, B> Add(Func<A, B> f, Func<A, B> g) => FracF<A, B, FloatB>.Add(f, g);
-        Func<A, B> Sub(Func<A, B> f, Func<A, B> g) => FracF<A, B, FloatB>.Sub(f, g);
-        Func<A, B> Neg(Func<A, B> f) => FracF<A, B, FloatB>.Neg(f);
-        Func<A, B> Mul(Func<A, B> f, Func<A, B> g) => FracF<A, B, FloatB>.Mul(f, g);
+        Func<A, B> operator +(Func<A, B> f, Func<A, B> g) => Add<Func<A, B>, NumF<A, B>>(f, g);
+        Func<A, B> operator -(Func<A, B> f, Func<A, B> g) => Sub<Func<A, B>, NumF<A, B>>(f, g);
+        Func<A, B> operator *(Func<A, B> f, Func<A, B> g) => Mul<Func<A, B>, NumF<A, B>>(f, g);
         Func<A, B> Abs(Func<A, B> f) => FracF<A, B>.Abs(f);
         Func<A, B> Signum(Func<A, B> f) => FracF<A, B>.Signum(f);
-        Func<A, B> FromInteger(int k) => FracF<A, B, FloatB>.FromInteger(k);
-        Func<A, B> FromRational(Ratio<int> k) => FracF<A, B, FloatB>.FromRational(k);
-        Func<A, B> Div(Func<A, B> f, Func<A, B> g) => FracF<A, B, FloatB>.Div(f, g);
-        Func<A, B> Recip(Func<A, B> f) => FracF<A, B, FloatB>.Recip(f);
+        Func<A, B> FromInteger(int k) => FracF<A, B>.FromInteger(k);
+        Func<A, B> FromRational(Ratio<int> k) => FracF<A, B>.FromRational(k);
+        Func<A, B> operator /(Func<A, B> f, Func<A, B> g) => Div<Func<A, B>, FracF<A, B>>(f, g);
 
         Func<A, B> Pi() => (x) => Pi();
         Func<A, B> Sqrt(Func<A, B> f) => (x) => Sqrt(f(x));
@@ -110,5 +105,4 @@ namespace BeautifulDifferentiation.FuncInstances
         Func<A, B> Acosh(Func<A, B> f) => (x) => Acosh(f(x));
         Func<A, B> Atanh(Func<A, B> f) => (x) => Atanh(f(x));
     }
-
 }

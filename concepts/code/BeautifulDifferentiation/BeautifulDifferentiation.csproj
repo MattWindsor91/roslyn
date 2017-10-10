@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1603C6CF-F298-45E7-8CDF-FCC123ADABC0}</ProjectGuid>
+    <ProjectGuid>{73887CDA-C4CA-4A10-963F-9DB2F977E075}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>BeautifulDifferentiation</RootNamespace>
@@ -33,7 +33,6 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -41,14 +40,14 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExpInstances.cs" />
-    <Compile Include="HoD.cs" />
     <Compile Include="D.cs" />
+    <Compile Include="ExpInstances.cs" />
     <Compile Include="FuncInstances.cs" />
-    <Compile Include="Mark1.cs" />
+    <Compile Include="HoD.cs" />
     <Compile Include="HoMark2.cs" />
-    <Compile Include="Mark3.cs" />
+    <Compile Include="Mark1.cs" />
     <Compile Include="Mark2.cs" />
+    <Compile Include="Mark3.cs" />
     <Compile Include="NumUtils.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -61,13 +60,13 @@
       <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
       <Name>ConceptAttributes</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ConceptLibrary\ConceptLibrary.csproj">
-      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
-      <Name>ConceptLibrary</Name>
-    </ProjectReference>
     <ProjectReference Include="..\ExpressionUtils\ExpressionUtils\ExpressionUtils.csproj">
       <Project>{382c1156-121f-41f9-8f3c-d61b15d8783b}</Project>
       <Name>ExpressionUtils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\OpConceptLibrary\OpConceptLibrary.csproj">
+      <Project>{dc8d5061-841a-4f36-afc6-7f9ab04266fb}</Project>
+      <Name>OpConceptLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

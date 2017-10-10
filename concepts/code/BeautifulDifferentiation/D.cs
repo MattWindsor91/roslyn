@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Concepts.Prelude;
+using System.Concepts.OpPrelude;
 
 namespace BeautifulDifferentiation
 {
@@ -94,6 +94,6 @@ namespace BeautifulDifferentiation
         /// </returns>
         public static Func<D<A>, D<A>> Chain<implicit NumA>(Func<A, A> f, Func<A, A> df)
             where NumA : Num<A>
-            => (d) => new D<A>(f(d.X), Mul(d.DX, df(d.X)));
+            => (d) => new D<A>(f(d.X), d.DX * df(d.X));
     }
 }
