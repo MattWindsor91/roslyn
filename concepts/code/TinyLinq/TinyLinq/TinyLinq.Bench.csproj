@@ -142,18 +142,18 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Analyzer Include="..\..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
+    <Analyzer Include="..\..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\ConceptLibrary\ConceptLibrary.csproj">
-      <Project>{dc8d5061-841a-4f36-afc6-7f9ab04266fb}</Project>
+      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
       <Name>ConceptLibrary</Name>
     </ProjectReference>
     <ProjectReference Include="..\TinyLinq.Core\TinyLinq.Core.csproj">
       <Project>{70dbd542-9553-43cd-b3a0-fc000e5b10d2}</Project>
       <Name>TinyLinq.Core</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Analyzer Include="..\..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
-    <Analyzer Include="..\..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
