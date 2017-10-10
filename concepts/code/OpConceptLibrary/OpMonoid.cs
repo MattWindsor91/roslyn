@@ -1,4 +1,4 @@
-// This is the version of Monoid for OpPrelude.
+﻿// This is the version of Monoid for OpPrelude.
 // Use Monoid if using Prelude.
 using System.Collections.Generic;
 using System.Concepts.OpPrelude;
@@ -37,7 +37,7 @@ namespace System.Concepts.OpMonoid
         /// <returns>
         ///     The result of the operation.
         /// </returns>
-        A Append(A x, A y);
+        A Append(this A x, A y);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ namespace System.Concepts.OpMonoid
         /// <summary>
         ///     The identity of <see cref="Append" />.
         /// <summary>
-        A Empty();
+        A Empty { get; }
 
         // In Haskell 98, we also have MConcat here.
         // For now, however, we define it separately.
@@ -70,8 +70,8 @@ namespace System.Concepts.OpMonoid
     /// </summary>
     public instance All : Monoid<bool>
     {
-        bool Empty() => true;
-        bool Append(bool x, bool y) => x && y;
+        bool Empty => true;
+        bool Append(this bool x, bool y) => x && y;
     }
 
     /// <summary>
@@ -79,8 +79,8 @@ namespace System.Concepts.OpMonoid
     /// </summary>
     public instance Any : Monoid<bool>
     {
-        bool Empty() => true;
-        bool Append(bool x, bool y) => x || y;
+        bool Empty => true;
+        bool Append(this bool x, bool y) => x || y;
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ namespace System.Concepts.OpMonoid
     public instance Min<A, implicit OrdA> : Semigroup<A> where OrdA : Ord<A>
     {
         // Is this actually associative?
-        A Append(A x, A y) => x <= y ? x : y;
+        A Append(this A x, A y) => x <= y ? x : y;
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ namespace System.Concepts.OpMonoid
     public instance Max<A, implicit OrdA> : Semigroup<A> where OrdA : Ord<A>
     {
         // Is this actually associative?
-        A Append(A x, A y) => x <= y ? y : x;
+        A Append(this A x, A y) => x <= y ? y : x;
     }
 
     /// <summary>
@@ -115,8 +115,8 @@ namespace System.Concepts.OpMonoid
     /// </typeparam>
     public instance Sum<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
-        A Empty() => FromInteger(0);
-        A Append(A x, A y) => x + y;
+        A Empty => FromInteger(0);
+        A Append(this A x, A y) => x + y;
     }
 
     /// <summary>
@@ -127,8 +127,8 @@ namespace System.Concepts.OpMonoid
     /// </typeparam>
     public instance Product<A, implicit NumA> : Monoid<A> where NumA : Num<A>
     {
-        A Empty() => FromInteger(1);
-        A Append(A x, A y) => x * y;
+        A Empty => FromInteger(1);
+        A Append(this A x, A y) => x * y;
     }
 
 #endregion Instances
@@ -220,10 +220,10 @@ namespace System.Concepts.OpMonoid
         public static A Concat<A, implicit MA>(IEnumerable<A> xs)
             where MA : Monoid<A>
         {
-            A result = Empty();
+            A result = Empty;
             foreach (A x in xs)
             {
-                result = Append(result, x);
+                result = result.Append(x);
             }
             return result;
         }
@@ -250,10 +250,10 @@ namespace System.Concepts.OpMonoid
         public static A ConcatMap<A, B, implicit MA>(IEnumerable<B> xs, Func<B, A> f)
             where MA : Monoid<A>
         {
-            A result = Empty();
+            A result = Empty;
             foreach (B x in xs)
             {
-                result = Append(result, f(x));
+                result = result.Append(f(x));
             }
             return result;
         }

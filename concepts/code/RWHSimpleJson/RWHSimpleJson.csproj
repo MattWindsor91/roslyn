@@ -50,10 +50,6 @@
       <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
       <Name>ConceptAttributes</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ConceptLibrary\ConceptLibrary.csproj">
-      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
-      <Name>ConceptLibrary</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

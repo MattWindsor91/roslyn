@@ -1,7 +1,7 @@
 ﻿using System.Concepts;
 using System.Concepts.Enumerable;
-using System.Concepts.Monoid;
-using System.Concepts.Prelude;
+using System.Concepts.OpMonoid;
+using System.Concepts.OpPrelude;
 
 namespace TinyLinq
 {
@@ -87,7 +87,7 @@ namespace TinyLinq
             while (E.MoveNext(ref e))
             {
                 count++;
-                sum = N.Add(sum, E.Current(ref e));
+                sum += E.Current(ref e);
             }
 
             return sum;
@@ -112,7 +112,7 @@ namespace TinyLinq
             while (E.MoveNext(ref e))
             {
                 count++;
-                sum = N.Add(sum, E.Current(ref e));
+                sum += E.Current(ref e);
             }
 
             return sum;

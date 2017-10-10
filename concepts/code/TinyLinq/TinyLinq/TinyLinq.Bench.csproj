@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{14367B62-41E9-4DD2-887E-6E36B32F3CC7}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TinyLinq</RootNamespace>
+    <RootNamespace>TinyLinq.Bench</RootNamespace>
     <AssemblyName>TinyLinq.Bench</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -145,13 +145,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ConceptAttributes\ConceptAttributes.csproj">
-      <Project>{c9c414c3-ef73-4170-82cd-2f4f8ff27a5e}</Project>
-      <Name>ConceptAttributes</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\ConceptLibrary\ConceptLibrary.csproj">
-      <Project>{1371e0a0-9c1b-4053-9689-838e5fe2a4a7}</Project>
-      <Name>ConceptLibrary</Name>
+    <ProjectReference Include="..\..\OpConceptLibrary\OpConceptLibrary.csproj">
+      <Project>{dc8d5061-841a-4f36-afc6-7f9ab04266fb}</Project>
+      <Name>OpConceptLibrary</Name>
     </ProjectReference>
     <ProjectReference Include="..\TinyLinq.Core\TinyLinq.Core.csproj">
       <Project>{70dbd542-9553-43cd-b3a0-fc000e5b10d2}</Project>

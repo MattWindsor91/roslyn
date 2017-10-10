@@ -1,6 +1,6 @@
 ﻿using System.Concepts;
 using System.Concepts.Enumerable;
-using System.Concepts.Prelude;
+using System.Concepts.OpPrelude;
 
 namespace TinyLinq
 {
@@ -84,10 +84,10 @@ namespace TinyLinq
             while (E.MoveNext(ref e))
             {
                 count++;
-                sum = F.Add(sum, E.Current(ref e));
+                sum += E.Current(ref e);
             }
 
-            return F.Div(sum, F.FromInteger(count));
+            return sum / F.FromInteger(count);
         }
     }
 
@@ -110,10 +110,10 @@ namespace TinyLinq
             while (E.MoveNext(ref e))
             {
                 count++;
-                sum = F.Add(sum, E.Current(ref e));
+                sum += E.Current(ref e);
             }
 
-            return F.Div(sum, F.FromInteger(count));
+            return sum / F.FromInteger(count);
         }
     }
 }
