@@ -46,7 +46,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var locals = GenerateLocals(F, receiver);
                 var arguments = GenerateInnerCallArguments(F);
 
-                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, Name, arguments, diagnostics, TypeArguments);
+                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, Name, arguments, diagnostics, TypeArguments, allowInvokingSpecialMethod: true);
                 if (call.HasErrors)
                 {
                     F.CloseMethod(F.ThrowNull());
