@@ -1200,18 +1200,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             //   We do so here.
             //
             // TODO: does this belong here?
-            if (typeArguments.Length < type.Arity)
+            //
+            // @MattWindsor91 (Concept-C# 2017)
+            // Trying to part-infer inside a constraint can cause an
+            // infinite loop if the constraint is over a concept witness
+            // we then consider during the part-inference.
+            // Not sure how to work out we're in one, so as a surrogate
+            // we check this flag.
+            if (typeArguments.Length < type.Arity && ShouldCheckConstraints)
             {
                 typeArguments = PartInferImplicitTypeParameters(typeArguments, type);
-                if (typeArguments.IsEmpty)
-                {
-                    diagnostics.Add(ErrorCode.ERR_BadArity, typeSyntax.Location, type, MessageID.IDS_SK_TYPE.Localize(), type.Arity);
+                Debug.Assert(typeArguments.IsEmpty || typeArguments.Length == type.Arity,
+                    "Part-inference should have given us the right number of arguments");
+            }
+            if (typeArguments.IsEmpty || typeArguments.Length < type.Arity)
+            {
+                diagnostics.Add(ErrorCode.ERR_BadArity, typeSyntax.Location, type, MessageID.IDS_SK_TYPE.Localize(), type.Arity);
 
-                    // TODO: this is probably wrong.
-                    return new ExtendedErrorTypeSymbol(type,
-                        LookupResultKind.WrongArity,
-                        null);
-                }
+                // TODO: this is probably wrong.
+                return new ExtendedErrorTypeSymbol(type,
+                    LookupResultKind.WrongArity,
+                    null);
             }
 
             type = type.Construct(typeArguments);
