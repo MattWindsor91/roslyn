@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace OpEq
 {
@@ -73,8 +73,8 @@ namespace OpEq
     {
         bool operator ==(A[] a, A[] b)
         {
-            if (a == null) return b == null;
-            if (b == null) return false;
+            if ((object)a == null) return (object)b == null;
+            if ((object)b == null) return false;
             if (a.Length != b.Length) return false;
             for (int i = 0; i < a.Length; i++)
                 if (!(a[i] == b[i])) return false;
@@ -82,8 +82,8 @@ namespace OpEq
         }
         bool operator !=(A[] a, A[] b)
         {
-            if (a == null) return b != null;
-            if (b == null) return true;
+            if ((object)a == null) return (object)b != null;
+            if ((object)b == null) return true;
             if (a.Length != b.Length) return true;
             for (int i = 0; i < a.Length; i++)
                 if ((a[i] != b[i])) return true;
