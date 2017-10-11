@@ -78,8 +78,8 @@ namespace System.Concepts.Prelude
     {
         bool operator ==(A[] x, A[] y)
         {
-            if (x == null) return y == null;
-            if (y == null) return false;
+            if ((object) x == null) return (object) y == null;
+            if ((object) y == null) return false;
             if (x.Length != y.Length) return false;
             for (int i = 0; i < x.Length; i++)
             {

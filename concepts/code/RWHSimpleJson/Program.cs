@@ -160,7 +160,7 @@ namespace RWHSimpleJson
         {
             var jnum = (val as JNumber?);
             error = (jnum == null) ? "not a JSON number" : null;
-            return (jnum?.Number == null) ? (int)jnum?.Number : default(int);
+            return (jnum?.Number != null) ? (int)jnum?.Number : default(int);
         }
     }
 
@@ -332,12 +332,14 @@ namespace RWHSimpleJson
                 {"url", "http://research.microsoft.com/~simonpj/papers/marktoberdorf/" }
             };
             // TODO: type inference should be able to do this
-            var json = Jsonify((IDictionary<string, string>)obj);
+            var json = Jsonify( (IDictionary<string, string>) obj);
 
             Console.Out.WriteLine(json.Render());
 
             var obj2 = (("name", "Nineteen Eighty-Four"), ("year", 1948));
             var json2 = Jsonify(obj2);
+
+            var obj3 = CJson<((string, string), (string, int))>.FromJValue(json2, out var error);
 
             Console.Out.WriteLine(json2.Render());
         }
