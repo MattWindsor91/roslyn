@@ -7,16 +7,19 @@ using Microsoft.CodeAnalysis.PooledObjects;
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     /// <summary>
-    /// A synthesized concept instance method that, when generated,
-    /// calls into a corresponding method on its this-parameter.
+    /// A synthesized concept instance method that calls out to some other
+    /// method (eg. a default method, or a class method).
     /// </summary>
-    internal sealed class SynthesizedConceptExtensionForwardingImplementationMethod : SynthesizedImplementationForwardingMethod
+    internal abstract class SynthesizedInstanceShimMethod : SynthesizedImplementationForwardingMethod
     {
-        public SynthesizedConceptExtensionForwardingImplementationMethod(MethodSymbol conceptMethod, NamedTypeSymbol implementingType)
+        public SynthesizedInstanceShimMethod(MethodSymbol conceptMethod, NamedTypeSymbol implementingType)
             : base(conceptMethod, conceptMethod, implementingType)
         {
         }
 
+        /// <summary>
+        /// Shim methods are always public.
+        /// </summary>
         public override Accessibility DeclaredAccessibility => Accessibility.Public;
         public override MethodKind MethodKind => ImplementingMethod.MethodKind;
 
@@ -39,14 +42,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             try
             {
-                // The receiver for the call is the first parameter to this method,
-                // as we're bridging from a concept extension method to a real
-                // instance method.
-                var receiver = F.Parameter(Parameters[0]);
-
+                var receiver = GenerateReceiver(F);
+                var locals = GenerateLocals(F, receiver);
                 var arguments = GenerateInnerCallArguments(F);
-                Debug.Assert(arguments.Length == Parameters.Length - 1,
-                    "Conversion from parameters to arguments lost or gained some entries.");
 
                 var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, Name, arguments, diagnostics, TypeArguments);
                 if (call.HasErrors)
@@ -61,11 +59,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 BoundBlock block;
                 if (call.Type.SpecialType == SpecialType.System_Void)
                 {
-                    block = F.Block(F.ExpressionStatement(call), F.Return());
+                    block = F.Block(locals, F.ExpressionStatement(call), F.Return());
                 }
                 else
                 {
-                    block = F.Block(F.Return(call));
+                    block = F.Block(locals, F.Return(call));
                 }
 
                 F.CloseMethod(block);
@@ -78,6 +76,31 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
+        /// Generates the receiver for this shim call.
+        /// </summary>
+        /// <param name="f">
+        /// The factory used to generate the receiver.
+        /// </param>
+        /// <returns>
+        /// The receiver for the shim call.
+        /// </returns>
+        protected abstract BoundExpression GenerateReceiver(SyntheticBoundNodeFactory f);
+
+        /// <summary>
+        /// Generates the locals list for this shim call.
+        /// </summary>
+        /// <param name="f">
+        /// The factory used to generate the locals.
+        /// </param>
+        /// <param name="receiver">
+        /// The receiver, in case it needs to be turned into a local.
+        /// </param>
+        /// <returns>
+        /// The locals list for this shim call.
+        /// </returns>
+        protected abstract ImmutableArray<LocalSymbol> GenerateLocals(SyntheticBoundNodeFactory f, BoundExpression receiver);
+
+        /// <summary>
         /// Converts the formal parameters of this method into the
         /// arguments of the inner call.
         /// </summary>
@@ -87,14 +110,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <returns>
         /// A list of bound inner-call arguments.
         /// </returns>
-        private ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f)
-        {
-            var argumentsB = ArrayBuilder<BoundExpression>.GetInstance();
-            for (int i = 1; i < ParameterCount; i++)
-            {
-                argumentsB.Add(f.Parameter(Parameters[i]));
-            }
-            return argumentsB.ToImmutableAndFree();
-        }
+        protected abstract ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f);
     }
 }

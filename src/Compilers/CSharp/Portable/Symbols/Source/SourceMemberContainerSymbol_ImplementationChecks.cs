@@ -15,23 +15,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
     internal partial class SourceMemberContainerTypeSymbol
     {
         // TODO: make new class for default forwards.
-        internal ImmutableArray<SynthesizedImplementationForwardingMethod> GetSynthesizedDefaultImplementations(
+        internal ImmutableArray<SynthesizedInstanceShimMethod> GetSynthesizedDefaultImplementations(
             CancellationToken cancellationToken)
         {
             if (_lazySynthesizedDefaultImplementations.IsDefault)
             {
-                var builder = ArrayBuilder<SynthesizedImplementationForwardingMethod>.GetInstance();
+                var builder = ArrayBuilder<SynthesizedInstanceShimMethod>.GetInstance();
                 var all = GetSynthesizedImplementations(cancellationToken);
                 foreach (var impl in all)
                 {
                     // TODO: make this not a type switch?
-                    if (impl is SynthesizedDefaultStructImplementationMethod d)
+                    if (impl is SynthesizedInstanceShimMethod d)
                     {
                         builder.Add(d);
-                    }
-                    else if (impl is SynthesizedConceptExtensionForwardingImplementationMethod c)
-                    {
-                        builder.Add(c);
                     }
 
                 }
@@ -39,9 +35,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (ImmutableInterlocked.InterlockedCompareExchange(
                         ref _lazySynthesizedDefaultImplementations,
                         builder.ToImmutableAndFree(),
-                        default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
+                        default).IsDefault)
                 {
-                    // @t-mawind do nothing here?
+                    // @MattWindsor91 do nothing here?
                 }
             }
 
@@ -106,6 +102,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             ComputeInterfaceImplementations(diagnostics, cancellationToken),
                             default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
                     {
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // As usual, this is in the wrong place.
                         CheckExcessInstanceMembers(diagnostics);
 
                         // Do not cancel from this point on.  We've assigned the member, so we must add
@@ -252,25 +250,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     var implementingMemberAndDiagnostics = this.FindImplementationForInterfaceMemberWithDiagnostics(interfaceMember);
                     var implementingMember = implementingMemberAndDiagnostics.Symbol;
 
-                    // @t-mawind
-                    //   Optimistically insert a default struct forward if
-                    //   we're in a concept, under the understanding that
-                    //   we'll trigger an error later if it doesn't exist.
+                    SynthesizedImplementationForwardingMethod synthesizedImplementation = null;
+                    // @MattWindsor91 (Concept-C# 2017)
+                    // If we couldn't find an implementing member, but we're
+                    // on an instance, try auto-generating a shim.
+                    // TODO: This is in the wrong place!
+                    //       This should be moved into a separate pass.
                     if (implementingMember == null && interfaceMemberKind == SymbolKind.Method && IsInstance && @interface.IsConcept)
                     {
                         var conceptMethod = interfaceMember as MethodSymbol;
-                        var def = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember, diagnostics: diagnostics);
-                        if (def != null)
+                        synthesizedImplementation = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember, diagnostics: diagnostics);
+                        if ((object)synthesizedImplementation != null)
                         {
-                            synthesizedImplementations.Add(def);
-                            implementingMember = def;
+                            // TODO: is this necessary?
+                            implementingMember = synthesizedImplementation;
                             implementingMemberAndDiagnostics = new SymbolAndDiagnostics(implementingMember, ImmutableArray<Diagnostic>.Empty);
                         }
                     }
 
                     bool wasImplementingMemberFound = (object)implementingMember != null;
 
-                    var synthesizedImplementation = this.SynthesizeInterfaceMemberImplementation(implementingMemberAndDiagnostics, interfaceMember);
+                    if ((object)synthesizedImplementation == null)
+                    {
+                        synthesizedImplementation = SynthesizeInterfaceMemberImplementation(implementingMemberAndDiagnostics, interfaceMember);
+                    }
                     if ((object)synthesizedImplementation != null)
                     {
                         synthesizedImplementations.Add(synthesizedImplementation);
@@ -488,7 +491,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     continue;
                 }
 
-                return new SynthesizedConceptExtensionForwardingImplementationMethod(conceptMethod, this);
+                return new SynthesizedConceptExtensionShimMethod(conceptMethod, this);
             }
 
             return null;
@@ -541,7 +544,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return null;
             }
 
-            return new SynthesizedDefaultStructImplementationMethod(conceptMethod, dstr, this);
+            return new SynthesizedDefaultShimMethod(conceptMethod, dstr, this);
         }
 
         protected abstract Location GetCorrespondingBaseListLocation(NamedTypeSymbol @base);
