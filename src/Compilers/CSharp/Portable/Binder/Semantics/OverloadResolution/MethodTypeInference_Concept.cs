@@ -1659,6 +1659,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             var firstPassInstanceBuilder = new ArrayBuilder<Candidate>();
             foreach (var instance in _allInstances)
             {
+                // @MattWindsor91 (Concept-C# 2017)
+                // We use type unification here, which is sound but incomplete
+                // (doesn't respect variance and subtyping).
+                //
+                // The correct thing to do here would be to use something like
+                // MethodTypeInference's LowerBoundInterfaceInference, with
+                // care to make sure any associated types and witnesses are
+                // recursively dispatched as in the second pass.
                 if (AllRequiredConceptsProvided(requiredConcepts, instance, out ImmutableTypeMap unifyingSubstitutions, _rigidParams))
                 {
                     // The unification may have provided us with substitutions
