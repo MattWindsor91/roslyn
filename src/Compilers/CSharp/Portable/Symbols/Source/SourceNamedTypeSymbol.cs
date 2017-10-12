@@ -1106,6 +1106,29 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 diagnostics.Add(ErrorCode.ERR_DefaultMemberOnIndexedType, allAttributeSyntaxNodes[index].Name.Location);
             }
 
+            // @MattWindsor91 (Concept-C# 2017)
+            // TODO: This is probably the wrong place for this, but it needs
+            // to be done _after_ we get a compilation handle and _after_ we
+            // do anything that could cause HasConceptAttributes to recur.
+            //
+            // Don't use IsConcept/IsInstance/IsDefaultStruct here: they depend
+            // on attribute checks (so we'd need the correct attributes in the
+            // compilation anyway), *and* checking for said attributes is a
+            // cyclic dependency.
+            var isConcepty =
+                declaration.Kind == DeclarationKind.Concept ||
+                declaration.Kind == DeclarationKind.Instance;
+            if (isConcepty && !DeclaringCompilation.HasConceptAttributes)
+            {
+                // CS8860: Cannot use concepts because the required attributes cannot be found. Are you missing a reference?
+                var info = new CSDiagnosticInfo(ErrorCode.ERR_ConceptAttributesMissing);
+                foreach (var nloc in declaration.NameLocations)
+                {
+                    // TODO: This should probably highlight the _keyword_.
+                    diagnostics.Add(ErrorCode.ERR_ConceptAttributesMissing, nloc);
+                }
+            }
+
             base.PostDecodeWellKnownAttributes(boundAttributes, allAttributeSyntaxNodes, diagnostics, symbolPart, decodedData);
         }
 
@@ -1182,11 +1205,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // already.
 
             // @t-mawind
-            if (this.IsConcept && !this.HasConceptAttribute)
+            if (IsConcept && !HasConceptAttribute)
             {
                 AddSynthesizedAttribute(ref attributes, compilation.TrySynthesizeAttribute(WellKnownMember.System_Concepts_ConceptAttribute__ctor));
             }
-            else if (this.IsInstance && !this.HasInstanceAttribute)
+            else if (IsInstance && !HasInstanceAttribute)
             {
                 AddSynthesizedAttribute(ref attributes, compilation.TrySynthesizeAttribute(WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor));
             }
