@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 // https://dlr.codeplex.com/
 
-namespace ExpressionUtils
+namespace NBE
 {
     using static Utils;
 
@@ -20,8 +20,84 @@ namespace ExpressionUtils
 
     public abstract class Exp
     {
+    }
+
+    public  class Val<T> : Exp
+    {
+    }
+    public class VFun<T,U> : Val<Func<T,U>>
+    {
+        public Func<Val<T>, Val<U>> f;
+        public VFun(Func<Val<T>, Val<U>> f) { this.f = f; }
+    }
+
+    public class VBase<T> : Val<Base<T>>
+    {
+        public Base<T> value;
+        public VBase(Base<T> value) { this.value = value; }
+    }
+
+    public abstract class NF<T>
+    {
 
     }
+    public abstract class AT<T>
+    {
+
+    }
+
+    public class NAt<T> : NF<Base<T>>
+    {
+        public AT<Base<T>> value;
+        public NAt(AT<Base<T>> value){ this.value = value; }
+
+        public override string ToString() => value.ToString();
+    }
+
+    public class NFun<T, U> : NF<Func<T, U>>
+    {
+        public Func<Val<T>, NF<U>> value;
+        public NFun(Func<Val<T>, NF<U>> value) { this.value = value; }
+
+        public override string ToString()
+        {
+            var v = new Val<T>();
+            return "Fun(" + v.ToString() + "," + value(v).ToString() + ")";
+        }
+
+            
+    }
+ 
+    public class AApp<T,U> : AT<U>
+    {
+        public AT<Func<T, U>> f;
+        public NF<T> a;
+        public AApp(AT<Func<T, U>> f, NF<T> a) { this.f = f; this.a = a; }
+
+        public override string ToString() => f.ToString() + "" + a.ToString();
+    }
+
+    public class AVar<T> : AT<T>
+    {
+        public Val<T> value;
+        public AVar(Val<T> value) { this.value = value; }
+
+        public override string ToString() => value.ToString();
+    }
+
+    public abstract class Base<T>
+    {
+        
+    }
+
+
+    public class Atom<T> : Base<T>
+    {
+        public AT<Base<T>> atom;
+        public Atom(AT<Base<T>> atom) { this.atom = atom; } 
+    }
+
+
 
     public abstract class Exp<T> : Exp
     {
@@ -38,6 +114,12 @@ namespace ExpressionUtils
         public T Run() => Compile()();
 
         public virtual Exp<T> Reduce(Map M) { return this; }
+
+
+        public virtual Val<T> Eval()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 
 
@@ -56,7 +138,15 @@ namespace ExpressionUtils
     }
     public class Var<T> : Exp<T>
     {
-        public Var()
+
+        Val<T> value;
+
+        public Var(Val<T> value)
+        {
+            this.value = value;
+        }
+
+        public Var() // TBR
         {
 
         }
@@ -70,30 +160,39 @@ namespace ExpressionUtils
         {
             return (Exp<T>)M(this);
         }
+        public override Val<T> Eval() => value;
+      
+
+
+
     }
 
     public class Lam<T, U> : Exp<Func<T, U>>
     {
-        public Var<T> v;
-        public Exp<U> e;
-        public Lam(Func<Var<T>, Exp<U>> f)
+        // public Var<T> v;
+        // public Exp<U> e;
+        public Func<Val<T>, Exp<U>> f;
+        public Lam(Func<Val<T>, Exp<U>> f)
         {
-            this.v = new Var<T>();
-            this.e = f(v);
+            this.f = f;
         }
 
         public override Expression Translate(Env E)
         {
             var p = Expression.Parameter(typeof(T));
+            var v = new Val<T>();
             var Ex = E.Add(v, p);
-            return Expression.Lambda(e.Translate(Ex), p);
+            return Expression.Lambda(f(v).Translate(Ex), p);
         }
 
         public override Exp<Func<T, U>> Reduce(Map M)
         {
-            return Lam<T, U>(x => e.Reduce(M.Add(v, x)));
+            var v = new Val<T>();
+            return Lam<T, U>(x => f(v).Reduce(M.Add(v, x)));
         }
 
+        public override Val<Func<T, U>> Eval() =>
+            new VFun<T, U>(x => f(x).Eval());
     }
 
     public class App<T, U> : Exp<U>
@@ -117,38 +216,51 @@ namespace ExpressionUtils
             var fr = f.Reduce(M) as Exp<Func<T, U>>;
             var er = e.Reduce(M) as Exp<T>;
             var lambda = fr as Lam<T, U>;
-            return (lambda == null) ?
-                   fr.Apply(er) :
-                   Let(er, x => lambda.e.Reduce(M.Add(lambda.v, x)));
+            if (lambda == null)
+            {
+                return fr.Apply(er);
+            }
+            else
+            {
+                var v = new Val<T>();
+                return Let(er, x => (lambda.f(v)).Reduce(M.Add(v, x)));
+            }
         }
+
+        public override Val<U> Eval() 
+            {
+                var fv = (f.Eval() as VFun<T, U>).f; //TODO pattern match instead
+                return fv(e.Eval());
+            }
     }
 
 
 
     public class Let<T, U> : Exp<U>
     {
-        public Var<T> x;
+        
         public Exp<T> e;
-        public Exp<U> f;
+        public Func<Var<T>, Exp<U>> f;
         public Let(Exp<T> e, Func<Var<T>, Exp<U>> f)
         {
-            this.x = new Var<T>();
             this.e = e;
-            this.f = f(x);
+            this.f = f;
         }
 
         public override Expression Translate(Env E)
         {
             var p = Expression.Parameter(typeof(T));
             var ce = e.Translate(E);
+            var x = new Var<T>();
             var Ex = E.Add(x, p);
-            var fc = f.Translate(Ex);
-            return Expression.Block(new[] { p }, Expression.Assign(p, e.Translate(E)), fc);
+            var fc = f(x).Translate(Ex);
+            return Expression.Block(new[] { p }, Expression.Assign(p, ce), fc);
         }
 
         public override Exp<U> Reduce(Map M)
         {
-            return Let(e.Reduce(M), y => f.Reduce(M.Add(x, y)));
+            var x = new Var<T>();
+            return Let(e.Reduce(M), y => f(x).Reduce(M.Add(x, y)));
         }
 
 
@@ -228,7 +340,7 @@ namespace ExpressionUtils
                      (y) => (x == y) ? p : E(x);
 
         public static Exp<T> C<T>(T t) => new Constant<T>(t);
-        public static Exp<Func<T, U>> Lam<T, U>(Func<Var<T>, Exp<U>> f) =>
+        public static Exp<Func<T, U>> Lam<T, U>(Func<Val<T>, Exp<U>> f) =>
                new Lam<T, U>(f);
 
 
@@ -246,9 +358,9 @@ namespace ExpressionUtils
              new Prim<T1, T>(f, e1);
 
 
-        public static Exp<Func<T, V>> Compose<T, U, V>(Exp<Func<U, V>> f, Exp<Func<T, U>> g) => Lam<T, V>(x => f.Apply(g.Apply(x)));
+        public static Exp<Func<T, V>> Compose<T, U, V>(Exp<Func<U, V>> f, Exp<Func<T, U>> g) => Lam<T, V>(x => f.Apply(g.Apply(new Var<T>(x))));
 
-        public static Exp<Func<T, T>> Pow<T>(Exp<Func<T, T>> f, int n) => (n > 0) ? Compose(f, Pow(f, n - 1)) : Lam<T, T>(x => x);
+        public static Exp<Func<T, T>> Pow<T>(Exp<Func<T, T>> f, int n) => (n > 0) ? Compose(f, Pow(f, n - 1)) : Lam<T, T>(x => new Var<T>(x));
 
     }
 
@@ -269,74 +381,62 @@ namespace ExpressionUtils
 
     public concept Nbe<A>
     {
-        Exp<A> Reify(A a);
-        A Reflect(Exp<A> ea);
+        NF<A> Reify(Val<A> a);
+        Val<A> Reflect(AT<A> ea);
+    }
+
+    public instance NbeBase<T> : Nbe<Base<T>>
+    {
+        NF<Base<T>> Reify(Val<Base<T>> v) 
+            {
+                var a = (v as VBase<T>).value;
+                var r = (a as Atom<T>).atom;
+                return new NAt<T>(r);
+            }
+
+        Val<Base<T>> Reflect(AT<Base<T>> r)
+             {
+                return new VBase<T>(new Atom<T>(r));
+            }
+   
     }
 
     public instance NbeFunc<A, B, implicit NbeA, implicit NbeB> : Nbe<Func<A, B>>
         where NbeA : Nbe<A>
         where NbeB : Nbe<B>
     {
-        Exp<Func<A, B>> Reify(Func<A, B> a) => Lam<A, B>(x => Reify(a(Reflect(x))));
-        Func<A, B> Reflect(Exp<Func<A, B>> a) => x => Reflect(a.Apply(Reify(x)));
+        NF<Func<A, B>> Reify(Val<Func<A, B>> v)
+        {   var f = (v as VFun<A, B>).f;
+            return
+                  new NFun<A, B>((Val<A> x) => Reify(f(Reflect(new AVar<A>(x))))); }
+
+        Val<Func<A, B>> Reflect(AT<Func<A, B>> a) =>
+            new VFun<A, B>(x => NbeB.Reflect(new AApp<A,B>(a,Reify(x))));
     }
 
     public static class NbeUtils
     {
-        static Exp<A> Nbe<A, implicit NbeA>(Exp<A> a) where NbeA : Nbe<A> => Reify(a.Run());
+        public static NF<A> Nbe<A, implicit NbeA>(Exp<A> a) where NbeA : Nbe<A> => Reify(a.Eval());
     }
-
-    public instance NbeExp<T> : Nbe<Exp<T>>
-    {
-        Exp<Exp<T>> Reify(Exp<T> e) => new Constant<Exp<T>>(e);
-        Exp<T> Reflect(Exp<Exp<T>> e) => new Coerce<T>(e);
-    }
+  
 
     public static class Test
     {
-        static void Maine()
+        static void Main()
         {
 
-            var t1 = C(1);
-            var r1 = t1.Run();
+            
+            var e1 = Lam<Base<int>,Base<int>>(x => new Var<Base<int>>(x));
+          
+            var e = Compose(e1, e1);
+            var e2 = Compose(e, e);
 
-            var t2 = Lam<int, int>(x => x);
-            var r2 = t2.Run();
+            var nf2 = NbeUtils.Nbe(e2);
 
-            var t3 = t2.Apply(t1);
-            var r3 = t3.Run();
-
-
-
-            var t4 = Let(t1, x => x);
-            var r4 = t4.Run();
-
-            var t6 = Let(t1, x => t2.Apply(x));
-            var r6 = t6.Run();
+            var nfs = nf2.ToString();
 
 
-            var t7 = Prim(x => Math.Cos(x), C(0.0));
-
-            var r7 = t7.Run();
-
-            var t8 = Prim((x, y) => x + y, C(1), C(2));
-
-            var r8 = t8.Run();
-
-
-            var t9 = Compose(t2, t2);
-            var r9 = t9.Run();
-            var r9opt = t9.Reduce(EmptyMap).Run();
-
-
-            var succ = Lam<int, int>(x => Prim(n => n + 1, x));
-            var t10 = Pow(succ, 10);
-            var r10 = t10.Run();
-            var r10opt = t10.Reduce(EmptyMap).Run();
-
-
-
-            System.Console.WriteLine(r10opt(100));
+            System.Console.WriteLine(nfs);
 
 
             System.Console.ReadLine();
