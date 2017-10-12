@@ -1018,8 +1018,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             // For static methods, we may have synthesized a type expression.  It serves no purpose, so we'll drop it.
             if (invokedAsExtensionMethod || (method.IsStatic && receiver != null && receiver.WasCompilerGenerated))
             {
-                receiver = null;
-
                 // @MattWindsor91 (Concept-C# 2017)
                 //
                 // An extension method might be a concept extension method,

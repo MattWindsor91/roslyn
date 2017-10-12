@@ -360,14 +360,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (extensionSituationOk && arityOk)
                 {
                     // @MattWindsor91 (Concept-C# 2017)
-                    //
-                    // `method` will look like
+                    // If we picked up this method from a concept, we need to
+                    // infer the specific instance we'll actually be calling.
+                    // Also, if the concept or standalone instance had type
+                    // parameters, these need to be inferred.
+                    var mustInferConceptParams = concept.IsConcept || concept.IsGenericType;
+
+                    // In these cases, `method` will look like
                     //     `C<TC>.M<TM>(this TC x, ...)`.
-                    // The presence of concept-level type parameters like
-                    // TC makes it very hard for us to do type inference
-                    // on this candidate, AND we still need to work out an
-                    // instance for C.
-                    //
                     // Our prototype solution is to use a synthesised
                     // symbol that looks like
                     //     `M<TM, TC, implicit I>(this TC x, ...)
@@ -380,7 +380,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // This is a nice party trick, but should eventually be
                     // done properly: see the commentary in
                     // `GetCandidateConceptExtensionMethods`.
-                    methods.Add(new SynthesizedImplicitConceptMethodSymbol(method));
+                    var finalMethod = mustInferConceptParams
+                        ? (MethodSymbol) new SynthesizedImplicitConceptMethodSymbol(method)
+                        : new SynthesizedWitnessMethodSymbol(method, concept);
+                    methods.Add(finalMethod);
                 }
             }
         }
