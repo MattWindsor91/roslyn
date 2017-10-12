@@ -23,7 +23,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             (this.IsInterfaceType() && this.HasConceptAttribute);
 
         /// <summary>
-        /// Gets whether this symbol represents an instance.
+        /// Gets whether this symbol represents a concept instance.
         /// </summary>
         /// <returns>
         /// True if this symbol was declared as an instance; false otherwise.

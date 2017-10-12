@@ -233,7 +233,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public static bool IsInterfaceType(this TypeSymbol type)
         {
-            Debug.Assert((object)type != null);
+            Debug.Assert((object)type != null, "type must not be null");
             return type.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)type).IsInterface;
         }
 
@@ -249,9 +249,32 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public static bool IsConceptType(this TypeSymbol type)
         {
             //@t-mawind
-            Debug.Assert((object)type != null);
+            Debug.Assert((object)type != null, "type must not be null");
             return type.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)type).IsConcept;
         }
+
+        /// <summary>
+        /// Determines whether this symbol names a concept or standalone instance type.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>
+        /// True if this symbol is a <see cref="NamedTypeSymbol"/> and either
+        /// <see cref="NamedTypeSymbol.IsConcept"/> or
+        /// <see cref="NamedTypeSymbol.IsStandaloneInstance"/> is true; false
+        /// otherwise.
+        /// </returns>
+        public static bool IsConceptOrStandaloneInstanceType(this TypeSymbol type)
+        {
+            //@t-mawind
+            Debug.Assert((object)type != null, "type must not be null");
+            if (type.Kind != SymbolKind.NamedType)
+            {
+                return false;
+            }
+            var nt = (NamedTypeSymbol)type;
+            return nt.IsConcept || nt.IsStandaloneInstance;
+        }
+
 
         /// <summary>
         /// Determines whether this symbol names an instance type.

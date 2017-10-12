@@ -133,48 +133,86 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private void CheckExcessInstanceMembers(DiagnosticBag diagnostics)
         {
             // @MattWindsor91 (Concept-C# 2017)
-            //
             // This is extremely inefficient: it does a forall-exists pairwise
             // equality check across all concepts in the instance.
 
-            if (!IsInstance)
+            if (!IsInstance || IsStandaloneInstance)
             {
+                // Standalone instances would normally report _every_ member as
+                // excess.
                 return;
             }
 
+            var interfaces = AllInterfacesNoUseSiteDiagnostics;
+
+            var excessMembers = PooledHashSet<Symbol>.GetInstance();
+
             foreach (var member in GetMembersUnordered())
             {
-                // Ignore the implicit struct constructor:
-                // we can't get rid of it, and it's harmless anyway.
-                if (member.Kind == SymbolKind.Method && ((MethodSymbol)member).IsDefaultValueTypeConstructor())
+                if (member.Kind == SymbolKind.Method)
                 {
-                    continue;
-                }
-
-                var excess = true;
-                foreach (var @interface in AllInterfacesNoUseSiteDiagnostics)
-                {
-                    if (!@interface.IsConcept)
+                    var method = (MethodSymbol)member;
+                    if (method.IsDefaultValueTypeConstructor())
                     {
+                        // Ignore the implicit struct constructor:
+                        // we can't get rid of it, and it's harmless anyway.
                         continue;
                     }
 
-                    foreach (var imember in @interface.GetMembersUnordered())
+                    var assoc = method.AssociatedSymbol;
+                    if (assoc != null && excessMembers.Contains(assoc))
                     {
-                        if (FindImplementationForInterfaceMember(imember) == member)
-                        {
-                            excess = false;
-                        }
+                        // If we reported, for example, a property, don't
+                        // re-report its accessors.
+                        continue;
                     }
                 }
 
-                if (excess)
+                if (IsExcessConceptMember(member, interfaces))
                 {
+                    excessMembers.Add(member);
                     // TODO: suppress duplicate errors on excess properties:
                     // currently, the property AND its accessors are flagged.
                     diagnostics.Add(ErrorCode.ERR_ExcessConceptInstanceMembers, member.Locations.ElementAtOrDefault(0), member);
                 }
             }
+        }
+
+        /// <summary>
+        /// Is the given member an excess concept member according to
+        /// the concepts in the given interface set?
+        /// </summary>
+        /// <param name="member">
+        /// The member to check.
+        /// </param>
+        /// <param name="interfaces">
+        /// The set of interfaces containing all concepts that
+        /// <paramref name="member"/> should belong to if it is not excess.
+        /// </param>
+        /// <returns>
+        /// True if <paramref name="member"/> is not an implementation of
+        /// a method from one of the concepts in <paramref name="interfaces"/>.
+        /// False otherwise.
+        /// </returns>
+        private bool IsExcessConceptMember(Symbol member, ImmutableArray<NamedTypeSymbol> interfaces)
+        {
+            foreach (var @interface in interfaces)
+            {
+                if (!@interface.IsConcept)
+                {
+                    continue;
+                }
+
+                foreach (var imember in @interface.GetMembersUnordered())
+                {
+                    if (FindImplementationForInterfaceMember(imember) == member)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private void CheckAbstractClassImplementations(DiagnosticBag diagnostics)

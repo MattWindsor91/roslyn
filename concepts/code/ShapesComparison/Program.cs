@@ -438,19 +438,12 @@ namespace ShapesComparison
         SComparable<T>:
         */
 
-        /* This isn't directly possible in Concept-C#.             //
-           Instead, you'd need to make a separate concept: */      //
-        public concept CComparison<T>                              //
-        {                                                          //
-            bool operator ==(T t1, T t2);                          //
-            bool operator !=(T t1, T t2);                          //
-            bool operator > (T t1, T t2);                          //
-            bool operator >=(T t1, T t2);                          //
-            bool operator < (T t1, T t2);                          //
-            bool operator <=(T t1, T t2);                          //
-        }                                                          //
-                                                                   //
-        public instance Comparison<T, implicit W> : CComparison<T> // public extension Comparison<T> of SComparable<T>
+        // NOTE: Since 2017-10-12 Concept-C# has supported 'standalone
+        //       instances': if an instance doesn't derive from concepts, it is
+        //       considered to be a concept that implements itself by extension
+        //       method and operator overloading.  This lets us implement this
+        //       example very closely to the Shapes Proposal:
+        public instance Comparison<T, implicit W>                  // public extension Comparison<T> of SComparable<T>
             where W : CComparable<T, T>                            //
         {                                                          // {
             bool operator ==(T t1, T t2) => t1.CompareTo(t2) == 0; //     public bool operator ==(T t1, T t2) => t1.CompareTo(t2) == 0;
@@ -481,14 +474,12 @@ namespace ShapesComparison
         If that extension is in scope at the declaration of the Max method above, the comparison operators can now be used directly:
         */
 
-        /* Again, not directly possible in Concept-C#.                       //
-           We have to call into the other concept: */                        //
-        public static T Max2<T, implicit W>(T[] ts) where W : CComparison<T> // public static T Max<T>(T[] ts) where T : SComparable<T>
-        {                                                                    // {
-            var result = ts[0];                                              //     var result = ts[0];
-            foreach (var t in ts) { if (result < t) result = t; }            //     foreach (var t in ts) { if (result < t) result = t; }
-            return result;                                                   //     return result;
-        }                                                                    // }
+        public static T Max2<T, implicit W>(T[] ts) where W : CComparable<T, T> // public static T Max<T>(T[] ts) where T : SComparable<T>
+        {                                                                       // {
+            var result = ts[0];                                                 //     var result = ts[0];
+            foreach (var t in ts) { if (result < t) result = t; }               //     foreach (var t in ts) { if (result < t) result = t; }
+            return result;                                                      //     return result;
+        }                                                                       // }
 
         /*
         This gets straightforwardly implemented by passing the method's Impl
