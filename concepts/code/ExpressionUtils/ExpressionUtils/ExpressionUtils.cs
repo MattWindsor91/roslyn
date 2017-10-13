@@ -28,6 +28,8 @@ namespace ExpressionUtils
 
         public abstract Expression Translate(Env E);
 
+        public Expression Translate() => this.Translate(Empty);
+
         public Func<T> Compile()
         {
             var c = this.Translate(Empty);
@@ -53,12 +55,15 @@ namespace ExpressionUtils
         {
             return Expression.Constant(c);
         }
+
+        public override string ToString() => c.ToString();
     }
     public class Var<T> : Exp<T>
     {
+        int id = counter++;
+        static int counter = 0;
         public Var()
-        {
-
+        { 
         }
 
         public override Expression Translate(Env E)
@@ -70,6 +75,8 @@ namespace ExpressionUtils
         {
             return (Exp<T>)M(this);
         }
+
+        public override string ToString() => "x"+id.ToString();
     }
 
     public class Lam<T, U> : Exp<Func<T, U>>
@@ -81,6 +88,13 @@ namespace ExpressionUtils
             this.v = new Var<T>();
             this.e = f(v);
         }
+
+        public Lam(Var<T> v, Exp<U> e)
+        {
+            this.v = v;
+            this.e = e;
+        }
+
 
         public override Expression Translate(Env E)
         {
@@ -94,6 +108,7 @@ namespace ExpressionUtils
             return Lam<T, U>(x => e.Reduce(M.Add(v, x)));
         }
 
+        public override string ToString() => "(" + v.ToString() + " => " + e.ToString() + ")";
     }
 
     public class App<T, U> : Exp<U>
@@ -121,6 +136,8 @@ namespace ExpressionUtils
                    fr.Apply(er) :
                    Let(er, x => lambda.e.Reduce(M.Add(lambda.v, x)));
         }
+
+        public override string ToString() => f.ToString() + " " + e.ToString();
     }
 
 
@@ -151,7 +168,7 @@ namespace ExpressionUtils
             return Let(e.Reduce(M), y => f.Reduce(M.Add(x, y)));
         }
 
-
+        public override string ToString() => $"let {x.ToString()} = {e.ToString()} in {f.ToString()}";
     }
 
 
@@ -179,6 +196,14 @@ namespace ExpressionUtils
         public override Exp<T> Reduce(Map M)
         {
             return Prim(f, e1.Reduce(M));
+        }
+
+        public override string ToString()
+        //    => $"{ f.ToString() } {e1.ToString()}";
+        //=> $"(let {f.Parameters[0]} = {e1} in {f.Body})";
+        {
+            var fmt = f.Body.ToString().Replace(f.Parameters[0].ToString(), "{0}");
+            return String.Format(fmt, e1);
         }
     }
 
@@ -211,8 +236,16 @@ namespace ExpressionUtils
         {
             return Prim(f, e1.Reduce(M), e2.Reduce(M));
         }
-    }
 
+        public override string ToString()
+        //=> $"{ f.ToString() } {e1.ToString()} {e2.ToString()}";
+        // => $"(let {f.Parameters[0]} = {e1} + {f.Parameters[1]} = {e2} in {f.Body})"; 
+        {
+            var fmt = f.Body.ToString().Replace(f.Parameters[0].ToString(), "{0}")
+                                       .Replace(f.Parameters[1].ToString(), "{1}");
+            return String.Format(fmt, e1, e2);
+        }
+    }
 
 
     public static class Utils
@@ -222,10 +255,11 @@ namespace ExpressionUtils
         public static Map EmptyMap = x => x;
 
         public static Env Add(this Env E, Exp x, ParameterExpression p) =>
-                       (y) => (x == y) ? p : E(x);
+                       
+            (y) => (x == y) ? p : E(y);
 
         public static Map Add(this Map E, Exp x, Exp p) =>
-                     (y) => (x == y) ? p : E(x);
+                     (y) => (x == y) ? p : E(y);
 
         public static Exp<T> C<T>(T t) => new Constant<T>(t);
         public static Exp<Func<T, U>> Lam<T, U>(Func<Var<T>, Exp<U>> f) =>
