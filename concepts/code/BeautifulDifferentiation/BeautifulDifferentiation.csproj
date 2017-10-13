@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="D.cs" />
     <Compile Include="ExpInstances.cs" />
+    <Compile Include="ExpTest.cs" />
     <Compile Include="FuncInstances.cs" />
     <Compile Include="HoD.cs" />
     <Compile Include="HoMark2.cs" />
