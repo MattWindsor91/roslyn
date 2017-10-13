@@ -44,6 +44,7 @@ namespace BeautifulDifferentiation
             Test<Mark2.FloatingDA<double>>();
             TestHigherOrder<HoMark2.FloatingDA<double>>();
             Test<Mark3.FloatingDA<double>>();
+            ExpTest.Test();
         }
     }
 }
