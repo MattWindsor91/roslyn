@@ -235,7 +235,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         internal override bool IsConcept => false; //@t-mawind
 
         /// <summary>
-        /// Gets whether this symbol represents a concept.
+        /// Gets whether this symbol represents a concept instance.
         /// </summary>
         /// <returns>
         /// True if this symbol is an instance (either it was declared as an

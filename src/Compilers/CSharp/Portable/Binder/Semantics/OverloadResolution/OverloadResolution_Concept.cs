@@ -36,7 +36,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             //   of finding overloads--can it be improved?
             for (var scope = _binder; scope != null; scope = scope.Next)
             {
-                scope.LookupConceptMethodsInSingleBinder(result, name, 0, null, LookupOptions.AllMethodsOnArityZero | LookupOptions.AllowSpecialMethods, _binder, true, ref useSiteDiagnostics);
+                var coptions = Binder.ConceptSearchOptions.SearchUsings |
+                    Binder.ConceptSearchOptions.SearchContainers |
+                    Binder.ConceptSearchOptions.NoConceptExtensions |
+                    Binder.ConceptSearchOptions.AllowStandaloneInstances;
+                scope.LookupConceptMethodsInSingleBinder(result, name, 0, null, LookupOptions.AllMethodsOnArityZero | LookupOptions.AllowSpecialMethods, _binder, true, ref useSiteDiagnostics, coptions);
                 if (result.IsMultiViable)
                 {
                     var haveCandidates = false;

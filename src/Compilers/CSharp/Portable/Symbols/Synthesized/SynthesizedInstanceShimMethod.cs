@@ -37,8 +37,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Debug.Assert(0 < ParameterCount,
                 "method should have at least one parameter, eg. its 'this' parameter");
 
-            SyntheticBoundNodeFactory F = new SyntheticBoundNodeFactory(this, this.GetNonNullSyntaxNode(), compilationState, diagnostics);
-            F.CurrentMethod = OriginalDefinition;
+            var F = new SyntheticBoundNodeFactory(this, this.GetNonNullSyntaxNode(), compilationState, diagnostics)
+            {
+                CurrentMethod = OriginalDefinition
+            };
 
             try
             {

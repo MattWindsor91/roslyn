@@ -22,10 +22,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// </summary>
             Default = 0,
             /// <summary>
-            /// Only consider witnesses directly brought in scope by a type
-            /// parameter.
+            /// If looking for concepts, accept standalone instances too.
             /// </summary>
-            OnlyExplicitWitnesses = 1 << 0,
+            AllowStandaloneInstances = 1 << 0,
             /// <summary>
             /// Search in containers.
             /// </summary>
@@ -42,7 +41,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// <summary>
             /// Consider non-extension methods only.
             /// </summary>
-            NoConceptExtensions = 1 << 4
+            NoConceptExtensions = 1 << 4,
         }
 
         /// <summary>
@@ -100,16 +99,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             return;
         }
 
-        internal virtual void LookupConceptMethodsInSingleBinder(LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        internal virtual void LookupConceptMethodsInSingleBinder(LookupResult result, string name, int arity, ConsList<Symbol> basesBeingResolved, LookupOptions options, Binder originalBinder, bool diagnose, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConceptSearchOptions coptions)
         {
             var conceptBuilder = ArrayBuilder<NamedTypeSymbol>.GetInstance();
-            GetConcepts(ConceptSearchOptions.SearchContainers | ConceptSearchOptions.SearchUsings, conceptBuilder, originalBinder, ref useSiteDiagnostics);
+            GetConcepts(coptions, conceptBuilder, originalBinder, ref useSiteDiagnostics);
             var concepts = conceptBuilder.ToImmutableAndFree();
 
             foreach (var concept in concepts)
             {
                 var methodBuilder = ArrayBuilder<MethodSymbol>.GetInstance();
-                AddConceptMethods(concept, methodBuilder, name, arity, options, ConceptSearchOptions.NoConceptExtensions);
+                AddConceptMethods(concept, methodBuilder, name, arity, options, coptions);
                 foreach (var method in methodBuilder.ToImmutableAndFree())
                 {
                     SingleLookupResult resultOfThisMethod = originalBinder.CheckViability(method, arity, options, concept, diagnose, ref useSiteDiagnostics, basesBeingResolved);
@@ -295,15 +294,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             // point, we could save a lot of time and compiler arm-twisting by
             // letting the overload resolver work out these issues.
 
-            var sopts = searchUsingsNotNamespace ? ConceptSearchOptions.SearchUsings : ConceptSearchOptions.SearchContainers;
+            var coptions = searchUsingsNotNamespace ? ConceptSearchOptions.SearchUsings : ConceptSearchOptions.SearchContainers;
+            coptions |= ConceptSearchOptions.ConceptExtensionsOnly;
+            // Standalone instances are also treated as concepts for the
+            // purposes of CEM resolution.
+            coptions |= ConceptSearchOptions.AllowStandaloneInstances;
 
             var concepts = ArrayBuilder<NamedTypeSymbol>.GetInstance();
             HashSet<DiagnosticInfo> ignore = null;
-            GetConcepts(sopts, concepts, originalBinder, ref ignore);
+            GetConcepts(coptions, concepts, originalBinder, ref ignore);
 
             foreach (var concept in concepts.ToImmutableAndFree())
             {
-                AddConceptMethods(concept, methods, name, arity, options, ConceptSearchOptions.ConceptExtensionsOnly);
+                AddConceptMethods(concept, methods, name, arity, options, coptions);
             }
         }
 
@@ -332,47 +335,55 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </param>
         private void AddConceptMethods(NamedTypeSymbol concept, ArrayBuilder<MethodSymbol> methods, string nameOpt, int arity, LookupOptions options, ConceptSearchOptions conceptOptions)
         {
+            var allowExtensions = (conceptOptions & ConceptSearchOptions.NoConceptExtensions) == 0;
+            var allowNonExtensions = (conceptOptions & ConceptSearchOptions.ConceptExtensionsOnly) == 0;
+            var allowStandaloneInstances = (conceptOptions & ConceptSearchOptions.AllowStandaloneInstances) != 0;
+
             Debug.Assert(concept != null, "cannot get methods from null concept");
-            Debug.Assert(concept.IsConcept, "any named type concept must be declared as such");
+            Debug.Assert(concept.IsConcept || concept.IsStandaloneInstance,
+                $"'{nameof(concept)}' is not a concept or standalone instance");
+            Debug.Assert(!concept.IsStandaloneInstance || allowStandaloneInstances,
+                $"'{nameof(concept)}' is a standalone instance, which is not allowed here");
             Debug.Assert(0 <= arity, "arity cannot be negative");
 
             // This part is mostly copied from DoGetExtensionMethods.
             var members = nameOpt == null ? concept.GetMembersUnordered() : concept.GetSimpleNonTypeMembers(nameOpt);
             foreach (var member in members)
             {
-                if (member.Kind == SymbolKind.Method)
+                if (member.Kind != SymbolKind.Method)
                 {
-                    var method = (MethodSymbol)member;
+                    continue;
+                }
+                var method = (MethodSymbol)member;
+                var extensionSituationOk = method.IsConceptExtensionMethod ? allowExtensions : allowNonExtensions;
+                var arityOk = (options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity;
+                if (extensionSituationOk && arityOk)
+                {
+                    // @MattWindsor91 (Concept-C# 2017)
+                    // If we picked up this method from a concept, we need to
+                    // infer the specific instance we'll actually be calling.
+                    // Also, if the concept or standalone instance had type
+                    // parameters, these need to be inferred.
+                    var mustInferConceptParams = concept.IsConcept || concept.IsGenericType;
 
-                    var allowExtensions = (conceptOptions & ConceptSearchOptions.NoConceptExtensions) == 0;
-                    var allowNonExtensions = (conceptOptions & ConceptSearchOptions.ConceptExtensionsOnly) == 0;
-                    var extensionSituationOk = method.IsConceptExtensionMethod ? allowExtensions : allowNonExtensions;
-                    var arityOk = (options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity;
-                    if (extensionSituationOk && arityOk)
-                    {
-                        // @MattWindsor91 (Concept-C# 2017)
-                        //
-                        // `method` will look like
-                        //     `C<TC>.M<TM>(this TC x, ...)`.
-                        // The presence of concept-level type parameters like
-                        // TC makes it very hard for us to do type inference
-                        // on this candidate, AND we still need to work out an
-                        // instance for C.
-                        //
-                        // Our prototype solution is to use a synthesised
-                        // symbol that looks like
-                        //     `M<TM, TC, implicit I>(this TC x, ...)
-                        //          where I : C<TC>`
-                        // which pushes all of the issues into the method
-                        // type inferrer.  When we construct the method with
-                        // the inferred arguments, we de-mangle the method back
-                        // to normal.
-                        //
-                        // This is a nice party trick, but should eventually be
-                        // done properly: see the commentary in
-                        // `GetCandidateConceptExtensionMethods`.
-                        methods.Add(new SynthesizedImplicitConceptMethodSymbol(method));
-                    }
+                    // In these cases, `method` will look like
+                    //     `C<TC>.M<TM>(this TC x, ...)`.
+                    // Our prototype solution is to use a synthesised
+                    // symbol that looks like
+                    //     `M<TM, TC, implicit I>(this TC x, ...)
+                    //          where I : C<TC>`
+                    // which pushes all of the issues into the method
+                    // type inferrer.  When we construct the method with
+                    // the inferred arguments, we de-mangle the method back
+                    // to normal.
+                    //
+                    // This is a nice party trick, but should eventually be
+                    // done properly: see the commentary in
+                    // `GetCandidateConceptExtensionMethods`.
+                    var finalMethod = mustInferConceptParams
+                        ? (MethodSymbol) new SynthesizedImplicitConceptMethodSymbol(method)
+                        : new SynthesizedWitnessMethodSymbol(method, concept);
+                    methods.Add(finalMethod);
                 }
             }
         }

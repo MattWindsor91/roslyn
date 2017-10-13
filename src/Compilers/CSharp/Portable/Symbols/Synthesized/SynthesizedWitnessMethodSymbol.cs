@@ -54,6 +54,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         public override MethodSymbol UnderlyingMethod => _method;
 
+        public override TypeSymbol ReceiverType => _parent;
+
         // @t-mawind
         //   The following are things WrappedMethodSymbol doesn't give us for
         //   free, and are probably incorrect.

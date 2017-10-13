@@ -4,6 +4,16 @@ using System.Linq;
 
 namespace ConceptExtensionMethods
 {
+    // # Concept extension methods
+    //
+    // Concepts can abstract over instance methods using the existing
+    // 'extension methods' syntax.
+
+    // Here is an example of a concept extension that doesn't have any
+    // type parameters.  Use cases for this might include letting the
+    // implementation of the extension method be swapped in and out
+    // through a witness parameter.
+
     public concept CIntExtensions
     {
         int Minus(this int x, int y);
@@ -13,17 +23,21 @@ namespace ConceptExtensionMethods
         int Minus(this int x, int y) => x - y;
     }
 
+    // A more compelling example of concept extension methods is
+    // implementing the 'monoid' concept.  Here, we can make
+    // monoidal append an extension method...
+
     public concept CMonoid<T>
     {
         T Plus(this T me, T you);
-
         T Zero { get; }
     }
+
+    // ...give it some stock implementations...
 
     public instance Monoid_Int : CMonoid<int>
     {
         int Plus(this int me, int you) => me + you;
-
         int Zero => 0;
     }
 
@@ -34,6 +48,8 @@ namespace ConceptExtensionMethods
         List<T> Zero => new List<T>();
     }
 
+    // ...and invoke it in several different ways.
+
     static class Extensions
     {
         public static A EPlus<A, implicit MA>(this A x, A y) where MA : CMonoid<A>
@@ -42,14 +58,6 @@ namespace ConceptExtensionMethods
 
             return x.Plus(y);
         }
-    }
-
-    public concept Num<A>
-    {
-        A Add(this A x, A y);
-        A Sub(this A x, A y) => x.Add(y.Neg());
-        A Neg(this A x) => FromInteger(0).Sub(x);
-        A FromInteger(int x);
     }
 
     class Program

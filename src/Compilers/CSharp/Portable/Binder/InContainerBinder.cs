@@ -247,23 +247,15 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal override void GetConceptInstances(ConceptSearchOptions options, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
         {
-            var onlyExplicitWitnesses = (options & ConceptSearchOptions.OnlyExplicitWitnesses) != 0;
             var searchContainers = (options & ConceptSearchOptions.SearchContainers) != 0;
             var searchUsings = (options & ConceptSearchOptions.SearchUsings) != 0;
-
-            // Container binders cannot provide explicit witnesses--only type
-            // parameter binders can do that.
-            if (onlyExplicitWitnesses)
-            {
-                return;
-            }
 
             // We need not check to see if the container itself is a possible
             // concept instance, because, if it is, then it has a parent
             // container, and the below check works fine.
             if (searchContainers && _container != null)
             {
-                GetConceptInstancesInContainer(_container, instances, originalBinder, ref useSiteDiagnostics);
+                GetConceptInstancesInContainer(_container, instances, originalBinder, ref useSiteDiagnostics, options);
             }
 
             // The above is ok if we just want to get all instances in
@@ -278,7 +270,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // This may cause duplicate instances, since we could
                 // 'using static'-import a container already traversed in this
                 // binder chain.
-                GetConceptInstancesInContainer(u.NamespaceOrType, instances, originalBinder, ref useSiteDiagnostics);
+                GetConceptInstancesInContainer(u.NamespaceOrType, instances, originalBinder, ref useSiteDiagnostics, options);
             }
         }
 
@@ -292,7 +284,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // container, and the below check works fine.
             if (searchContainers && _container != null)
             {
-                GetConceptsInContainer(_container, concepts, originalBinder, ref useSiteDiagnostics);
+                GetConceptsInContainer(_container, concepts, originalBinder, ref useSiteDiagnostics, options);
             }
 
             // The above is ok if we just want to get all concepts in
@@ -307,7 +299,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // This may cause duplicate concepts, since we could
                 // 'using static'-import a container already traversed in this
                 // binder chain.
-                GetConceptsInContainer(u.NamespaceOrType, concepts, originalBinder, ref useSiteDiagnostics);
+                GetConceptsInContainer(u.NamespaceOrType, concepts, originalBinder, ref useSiteDiagnostics, options);
             }
         }
 
@@ -326,7 +318,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="useSiteDiagnostics">
         /// The set of use-site diagnostics to populate with any errors.
         /// </param>
-        private void GetConceptInstancesInContainer(NamespaceOrTypeSymbol container, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        /// <param name="options">
+        /// The concept look-up options to use.
+        /// </param>
+        private void GetConceptInstancesInContainer(NamespaceOrTypeSymbol container, ArrayBuilder<TypeSymbol> instances, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConceptSearchOptions options)
         {
             Debug.Assert(container != null, "container being searched should not be null: this should have been checked earlier");
 
@@ -360,9 +355,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="useSiteDiagnostics">
         /// The set of use-site diagnostics to populate with any errors.
         /// </param>
-        private void GetConceptsInContainer(NamespaceOrTypeSymbol container, ArrayBuilder<NamedTypeSymbol> concepts, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics)
+        /// <param name="options">
+        /// The concept look-up options to use.
+        /// </param>
+        private void GetConceptsInContainer(NamespaceOrTypeSymbol container, ArrayBuilder<NamedTypeSymbol> concepts, Binder originalBinder, ref HashSet<DiagnosticInfo> useSiteDiagnostics, ConceptSearchOptions options)
         {
             Debug.Assert(container != null, "container being searched should not be null: this should have been checked earlier");
+            var useStandaloneInstances = (options & ConceptSearchOptions.AllowStandaloneInstances) != 0;
 
             foreach (var member in container.GetTypeMembers())
             {
@@ -373,7 +372,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // Concepts can declare sub-concepts, but (for now) we don't
                 // consider them.
-                if (member.IsConcept)
+                if (member.IsConcept || (useStandaloneInstances && member.IsStandaloneInstance))
                 {
                     concepts.Add(member);
                 }
