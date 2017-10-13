@@ -681,17 +681,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             // @t-mawind
             //
             // Also look up any members of an instance that are about to
-            // forward to a default implementation.
+            // forward to a shim.
             //
-            // TODO: this is a painfully horrible hack, but I'm not
-            // sure how else would be best to do it.
+            // TODO(@MattWindsor91): this is horrible hack, but I'm unsure how
+            //     else would be best to do it.
             var allMembersB = ArrayBuilder<Symbol>.GetInstance();
             allMembersB.AddRange(members);
             if (type is SourceMemberContainerTypeSymbol && type.IsInstanceType()
                 && ((options & (LookupOptions.NamespacesOrTypesOnly | LookupOptions.NamespaceAliasesOnly)) == 0))
             {
                 var st = type as SourceMemberContainerTypeSymbol;
-                foreach (var mem in st.GetSynthesizedDefaultImplementations(CancellationToken.None))
+                foreach (var mem in st.GetSynthesizedInstanceShims(CancellationToken.None))
                 {
                     if (mem.Name == name) allMembersB.Add(mem);
                 }

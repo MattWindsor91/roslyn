@@ -98,10 +98,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<BoundExpression> args,
             DiagnosticBag diagnostics,
             ImmutableArray<TypeSymbol> typeArgs = default(ImmutableArray<TypeSymbol>),
-            bool allowUnexpandedForm = true,
-            // @MattWindsor91 (Concept-C# 2017)
-            //     Workaround to let us synthesise calls to operators.
-            bool allowInvokingSpecialMethod = false)
+            bool allowUnexpandedForm = true)
         {
             if (_binder == null || _binder.Flags != flags)
             {
@@ -116,8 +113,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 diagnostics,
                 typeArgs: typeArgs,
                 allowFieldsAndProperties: false,
-                allowUnexpandedForm: allowUnexpandedForm,
-                allowInvokingSpecialMethod: allowInvokingSpecialMethod);
+                allowUnexpandedForm: allowUnexpandedForm);
         }
 
         /// <summary>
@@ -498,6 +494,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         public BoundBinaryOperator Binary(BinaryOperatorKind kind, TypeSymbol type, BoundExpression left, BoundExpression right)
         {
             return new BoundBinaryOperator(this.Syntax, kind, left, right, ConstantValue.NotAvailable, null, LookupResultKind.Viable, type) { WasCompilerGenerated = true };
+        }
+
+        // @MattWindsor91 (Concept-C# 2017)
+        // Needed for interface shim methods.
+        public BoundUnaryOperator Unary(UnaryOperatorKind kind, TypeSymbol type, BoundExpression expression)
+        {
+            return new BoundUnaryOperator(this.Syntax, kind, expression, ConstantValue.NotAvailable, null, LookupResultKind.Viable, type) { WasCompilerGenerated = true };
         }
 
         public BoundAsOperator As(BoundExpression operand, TypeSymbol type)

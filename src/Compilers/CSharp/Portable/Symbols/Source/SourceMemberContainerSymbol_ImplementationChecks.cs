@@ -14,35 +14,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class SourceMemberContainerTypeSymbol
     {
-        // TODO: make new class for default forwards.
-        internal ImmutableArray<SynthesizedInstanceShimMethod> GetSynthesizedDefaultImplementations(
-            CancellationToken cancellationToken)
-        {
-            if (_lazySynthesizedDefaultImplementations.IsDefault)
-            {
-                var builder = ArrayBuilder<SynthesizedInstanceShimMethod>.GetInstance();
-                var all = GetSynthesizedImplementations(cancellationToken);
-                foreach (var impl in all)
-                {
-                    // TODO: make this not a type switch?
-                    if (impl is SynthesizedInstanceShimMethod d)
-                    {
-                        builder.Add(d);
-                    }
-
-                }
-
-                if (ImmutableInterlocked.InterlockedCompareExchange(
-                        ref _lazySynthesizedDefaultImplementations,
-                        builder.ToImmutableAndFree(),
-                        default).IsDefault)
-                {
-                    // @MattWindsor91 do nothing here?
-                }
-            }
-
-            return _lazySynthesizedDefaultImplementations;
-        }
 
         /// <summary>
         /// In some circumstances (e.g. implicit implementation of an interface method by a non-virtual method in a 
@@ -297,7 +268,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     if (implementingMember == null && interfaceMemberKind == SymbolKind.Method && IsInstance && @interface.IsConcept)
                     {
                         var conceptMethod = interfaceMember as MethodSymbol;
-                        synthesizedImplementation = SynthesizeDefaultImplementationMethod(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember, diagnostics: diagnostics);
+                        synthesizedImplementation = TrySynthesizeInstanceShim(concept: @interface, conceptMethod: (MethodSymbol) interfaceMember, diagnostics: diagnostics);
                         if ((object)synthesizedImplementation != null)
                         {
                             // TODO: is this necessary?
@@ -431,158 +402,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return synthesizedImplementations.ToImmutableAndFree();
-        }
-
-        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethod(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
-        {
-            Debug.Assert(concept.IsConcept, "concept for default implementation synthesis must be an actual concept");
-            Debug.Assert(IsInstance, "target for default implementation synthesis must be an instance");
-
-            if (conceptMethod.IsConceptExtensionMethod)
-            {
-                var emeth = SynthesizeDefaultImplementationMethodOnExtension(concept, conceptMethod, diagnostics);
-                if (emeth != null)
-                {
-                    return emeth;
-                }
-            }
-
-            var dstr = concept.GetDefaultStruct();
-            if (dstr != null)
-            {
-                var dmeth = SynthesizeDefaultImplementationMethodOnDefaultStruct(dstr, concept, conceptMethod, diagnostics);
-                if (dmeth != null)
-                {
-                    return dmeth;
-                }
-            }
-
-            // Couldn't create a default method of any form: bail.
-            return null;
-        }
-
-        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethodOnExtension(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
-        {
-            Debug.Assert(conceptMethod.IsConceptExtensionMethod,
-                "shouldn't try synthesising this on a static concept method");
-
-            Debug.Assert(0 < conceptMethod.ParameterCount,
-                "concept extension method should have a 'this' parameter");
-            var target = conceptMethod.ParameterTypes[0];
-
-            var eco = MemberSignatureComparer.CSharpImplicitImplementationComparer;
-            foreach (var member in target.GetMembers(conceptMethod.Name))
-            {
-                // Comparing is a bit difficult, because one of these is a
-                // method A.B(C, D) and the other an extension B(A, C, D).
-
-                // TODO: can we use binders here?  I don't think we can,
-                // but it would make things much more robust.
-
-                if (member.Kind != SymbolKind.Method)
-                {
-                    continue;
-                }
-
-                var method = (MethodSymbol)member;
-
-                // Lightweight checks first.
-                if (method.IsStatic)
-                {
-                    continue;
-                }
-                if (method.Arity != conceptMethod.Arity)
-                {
-                    continue;
-                }
-                // TODO: is this too strict?
-                if (method.DeclaredAccessibility != Accessibility.Public)
-                {
-                    continue;
-                }
-                // Remember: the target method has an implicit 'this',
-                // the concept one does not.
-                if (method.ParameterCount != conceptMethod.ParameterCount - 1)
-                {
-                    continue;
-                }
-
-                // To compare, we must rewrite the concept method from
-                // B(A, C, D) to A.B(C, D).
-                var extParamsB = ArrayBuilder<ParameterSymbol>.GetInstance();
-                extParamsB.AddRange(conceptMethod.Parameters.Skip(1));
-                var extParams = extParamsB.ToImmutableAndFree();
-                var extMethodSig = new SignatureOnlyMethodSymbol(
-                    conceptMethod.Name,
-                    conceptMethod.ContainingType,
-                    conceptMethod.MethodKind,
-                    conceptMethod.CallingConvention,
-                    conceptMethod.TypeParameters,
-                    extParams,
-                    conceptMethod.RefKind,
-                    conceptMethod.ReturnType,
-                    conceptMethod.ReturnTypeCustomModifiers,
-                    conceptMethod.RefCustomModifiers,
-                    conceptMethod.ExplicitInterfaceImplementations);
-                if (!eco.Equals(extMethodSig, method))
-                {
-                    continue;
-                }
-
-                return new SynthesizedConceptExtensionShimMethod(conceptMethod, this);
-            }
-
-            return null;
-        }
-
-        private SynthesizedImplementationForwardingMethod SynthesizeDefaultImplementationMethodOnDefaultStruct(NamedTypeSymbol dstr, NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
-        {
-            // Default-struct sanity checking
-            var conceptLoc = concept.Locations.IsEmpty ? Location.None : Locations[0];
-            var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
-            if (dstr.Arity != 1)
-            {
-                // Don't use the default struct's location: it is an
-                // implementation detail and may not actually exist.
-                diagnostics.Add(ErrorCode.ERR_DefaultStructBadArity, conceptLoc, concept.Name, dstr.Arity, concept.Arity + 1);
-                return null;
-            }
-            var witnessPar = dstr.TypeParameters[0];
-            if (!witnessPar.IsConceptWitness)
-            {
-                diagnostics.Add(ErrorCode.ERR_DefaultStructNoWitnessParam, conceptLoc, concept.Name);
-                return null;
-            }
-
-            // Now construct the default struct
-
-
-            // Check that the defaults struct actually contains this method
-            // TODO: check this works for properties
-            // TODO: hold onto method for default implementation
-            Symbol dmethod = null;
-            var eco = MemberSignatureComparer.CSharpImplicitImplementationComparer;
-            foreach (var member in dstr.GetMembersUnordered())
-            {
-                // TODO: properties
-                if (member.Kind != SymbolKind.Method)
-                {
-                    continue;
-                }
-
-                if (eco.Equals(conceptMethod, member))
-                {
-                    dmethod = member;
-                    break;
-                }
-            }
-
-            if (dmethod == null)
-            {
-                return null;
-            }
-
-            return new SynthesizedDefaultShimMethod(conceptMethod, dstr, this);
         }
 
         protected abstract Location GetCorrespondingBaseListLocation(NamedTypeSymbol @base);

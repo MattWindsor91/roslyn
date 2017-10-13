@@ -98,6 +98,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </summary>
         InLoadedSyntaxTree = 1 << 28,
 
+        /// <summary>
+        /// Currently generating a shim method.
+        /// </summary>
+        InShim = 1 << 29,
+
         // Groups
 
         AllClearedAtExecutableCodeBoundary = InLockBody | InCatchBlock | InCatchFilter | InFinallyBlock | InTryBlockOfTryCatch | InNestedFinallyBlock,

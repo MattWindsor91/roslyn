@@ -27,6 +27,7 @@ namespace StandaloneInstances
         // Standalone instances can also define operator overloads.
         // Defining one on 'int' to break the normal int behaviour looks
         // possible...
+        // (TODO(@MattWindsor91): rule these out?)
 
         public instance BreakInt
         {

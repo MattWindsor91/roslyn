@@ -569,10 +569,7 @@ namespace System.Concepts.Prelude
     /// </remarks>
     public instance PreludeBool : Ord<bool>
     {
-        // Eq (via Ord)
-        bool operator ==(bool x, bool y) => x == y;
-        bool operator !=(bool x, bool y) => x != y;
-
+        // Eq is autofilled.
 
         // Ord
         bool operator <=(bool x, bool y) => !x || y;
@@ -585,25 +582,6 @@ namespace System.Concepts.Prelude
     /// </summary>
     public instance PreludeInt : Ord<int>, Num<int>
     {
-        //
-        // Eq (via Ord)
-        //
-        bool operator ==(int x, int y) => x == y;
-        bool operator !=(int x, int y) => x != y;
-
-
-        //
-        // Ord
-        //
-        bool operator <=(int x, int y) => x <= y;
-        bool operator >=(int x, int y) => x >= y;
-
-        //
-        // Num
-        //
-        int operator +(int x, int y) => x + y;
-        int operator -(int x, int y) => x - y;
-        int operator *(int x, int y) => x * y;
         int Abs(int x)               => Math.Abs(x);
         int Signum(int x)            => Math.Sign(x);
         int FromInteger(int x)       => x;
@@ -615,38 +593,11 @@ namespace System.Concepts.Prelude
     /// </summary>
     public instance PreludeDouble : Ord<double>, Floating<double>
     {
-        //
-        // Eq (via Ord)
-        //
-        bool operator ==(double x, double y) => x == y;
-        bool operator !=(double x, double y) => x != y;
-
-        //
-        // Ord
-        //
-        bool operator <=(double x, double y) => x <= y;
-        bool operator >=(double x, double y) => x >= y;
-
-
-        //
-        // Num (via Floating)
-        //
-        double operator +(double x, double y) => x + y;
-        double operator -(double x, double y) => x - y;
-        double operator *(double x, double y) => x * y;
         double Abs(double x)                  => Math.Abs(x);
         double Signum(double x)               => Math.Sign(x);
-        double FromInteger(int x)             => (double)x;
-
-        //
-        // Fractional (via Floating)
-        //
-        double operator /(double x, double y) => x / y;
+        double FromInteger(int x)             => x;
         double FromRational(Ratio<int> x)  => x.num / x.den;
 
-        //
-        // Floating
-        //
         double Pi()                        => Math.PI;
         double Exp(double x)               => Math.Exp(x);
         double Sqrt(double x)              => Math.Sqrt(x);

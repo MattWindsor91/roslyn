@@ -779,7 +779,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </remarks>
         private void CompileSynthesizedDefaultImplementations(SourceMemberContainerTypeSymbol sourceTypeSymbol, TypeCompilationState compilationState)
         {
-            foreach (var synthesizedImpl in sourceTypeSymbol.GetSynthesizedDefaultImplementations(_cancellationToken))
+            foreach (var synthesizedImpl in sourceTypeSymbol.GetSynthesizedInstanceShims(_cancellationToken))
             {
                 Debug.Assert(synthesizedImpl.SynthesizesLoweredBoundBody);
                 synthesizedImpl.GenerateMethodBody(compilationState, _diagnostics);

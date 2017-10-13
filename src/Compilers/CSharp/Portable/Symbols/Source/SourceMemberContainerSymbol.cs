@@ -169,7 +169,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private ImmutableArray<Symbol> _lazyMembersFlattened;
         // @t-mawind (sorry!)
         private ImmutableArray<SynthesizedImplementationForwardingMethod> _lazySynthesizedImplementations;
-        private ImmutableArray<SynthesizedInstanceShimMethod> _lazySynthesizedDefaultImplementations;
         private ImmutableArray<SynthesizedExplicitImplementationForwardingMethod> _lazySynthesizedExplicitImplementations;
         private int _lazyKnownCircularStruct;
         private LexicalSortKey _lazyLexicalSortKey = LexicalSortKey.NotInitialized;

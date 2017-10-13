@@ -593,12 +593,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             Debug.Assert(memberSymbol.Kind != SymbolKind.Method ||
                 // @MattWindsor91 (Concept-C# 2017)
-                // We can get here if we're making an operator call into a
-                // default struct.
+                // We can get here if we're making a shim
                 // Since this should never be done by the programmer, and
                 // instead should always result from synthesis, we allow
                 // it.  (Famous last words?)
-                (memberSymbol.ContainingType?.IsDefaultStruct ?? false) || 
+                ((Flags & BinderFlags.InShim) != 0) || 
                 memberSymbol.CanBeReferencedByName);
             //note that the same assert does not hold for all properties. Some properties and (all indexers) are not referenceable by name, yet
             //their binding brings them through here, perhaps needlessly.

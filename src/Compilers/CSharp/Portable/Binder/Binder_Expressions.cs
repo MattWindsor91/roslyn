@@ -5487,10 +5487,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             SeparatedSyntaxList<TypeSyntax> typeArgumentsSyntax,
             ImmutableArray<TypeSymbol> typeArguments,
             bool invoked,
-            DiagnosticBag diagnostics,
-            // @MattWindsor91 (Concept-C# 2017)
-            //     Workaround to let us synthesise calls to operators.
-            bool allowInvokingSpecialMethod = false)
+            DiagnosticBag diagnostics)
         {
             Debug.Assert(rightArity == (typeArguments.IsDefault ? 0 : typeArguments.Length));
             var leftType = boundLeft.Type;
@@ -5500,11 +5497,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 options |= LookupOptions.MustBeInvocableIfMember;
             }
             // @MattWindsor91 (Concept-C# 2017)
-            //     Aforementioned workaround.
-            if (allowInvokingSpecialMethod)
+            //     If we're inside a shim, sometimes we need to access the
+            //     desugared form of a method..
+            if ((Flags & BinderFlags.InShim) != 0)
             {
                 options |= LookupOptions.AllowSpecialMethods;
             }
+
 
             var lookupResult = LookupResult.GetInstance();
             try

@@ -92,8 +92,6 @@ namespace ShapesComparison
         
         public instance IntGroup : CGroup<int>       // public extension IntGroup of int : SGroup<int>
         {                                            // {
-            // TODO: auto-forward this.              //
-            int operator +(int t1, int t2) => t1+t2; //
             int Zero => 0;                           //     public static int Zero => 0;
         }                                            // }
         

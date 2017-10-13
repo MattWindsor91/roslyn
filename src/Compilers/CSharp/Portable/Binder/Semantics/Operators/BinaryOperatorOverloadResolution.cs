@@ -45,8 +45,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             // @t-mawind
             //   Here, we add in the possibility of having access to a concept
             //   witness defining the binary operator.
-            hadUserDefinedCandidate |= GetBinaryConceptOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
-
+            if ((_binder.Flags & BinderFlags.InShim) == 0 && !hadUserDefinedCandidate)
+            {
+                hadUserDefinedCandidate |= GetBinaryConceptOperators(underlyingKind, left, right, result.Results, ref useSiteDiagnostics);
+            }
 
             // SPEC: If the set of candidate user-defined operators is not empty, then this becomes the set of candidate 
             // SPEC: operators for the operation. Otherwise, the predefined binary operator op implementations, including 

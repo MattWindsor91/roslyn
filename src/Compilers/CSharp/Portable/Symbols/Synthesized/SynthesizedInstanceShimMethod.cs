@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -32,6 +33,42 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public override string Name => ImplementingMethod.Name;
         public override string MetadataName => ImplementingMethod.MetadataName;
 
+        /// <summary>
+        /// Checks whether this shim will generate a correct call when
+        /// synthesised.
+        /// </summary>
+        /// <returns>
+        /// True if, and only if, the shim's inner call will raise no errors
+        /// when synthesised.
+        /// </returns>
+        internal bool IsValid()
+        {
+            // TODO(@MattWindsor91): perhaps there are some more lightweight
+            //     checks we can do here.
+
+            var ignore = new DiagnosticBag();
+            var ignore2 = new HashSet<DiagnosticInfo>();
+            var F = new SyntheticBoundNodeFactory(this, this.GetNonNullSyntaxNode(), new TypeCompilationState(null, DeclaringCompilation, null), ignore);
+
+            try
+            {
+                var receiver = GenerateReceiver(F);
+                var arguments = GenerateInnerCallArguments(F);
+                var call = GenerateCall(F, receiver, arguments, ignore);
+                if (call.HasErrors)
+                {
+                    return false;
+                }
+                // Make sure the return type of the call lines up perfectly.
+                // TODO(@MattWindsor91): is this too restrictive?
+                return DeclaringCompilation.Conversions.ClassifyConversionFromExpression(call, ReturnType, ref ignore2).IsIdentity;
+            }
+            catch (SyntheticBoundNodeFactory.MissingPredefinedMember)
+            {
+                return false;
+            }
+        }
+
         internal override void GenerateMethodBody(TypeCompilationState compilationState, DiagnosticBag diagnostics)
         {
             Debug.Assert(0 < ParameterCount,
@@ -47,8 +84,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var receiver = GenerateReceiver(F);
                 var locals = GenerateLocals(F, receiver);
                 var arguments = GenerateInnerCallArguments(F);
-
-                var call = F.MakeInvocationExpression(BinderFlags.None, F.Syntax, receiver, Name, arguments, diagnostics, TypeArguments, allowInvokingSpecialMethod: true);
+                var call = GenerateCall(F, receiver, arguments, diagnostics);
                 if (call.HasErrors)
                 {
                     F.CloseMethod(F.ThrowNull());
@@ -113,5 +149,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// A list of bound inner-call arguments.
         /// </returns>
         protected abstract ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f);
+
+        protected virtual BoundExpression GenerateCall(SyntheticBoundNodeFactory f, BoundExpression receiver, ImmutableArray<BoundExpression> arguments, DiagnosticBag diagnostics)
+        {
+            return f.MakeInvocationExpression(BinderFlags.InShim, f.Syntax, receiver, Name, arguments, diagnostics, TypeArguments);
+        }
     }
 }
