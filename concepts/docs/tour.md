@@ -8,7 +8,7 @@ institute:
   - Microsoft Research Cambridge
   - Microsoft Research Cambridge
 date: Friday 13 November 2017
-abstract: | 
+abstract: |
   Concepts are a proposed way to structure polymorphic C# code. Like
   interfaces, they constrain generic type arguments based on the presence of
   certain functions over those types. Unlike interfaces, but like extension
@@ -174,10 +174,10 @@ then we can call upon C#'s interface-based subtyping system as follows:
         }
     }
 
-The subtyping relationship between these classes is manifest in the definitions
+The subtyping relationship between these classes is baked into the definitions
 of the types themselves.  This means we run into problems if, say, we use a
-library that contains a nice implementation of `Circle`, but didn't have the
-foresight to implement our `Shape` interface.
+library that contains a nice implementation of `Circle`, but doesn't already
+implement `Shape`.
 
 ## Generics ##
 
@@ -216,20 +216,20 @@ encounters the corresponding operator.
 
 This is useful as a way of making numeric code cleaner and easier to read, but
 can we abstract over the presence of such operators?  Can we make a
-`Shape<TArea>`, where `TArea` supports `*` and `/`?
+`Shape<TArea>`, where `TArea` supports `*` and `/`?  Alas, no: operator
+overloads sit outside the subtyping system---there is no interface or class that
+represents having certain operators.
 
-Alas, no: operator overloads sit outside the subtyping system! To abstract
-over generic arithmetic, we would need to create a new interface, at which
-point:
+To abstract over generic arithmetic, we would need to abandon operator overloads
+and create a new interface.  Even then:
 
 - We can't make our arithmetic generic over existing classes, as they can't
   make themselves subtypes of the interface;
-- We can't make our arithmetic generic over primitive types, as they can't
-  subtype at all;
+- We can't make it generic over primitive types, as they can't subtype at all;
 - Even if we restrict ourselves to our own classes, we can't represent all of
   the operations we would need for practical generic arithmetic as interface
   methods.
-  
+
 Let's explore the third point. Most types that act like numbers work with a
 common set of operations: addition, subtraction, multiplication, splitting
 into absolute value and sign, and conversion from an integer[^4]. We could
@@ -252,14 +252,13 @@ try to make this set into a C# interface, but quickly run into trouble:
 
 ## Extension methods ##
 
-A key problem of subtype-based systems is that they are closed for extension.
-If we want to add a class to an interface, we have to modify the class's code.
-If we don't own the code we need to extend, we must resort to
-workarounds like static methods and type wrappers.
-
+A key problem of system is that it is closed for extension.  If we want to make
+a class implement an interface, we must modify the class's code.  If we can't,
+we must resort to workarounds like static methods and type wrappers.
 This problem extends to adding new methods to existing types.  For example,
-maybe we really need to add the ability to rotate a `Rectangle` 90 degrees, but
-aren't allowed to add a new `Rotate` method to the class itself.
+maybe we really need to be able to rotate a `Rectangle` 90 degrees, but aren't
+allowed to add a new `Rotate` method to the class itself.
+
 To fix this, C# 3.0 introduced _extension methods_---static methods that can be
 invoked as if they were native methods on some target type:
 
@@ -286,7 +285,7 @@ In our tour of C# 7.1, we found some pain points with subtyping polymorphism:
 - We can't add interfaces to existing types, including primitive types;
 - We can't fit static methods, type-level properties, operator overloads, and
   other such exotica inside interfaces;
-- Extension methods let us add functionality to existing types, but we can't
+- Extension methods let us add methods to existing types, but we can't
   use them in bounds;
 
 In this section, we explore our design for concepts in C#, showing how concepts
@@ -361,7 +360,7 @@ Formally, instances correspond to deduction steps in concept proof trees:
 
 In most languages with concepts---including Concept-C#---the
 compiler solves these obligations through type inference.  We discuss
-Concept-C#'s concept inference algorithm later.
+Concept-C#'s concept inference scheme later.
 
 ## Derived instances ##
 
@@ -421,20 +420,54 @@ In Concept-C#, concepts can define their own operators.  We can rewrite
         T FromInteger(int x);
     }
 
-Concept operators become available for operator overloading if no other
-operator or operator overload is available, and a suitable concept instance is
-in scope.  When we use `+`, `-`, or `*` on two values of type `T`, there
-is not already a valid operator or operator overload, and some `CNum<T>` is
-available, Concept-C# will pick up its definitions.
+Concept operators are picked up when no builtin operator or operator overload is
+available, and a suitable concept instance is in scope.  When we use `+`, `-`,
+or `*` on two values of type `T`, there is not already a valid operator or
+operator overload, and some `CNum<T>` is available, Concept-C# will pick up its
+definitions.
 
 With concept operator overloading, we can rewrite `SomePoly` to this:
 
-    public T SomePoly<T, NumT>(T x, T c) where NumT : CNum<T> =>
-        x * x + x + c; // NumT is in scope, so use its operators
+    public T SomePoly<T, implicit NT>(T x, T c) where NT : CNum<T> =>
+        x * x + x + c; // NT is in scope, so use its operators
+
+We can also, finally, make our shapes library generic over numeric types[^5]:
+
+    public class Rectangle<T, implicit NT> where NT : CNum<T>
+    {
+        private T _length;
+        private T _breadth;
+
+        // Constructor
+        Rectangle(T length, T breadth)
+        {
+            _length = length;
+            _breadth = breadth;
+        }
+
+        public T Area()
+        {
+            return _length * _breadth;
+        }
+
+        public T Length => _length;
+        public T Breadth => _breadth;
+
+        // Static method
+        public static Rectangle Square(T length)
+        {
+            return new Rectangle(length, length);
+        }
+    }
+
+[^5]: `NT` is part of the class type parameters, which guarantees that the user
+      of the class can't modify how to calculate the area, but means that
+      two `Rectangle`s with the same `T` but different `NT` will have different
+      types.  This is a difficult ergonomic problem with our model.
 
 ## Concept extension methods ##
 
-Operator overloads help us write concept-based generic arithmetic in a highly
+Operator overloads let us write concept-based generic arithmetic in a highly
 idiomatic way.  However, if we want to take the absolute value or sign of a
 `Num<T>`, we still have to write awkward, functional code:
 
@@ -445,7 +478,7 @@ Ideally, we would like to call `Abs` and `Signum` on `x`, as if they were actual
 methods of the `T` class.
 
 Just like we extended operator overloads to concepts, we extend extension
-methods: by prefixing the first parameter of a concept method with `this`, 
+methods: by prefixing the first parameter of a concept method with `this`,
 the method becomes a _concept extension method_.  Applying this change to
 `Abs` and `Signum` means we can refactor:
 
@@ -466,16 +499,16 @@ At this stage, our `Num_Int` instance looks as follows:
         int FromInteger(int x)        => x;
     }
 
-The first three instances are tedious to write, and likely to introduce the
-dreaded copy-paste error when implemented:
+The first three methods are tedious to write, and likely to introduce
+copy-paste errors when implemented:
 
         int operator -(int x, int y)  => x + y; // oops!
 
-Thankfully, Concept-C# can infer trivial parts of instances.  If an instance
+To help out, Concept-C# infers trivial parts of instances.  If an instance
 method is an operator overload, and there already exists a valid statically
 defined operator overload or builtin operator for the same types, Concept-C#
 will fill in the obvious definition of that operator.  The above is, thus,
-equivalent to[^5]:
+equivalent to[^6]:
 
     public instance Num_Int : CNum<int>
     {
@@ -487,13 +520,13 @@ equivalent to[^5]:
 Similarly, suppose we implement `CNum` for a class with methods already
 called `Abs` and `Signum`.  Concept-C# can automatically forward concept
 extension methods to instance methods on the same class, saving us from needing
-to write[^6]
+to write:[^7]
 
     int Abs(this Clazz x) => x.Abs();
 
-[^5]: Future versions of Concept-C# will probably prevent the programmer from
+[^6]: Future versions of Concept-C# will probably prevent the programmer from
       overloading builtin operators anyway, to prevent surprises.
-[^6]: We don't currently forward static methods, but maybe we should.
+[^7]: We don't currently forward static methods, but maybe we should.
 
 ## Defaults ##
 
@@ -512,7 +545,7 @@ forward it based on the rules above.
 
 ## Multi-parameter concepts ##
 
-C# supports generic enumeration of collections through the `IEnumerable<T>`
+C# supports generic collection enumeration through the `IEnumerable<T>`
 interface, where `T` is the type of elements in the collection.  The interface
 looks like this:
 
@@ -695,9 +728,9 @@ instance over the general one, and don't want to write out the entire
 instance.  Concept-C# has heuristics for _tie-breaking_ when multiple
 instances are available.  To use them, we must tell it that the less
 suitable instance can be _overlapped_ by any more suitable instance, or the
-more suitable instance can be _overlapping_ less suitable instances[^7].
+more suitable instance can be _overlapping_ less suitable instances[^8].
 
-[^7]: This system is based on the Glasgow Haskell Compiler's
+[^8]: This system is based on the Glasgow Haskell Compiler's
       _overlapping instances_ extension.
 
 We can turn tie-breaking on by making the following change to our general
