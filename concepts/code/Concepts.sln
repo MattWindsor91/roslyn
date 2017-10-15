@@ -57,13 +57,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "conceptbench", "conceptbenc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SerialPBT", "SerialPBT\SerialPBT.csproj", "{958D76D8-9420-4CF8-9C5A-3BE63950790E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Bench", "TinyLinq\TinyLinq\TinyLinq.Bench.csproj", "{14367B62-41E9-4DD2-887E-6E36B32F3CC7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Bench", "TinyLinq\TinyLinq.Bench\TinyLinq.Bench.csproj", "{14367B62-41E9-4DD2-887E-6E36B32F3CC7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LINQ", "LINQ", "{EE9330C3-6DDB-4911-A8C4-14BC72AEADFA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Core", "TinyLinq\TinyLinq.Core\TinyLinq.Core.csproj", "{70DBD542-9553-43CD-B3A0-FC000E5B10D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Tests", "TinyLinq\TinyLinq.Benchmarks\TinyLinq.Tests.csproj", "{6A8191EA-9B29-4A25-9073-67EFC6ECB578}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyLinq.Tests", "TinyLinq\TinyLinq.Tests\TinyLinq.Tests.csproj", "{6A8191EA-9B29-4A25-9073-67EFC6ECB578}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Features", "Features", "{1FCA22B0-231D-49FB-B7A8-48F12A86B64F}"
 EndProject
