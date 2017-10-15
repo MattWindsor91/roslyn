@@ -117,13 +117,13 @@ namespace RWHSimpleJson
     /// </typeparam>
     concept CJson<A>
     {
-        IJValue ToJValue(A a);
+        IJValue ToJValue(this A a);
         A FromJValue(IJValue val, out string error);
     }
 
     instance CJsonIJValue : CJson<IJValue>
     {
-        IJValue ToJValue(IJValue a) => a;
+        IJValue ToJValue(this IJValue a) => a;
         IJValue FromJValue(IJValue val, out string error)
         {
             error = null;
@@ -133,7 +133,7 @@ namespace RWHSimpleJson
 
     instance CJsonBool : CJson<bool>
     {
-        IJValue ToJValue(bool a) => new JBool { Bool = a };
+        IJValue ToJValue(this bool a) => new JBool { Bool = a };
         bool FromJValue(IJValue val, out string error)
         {
             var jbool = (val as JBool?);
@@ -144,7 +144,7 @@ namespace RWHSimpleJson
 
     instance CJsonString : CJson<string>
     {
-        IJValue ToJValue(string a) => a == null ? (IJValue) new JNull() : new JString { String = a };
+        IJValue ToJValue(this string a) => a == null ? (IJValue) new JNull() : new JString { String = a };
         string FromJValue(IJValue val, out string error)
         {
             var jstring = (val as JString?);
@@ -155,7 +155,7 @@ namespace RWHSimpleJson
 
     instance CJsonInt : CJson<int>
     {
-        IJValue ToJValue(int a) => new JNumber { Number = a };
+        IJValue ToJValue(this int a) => new JNumber { Number = a };
         int FromJValue(IJValue val, out string error)
         {
             var jnum = (val as JNumber?);
@@ -166,7 +166,7 @@ namespace RWHSimpleJson
 
     instance CJsonDouble : CJson<double>
     {
-        IJValue ToJValue(double a) => new JNumber { Number = a };
+        IJValue ToJValue(this double a) => new JNumber { Number = a };
         double FromJValue(IJValue val, out string error)
         {
             var jnum = (val as JNumber?);
@@ -177,14 +177,14 @@ namespace RWHSimpleJson
 
     instance CJsonArray<A, implicit CJsonA> : CJson<A[]> where CJsonA : CJson<A>
     {
-        IJValue ToJValue(A[] a)
+        IJValue ToJValue(this A[] a)
         {
             if (a == null) return new JNull();
 
             var ary = new IJValue[a.Length];
             for (int i = 0; i < a.Length; i++)
             {
-                ary[i] = ToJValue(a[i]);
+                ary[i] = a[i].ToJValue();
             }
 
             return new JArray { Array = ary };
@@ -214,14 +214,14 @@ namespace RWHSimpleJson
 
     instance CJsonDict<A, implicit CJsonA> : CJson<IDictionary<string, A>> where CJsonA : CJson<A>
     {
-        IJValue ToJValue(IDictionary<string, A> adict)
+        IJValue ToJValue(this IDictionary<string, A> adict)
         {
             if (adict == null) return new JNull();
 
             var obj = new Dictionary<string, IJValue>(adict.Count);
             foreach (var binding in adict)
             {
-                obj[binding.Key] = ToJValue(binding.Value);
+                obj[binding.Key] = binding.Value.ToJValue();
             }
 
             return new JObject { Object = obj };
@@ -255,11 +255,11 @@ namespace RWHSimpleJson
         where CT1 : CJson<T1>
         where CT2 : CJson<T2>
     {
-        IJValue ToJValue(((string, T1), (string, T2)) tup)
+        IJValue ToJValue(this ((string, T1), (string, T2)) tup)
         {
             return new JObject { Object = new Dictionary<string, IJValue> {
-                    { tup.Item1.Item1, ToJValue(tup.Item1.Item2) },
-                    { tup.Item2.Item1, ToJValue(tup.Item2.Item2) }
+                    { tup.Item1.Item1, tup.Item1.Item2.ToJValue() },
+                    { tup.Item2.Item1, tup.Item2.Item2.ToJValue() }
                 }
             };
         }
@@ -321,8 +321,6 @@ namespace RWHSimpleJson
 
     class Program
     {
-        static IJValue Jsonify<A, implicit JA>(A a) where JA : CJson<A> => ToJValue(a);
-
         static void Main(string[] args)
         {
             var obj = new Dictionary<string, string>
@@ -331,13 +329,14 @@ namespace RWHSimpleJson
                 {"snippet", "Tackling the awkward squad: monadic input/output, concurrency, exceptions, and foreign-language calls in Haskell"},
                 {"url", "http://research.microsoft.com/~simonpj/papers/marktoberdorf/" }
             };
-            // TODO: type inference should be able to do this
-            var json = Jsonify( (IDictionary<string, string>) obj);
+            // TODO(@MattWindsor91): we shouldn't need this cast, but
+            //     the prototype inference system can't do subtyping
+            var json = ((IDictionary<string, string>) obj).ToJValue();
 
             Console.Out.WriteLine(json.Render());
 
             var obj2 = (("name", "Nineteen Eighty-Four"), ("year", 1948));
-            var json2 = Jsonify(obj2);
+            var json2 = obj2.ToJValue();
 
             var obj3 = CJson<((string, string), (string, int))>.FromJValue(json2, out var error);
 

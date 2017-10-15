@@ -7,8 +7,8 @@
     <ProjectGuid>{7D9E947C-4359-4EBE-9E8F-17465EE88451}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DefaultsTestbed</RootNamespace>
-    <AssemblyName>DefaultsTestbed</AssemblyName>
+    <RootNamespace>Defaults</RootNamespace>
+    <AssemblyName>Defaults</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

@@ -3,8 +3,13 @@ using System.Concepts.Prelude;
 using System.Concepts.Numerics;
 using System.Numerics;
 
-namespace OpsTestbed
+namespace OperatorOverloads
 {
+    // # Operator Overloads
+    //
+    // This testbed shows the use of operator-overloaded generic polynomials.
+    // Here, we're using the Num<A> concept from System.Concepts.Prelude.
+
     class Program
     {
         static A M<A, implicit NumA>(A x) where NumA : Num<A> => FromInteger(666) * x * x * x + FromInteger(777) * x * x + FromInteger(888);
@@ -18,6 +23,10 @@ namespace OpsTestbed
 
         static void Main(string[] args)
         {
+            // These two lines are here to trip the debugger without running
+            // the testbed through VS, so that we can step through and
+            // disassemble the JIT emitted code for the polynomials.
+
             System.Diagnostics.Debugger.Launch();
             System.Diagnostics.Debugger.Break();
 

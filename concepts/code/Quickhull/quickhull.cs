@@ -25,7 +25,7 @@ public concept ToSingle<A>
     /// <returns>
     ///     The number as an Single.
     /// </returns>
-    Single ToSingle(A x);
+    float ToSingle(this A x);
 }
 
 /// <summary>
@@ -42,7 +42,7 @@ public instance ToSingleFloat : ToSingle<float>
     /// <returns>
     ///     The number as an Single.
     /// </returns>
-    float ToSingle(float x) => x;
+    float ToSingle(this float x) => x;
 }
 
 /// <summary>
@@ -59,7 +59,7 @@ public instance ToSingleDouble : ToSingle<double>
     /// <returns>
     ///     The number as an Single.
     /// </returns>
-    float ToSingle(double x) => (float)x;
+    float ToSingle(this double x) => (float)x;
 }
 
 /// <summary>
@@ -107,7 +107,7 @@ public struct Line<A>
     /// </returns>
     public Line<A> Flip()
     {
-        return new Line<A> { P2 = this.P1, P1 = this.P2 };
+        return new Line<A> { P2 = P1, P1 = P2 };
     }
 
     /// <summary>
@@ -202,7 +202,7 @@ public concept Drawable<A>
     /// <param name="gfx">
     ///     The graphics context to draw onto.
     /// </param>
-    void Draw(A item, Color colour, Graphics gfx);
+    void Draw(this A item, Color colour, Graphics gfx);
 }
 
 /// <summary>
@@ -211,11 +211,11 @@ public concept Drawable<A>
 public instance DrawPoint<A, implicit TA> : Drawable<Point<A>>
     where TA : ToSingle<A>
 {
-    void Draw(Point<A> item, Color colour, Graphics gfx)
+    void Draw(this Point<A> item, Color colour, Graphics gfx)
     {
         var brush = new SolidBrush(colour);
-        var x = ToSingle(item.X);
-        var y = ToSingle(item.Y);
+        var x = item.X.ToSingle();
+        var y = item.Y.ToSingle();
 
         gfx.FillEllipse(brush, x - 4, y - 4, 8, 8);
     }
@@ -227,13 +227,13 @@ public instance DrawPoint<A, implicit TA> : Drawable<Point<A>>
 public instance DrawLine<A, implicit TA> : Drawable<Line<A>>
     where TA : ToSingle<A>
 {
-    void Draw(Line<A> item, Color colour, Graphics gfx)
+    void Draw(this Line<A> item, Color colour, Graphics gfx)
     {
         var pen = new Pen(colour, 5.0f);
-        var x1 = ToSingle(item.P1.X);
-        var y1 = ToSingle(item.P1.Y);
-        var x2 = ToSingle(item.P2.X);
-        var y2 = ToSingle(item.P2.Y);
+        var x1 = item.P1.X.ToSingle();
+        var y1 = item.P1.Y.ToSingle();
+        var x2 = item.P2.X.ToSingle();
+        var y2 = item.P2.Y.ToSingle();
 
         gfx.DrawLine(pen, x1, y1, x2, y2);
     }
@@ -245,11 +245,11 @@ public instance DrawLine<A, implicit TA> : Drawable<Line<A>>
 public instance DrawEnum<A, implicit DA> : Drawable<IEnumerable<A>>
     where DA : Drawable<A>
 {
-    void Draw(IEnumerable<A> items, Color colour, Graphics gfx)
+    void Draw(this IEnumerable<A> items, Color colour, Graphics gfx)
     {
         foreach (var item in items)
         {
-            Draw(item, colour, gfx);
+            item.Draw(colour, gfx);
         }
     }
 }
@@ -466,26 +466,19 @@ public class QuickhullDriver
         var maxx = w - 1;
         var maxy = h - 1;
 
-        for (int i = 0; i < c; i++)
+        for (var i = 0; i < c; i++)
         {
             pts[i] = new Point<double> { X = rando.Next(0, maxx), Y = rando.Next(0, maxy) };
         }
 
         var hull = new Quickhull<double>(pts);
-        // TODO: improve inference here.
         hull.Run();
 
-        Draw(hull.Points, Color.Green);
-        Draw(hull.Lines, Color.Red);
-        Draw(hull.Hull, Color.Blue);
+        hull.Points.Draw(Color.Green, gfx);
+        hull.Lines.Draw(Color.Red, gfx);
+        hull.Hull.Draw(Color.Blue, gfx);
 
         return bmp;
-    }
-
-    private void Draw<A, implicit DA>(A item, Color colour)
-        where DA : Drawable<A>
-    {
-        Draw(item, colour, gfx);
     }
 
     public static void Main()
