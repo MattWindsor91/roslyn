@@ -16,12 +16,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal enum ConceptSearchOptions
         {
             /// <summary>
-            /// Default behaviour.
-            /// The default behaviour is useless, and will need OR-ing with
-            /// other flags for search to work.
-            /// </summary>
-            Default = 0,
-            /// <summary>
             /// If looking for concepts, accept standalone instances too.
             /// </summary>
             AllowStandaloneInstances = 1 << 0,
@@ -191,8 +185,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                             SingleLookupResult resultOfThisProp = originalBinder.CheckViability(witnessProp, arity, options, witness, diagnose, ref useSiteDiagnostics, basesBeingResolved);
                             result.MergeEqual(resultOfThisProp);
                             break;
-                            // We don't allow other types to be fields of a
-                            // witness.
+                        // We don't allow other types to be fields of a witness
                     }
                 }
             }
@@ -223,11 +216,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             //   usefulness of allowing concepts on the left hand side of
             //   member accesses?
 
-            if (!namedType.IsConcept) return false;
+            if (!namedType.IsConcept)
+            {
+                return false;
+            }
 
             for (int i = 0; i < namedType.TypeParameters.Length; i++)
             {
-                if (namedType.TypeParameters[i] == namedType.TypeArguments[i]) return true;
+                if (namedType.TypeParameters[i] == namedType.TypeArguments[i])
+                {
+                    return true;
+                }
             }
 
             // We didn't see any evidence of failed inference at this point.
@@ -355,36 +354,44 @@ namespace Microsoft.CodeAnalysis.CSharp
                     continue;
                 }
                 var method = (MethodSymbol)member;
-                var extensionSituationOk = method.IsConceptExtensionMethod ? allowExtensions : allowNonExtensions;
-                var arityOk = (options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity;
-                if (extensionSituationOk && arityOk)
-                {
-                    // @MattWindsor91 (Concept-C# 2017)
-                    // If we picked up this method from a concept, we need to
-                    // infer the specific instance we'll actually be calling.
-                    // Also, if the concept or standalone instance had type
-                    // parameters, these need to be inferred.
-                    var mustInferConceptParams = concept.IsConcept || concept.IsGenericType;
 
-                    // In these cases, `method` will look like
-                    //     `C<TC>.M<TM>(this TC x, ...)`.
-                    // Our prototype solution is to use a synthesised
-                    // symbol that looks like
-                    //     `M<TM, TC, implicit I>(this TC x, ...)
-                    //          where I : C<TC>`
-                    // which pushes all of the issues into the method
-                    // type inferrer.  When we construct the method with
-                    // the inferred arguments, we de-mangle the method back
-                    // to normal.
-                    //
-                    // This is a nice party trick, but should eventually be
-                    // done properly: see the commentary in
-                    // `GetCandidateConceptExtensionMethods`.
-                    var finalMethod = mustInferConceptParams
-                        ? (MethodSymbol) new SynthesizedImplicitConceptMethodSymbol(method)
-                        : new SynthesizedWitnessMethodSymbol(method, concept);
-                    methods.Add(finalMethod);
+                var extensionSituationOk = method.IsConceptExtensionMethod ? allowExtensions : allowNonExtensions;
+                if (!extensionSituationOk)
+                {
+                    continue;
                 }
+
+                var arityOk = (options & LookupOptions.AllMethodsOnArityZero) != 0 || arity == method.Arity;
+                if (!arityOk)
+                {
+                    continue;
+                }
+
+                // @MattWindsor91 (Concept-C# 2017)
+                // If we picked up this method from a concept, we need to
+                // infer the specific instance we'll actually be calling.
+                // Also, if the concept or standalone instance had type
+                // parameters, these need to be inferred.
+                var mustInferConceptParams = concept.IsConcept || concept.IsGenericType;
+
+                // In these cases, `method` will look like
+                //     `C<TC>.M<TM>(this TC x, ...)`.
+                // Our prototype solution is to use a synthesised
+                // symbol that looks like
+                //     `M<TM, TC, implicit I>(this TC x, ...)
+                //          where I : C<TC>`
+                // which pushes all of the issues into the method
+                // type inferrer.  When we construct the method with
+                // the inferred arguments, we de-mangle the method back
+                // to normal.
+                //
+                // This is a nice party trick, but should eventually be
+                // done properly: see the commentary in
+                // `GetCandidateConceptExtensionMethods`.
+                var finalMethod = mustInferConceptParams
+                    ? (MethodSymbol) new SynthesizedImplicitConceptMethodSymbol(method)
+                    : new SynthesizedWitnessMethodSymbol(method, concept);
+                methods.Add(finalMethod);
             }
         }
     }

@@ -8,6 +8,9 @@ using Microsoft.CodeAnalysis.PooledObjects;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
+    // @MattWindsor91 (Concept-C# 2016 and 2017)
+    // Added getters etc. for looking up concept miscellanea on named types.
+
     internal partial class NamedTypeSymbol
     {
         /// <summary>
@@ -18,10 +21,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// false otherwise.
         ///</returns>
         internal bool HasConceptAttribute
-        { //@t-mawind
+        {
             get
             {
-                foreach (var attribute in this.GetAttributes())
+                foreach (var attribute in GetAttributes())
                 {
                     if (attribute.IsTargetAttribute(this, AttributeDescription.ConceptAttribute))
                     {
@@ -39,7 +42,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// True if this symbol has the <c>System_Concepts_ConceptInstanceAttribute</c>
         /// attribute; false otherwise.
         ///</returns>
-        internal bool HasInstanceAttribute //@t-mawind
+        internal bool HasInstanceAttribute
         {
             get
             {
@@ -57,11 +60,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Gets whether this type is a default struct.
         /// </summary>
-        internal virtual bool IsDefaultStruct //@t-mawind
+        internal virtual bool IsDefaultStruct
         {
             get
             {
-                foreach (var attribute in this.GetAttributes())
+                foreach (var attribute in GetAttributes())
                 {
                     if (attribute.IsTargetAttribute(this, AttributeDescription.ConceptDefaultAttribute))
                     {
@@ -97,7 +100,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             foreach (var m in GetTypeMembers())
             {
-                if (m.IsDefaultStruct) return m;
+                if (m.IsDefaultStruct)
+                {
+                    return m;
+                }
             }
 
             return null;

@@ -59,8 +59,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             // TODO(@MattWindsor91): Find a better way to make sure this is
             //     populated.
-            if (_conceptDefaultMethods.IsDefault) GetMembers();
-            Debug.Assert(!_conceptDefaultMethods.IsDefault, "concept default methods should be populated at this stage.");
+            if (_conceptDefaultMethods.IsDefault)
+            {
+                GetMembers();
+                Debug.Assert(!_conceptDefaultMethods.IsDefault,
+                    "concept default methods should be populated at this stage.");
+            }
             return _conceptDefaultMethods;
         }
 
@@ -107,7 +111,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         builder.Add(d);
                     }
-
                 }
 
                 if (ImmutableInterlocked.InterlockedCompareExchange(
