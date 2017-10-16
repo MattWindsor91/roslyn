@@ -110,6 +110,64 @@ where `ArrayCursor` is the enumerator struct we use for `CEnumerator` on arrays
 
 # Complex Queries
 
+# Sum (Vanilla Linq)
+
+Linq's ``Sum`` methods are hand-specialized to some (but not all) numeric types. 
+Same is true for ``Max``, ``Min``, ``Average`` etc.
+
+        public static int Sum(this IEnumerable<int> source)
+        {
+            if (source == null)
+                throw Error.ArgumentNull(nameof(source));
+            int sum = 0;
+            checked {
+              foreach (int v in source)
+                sum += v;
+            }
+            return sum;
+        }
+        public static int? Sum(this IEnumerable<int?> source) {...ditto...}
+        public static long Sum(this IEnumerable<long> source) {...ditto...}
+        public static long? Sum(this IEnumerable<long?> source)  {...ditto...}
+        public static float Sum(this IEnumerable<float> source)  {...ditto...}
+        public static float? Sum(this IEnumerable<float?> source)  {...ditto...}
+        public static double Sum(this IEnumerable<double> source)  {...ditto...}
+        public static double? Sum(this IEnumerable<double?> source)  {...ditto...}
+        public static decimal Sum(this IEnumerable<decimal> source)  {...ditto...}
+        public static decimal? Sum(this IEnumerable<decimal?> source)  {...ditto...}
+       
+(iteration (via ``foreach``) is unspecialized!)
+
+# Sum (Concept Linq)
+
+Concept Linq has *one* generic implementation of ``Sum``, abstracted on all current (and future) numeric instances:
+
+    public concept CSum<TEnum, [AssociatedType] TElem>
+    {
+        TElem Sum(this TEnum e);        
+    }
+    
+    public instance Sum_Enumerable_Num<TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit N> : CSum<TColl, TElem>
+        where E : CEnumerable<TColl, TEnum, TElem>
+        where N : Num<TElem>
+    {
+        TElem Sum(this TColl c)
+        {
+            var e = E.GetEnumerator(c);
+            var sum = N.FromInteger(0);
+            var count = 0;
+            E.Reset(ref e);
+            while (E.MoveNext(ref e))
+            {
+                count++;
+                sum += E.Current(ref e);
+            }
+            return sum;
+        }
+    }
+
+Moreover, iteration (via CEnumerable<TColl,TENum,Elem>) can be specialized!
+
 # Caveats
 
 - TinyLINQ plays hard and fast with enumerators
