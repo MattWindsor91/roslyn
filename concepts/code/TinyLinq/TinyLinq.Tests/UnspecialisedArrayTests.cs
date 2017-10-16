@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Concepts;
 using System.Concepts.Prelude;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
+using System.Concepts.Indexable;
 using static System.Concepts.Enumerable.Instances;
 using System.Concepts.Showable;
 using SerialPBT;
@@ -12,28 +14,6 @@ namespace TinyLinq
 {
     public static class UnspecialisedArrayTests
     {
-        /// <summary>
-        /// Select and ToArray behaves as identity.
-        /// </summary>
-        /// <param name="toSum">The array to test against.</param>
-        /// <returns>Whether LINQ and TinyLINQ agree.</returns>
-        private static bool Prop_UnspecSelectIdentityIntArray(int[] toSum)
-        {
-            var ts = toSum.Select(x => x).ToArray();
-            if (ts.Length != toSum.Length)
-            {
-                return false;
-            }
-            for (var i = 0; i < ts.Length; i++)
-            {
-                if (ts[i] != toSum[i])
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         /// <summary>
         /// LINQ and TinyLINQ agree on the sum of an array.
         /// </summary>
@@ -303,7 +283,7 @@ namespace TinyLinq
 
         public static void Run()
         {
-            PBTHelpers.Check(Prop_UnspecSelectIdentityIntArray, 7);
+            PBTHelpers.Check((Func<int[], bool>)GenericTests.Prop_SelectIdentity, 7);
 
             PBTHelpers.Check(Prop_UnspecSumEqualIntArray, 7);
             PBTHelpers.Check(Prop_UnspecSumSquaresEqualIntArray, 7);

@@ -58,6 +58,31 @@ namespace SerialPBT
         }
     }
 
+    // TODO: have some way of making this hidden from inference
+    public static class NonNeg
+    {
+        /// <summary>
+        /// Serial instance for signed integers, where the depth is taken as the
+        /// maximum absolute value.
+        /// </summary>
+        public instance SerialInt : CSerial<int>
+        {
+            IEnumerable<int> Series(int depth)
+            {
+                if (depth < 0)
+                {
+                    yield break;
+                }
+
+                yield return 0;
+                for (var i = 1; i <= depth; i++)
+                {
+                    yield return i;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Serial instance for arrays.
     /// </summary>
@@ -95,6 +120,22 @@ namespace SerialPBT
         where SerialB : CSerial<B>
     {
         IEnumerable<(A, B)> Series(int depth) => SerialHelpers.Prod(SerialA.Series, SerialB.Series, depth);
+    }
+
+    /// <summary>
+    /// Serial instnace for ranges.
+    /// </summary>
+    public instance SerialRange<A, implicit SerialA> : CSerial<System.Concepts.Range<A>>
+        where SerialA : CSerial<A>
+    {
+        // This is probably not quite right.
+        IEnumerable<System.Concepts.Range<A>> Series(int depth)
+        {
+            foreach ((var s, var c) in SerialHelpers.Prod(SerialA.Series, NonNeg.SerialInt.Series, depth))
+            {
+                yield return new System.Concepts.Range<A> { start = s, count = c };
+            }
+        }
     }
 
     #endregion Common CSerial instances

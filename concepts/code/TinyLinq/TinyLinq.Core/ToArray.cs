@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
 
 
@@ -96,7 +97,7 @@ namespace TinyLinq
 
     [Overlappable]
     public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit S, implicit E> : CToArray<TEnum, TElem>
-        where S : CStaticCount<TEnum>
+        where S : CStaticCountable<TEnum>
         where E : CEnumerator<TEnum, TElem>
     {
         TElem[] ToArray(this TEnum e)
