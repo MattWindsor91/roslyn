@@ -22,6 +22,17 @@ namespace TinyLinq
     }
 
     /// <summary>
+    /// If we can average over an enumerator, we can average over its enumerable.
+    /// </summary>
+    [Overlappable]
+    public instance Average_Enumerable<TColl, [AssociatedType]TEnum, [AssociatedType]TDst, implicit E, implicit A> : CAverage<TColl, TDst>
+        where E : CEnumerable<TColl, TEnum>
+        where A : CAverage<TEnum, TDst>
+    {
+        TDst Average(this TColl c) => c.GetEnumerator().Average();
+    }
+
+    /// <summary>
     /// Averaging over a general enumerator of integers, promoting the
     /// result to a double.
     /// </summary>
@@ -33,31 +44,6 @@ namespace TinyLinq
             var sum = 0;
             var count = 0;
 
-            E.Reset(ref e);
-            while (E.MoveNext(ref e))
-            {
-                count++;
-                sum += E.Current(ref e);
-            }
-
-            return (double)sum / count;
-        }
-    }
-
-
-    /// <summary>
-    /// Averaging over a general enumerable of integers, promoting the
-    /// result to a double.
-    /// </summary>
-    public instance Average_Enumerator_Int<TColl, [AssociatedType]TEnum, implicit E> : CAverage<TColl, double>
-        where E : CEnumerable<TColl, TEnum, int>
-    {
-        double Average(this TColl c)
-        {
-            var sum = 0;
-            var count = 0;
-
-            var e = E.GetEnumerator(c);
             while (E.MoveNext(ref e))
             {
                 count++;
@@ -80,7 +66,6 @@ namespace TinyLinq
             var sum = F.FromInteger(0);
             var count = 0;
 
-            E.Reset(ref e);
             while (E.MoveNext(ref e))
             {
                 count++;
@@ -92,21 +77,18 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Summation over a general enumerable, when the element is a monoid.
+    /// Summation over a general enumerator, when the element is a monoid.
     /// Summation is iterated monoid append with monoid empty as a unit.
     /// </summary>
-    public instance Average_Enumerable_Monoid<TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit F> : CAverage<TColl, TElem>
-        where E : CEnumerable<TColl, TEnum, TElem>
+    public instance Average_Enumerator_Monoid<TEnum, [AssociatedType] TElem, implicit E, implicit F> : CAverage<TEnum, TElem>
+        where E : CEnumerator<TEnum, TElem>
         where F : Fractional<TElem>
     {
-        TElem Average(this TColl c)
+        TElem Average(this TEnum e)
         {
-            var e = E.GetEnumerator(c);
-
             var sum = F.FromInteger(0);
             var count = 0;
 
-            E.Reset(ref e);
             while (E.MoveNext(ref e))
             {
                 count++;

@@ -100,10 +100,10 @@ namespace TinyLinq
     /// Adapts any Where over enumerators into one over enumerables.
     /// </summary>
     [Overlappable]
-    public instance Where_Enumerable<TColl, [AssociatedType] TSrc, [AssociatedType] TElem, [AssociatedType] TDst, implicit S, implicit E>
+    public instance Where_Enumerable<TColl, [AssociatedType] TSrc, TElem, [AssociatedType] TDst, implicit S, implicit E>
         : CWhere<TColl, TElem, TDst>
         where S : CWhere<TSrc, TElem, TDst>
-        where E : CEnumerable<TColl, TSrc, TElem>
+        where E : CEnumerable<TColl, TSrc>
     {
         TDst Where(this TColl t, Func<TElem, bool> filter) => S.Where(E.GetEnumerator(t), filter);
     }

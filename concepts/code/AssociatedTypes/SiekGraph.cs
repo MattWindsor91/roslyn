@@ -78,7 +78,7 @@ namespace AssociatedTypes
                 var u = q.Dequeue();
                 vis.ExamineVertex(u, graph, ref q);
 
-                foreach (E edge in CIncidenceGraphG.OutEdges(u, graph))
+                foreach (var edge in CIncidenceGraphG.OutEdges(u, graph))
                 {
                     var v = CEdgeE.Target(edge);
                     vis.ExamineEdge(edge, graph, ref q);
@@ -108,22 +108,24 @@ namespace AssociatedTypes
             }
         }
 
-        public static void CSearch<Vis, G, [AssociatedType] E, [AssociatedType] V, [AssociatedType] VS, [AssociatedType] ES, implicit CIncidenceGraphG, implicit CEnumerableEG, implicit CEnumerableVG, implicit CEdgeE>(G graph, V root, Vis vis)
+        public static void CSearch<Vis, G, [AssociatedType] E, [AssociatedType] V, [AssociatedType] VS, [AssociatedType] ES, implicit CIncidenceGraphG, implicit CEnumerableEG, implicit CEnumerableVG, implicit CEnumeratorEG, implicit CEnumeratorVG, implicit CEdgeE>(G graph, V root, Vis vis)
             where Vis : BFSVisitor<G, E, V, Queue<V>, CIncidenceGraphG, CEdgeE>
             where CIncidenceGraphG : CIncidenceGraph<G, E, V, CEdgeE>
-            where CEnumerableEG : CEnumerable<(V, G), ES, E>
-            where CEnumerableVG : CEnumerable<G, VS, V>
+            where CEnumerableEG : CEnumerable<(V, G), ES>
+            where CEnumerableVG : CEnumerable<G, VS>
+            where CEnumeratorEG : CEnumerator<ES, E>
+            where CEnumeratorVG : CEnumerator<VS, V>
             where CEdgeE : CEdge<E, V>
         {
             var q = new Queue<V>();
 
             var c = new Dictionary<V, Colour>();
 
-            VS vertices = CEnumerableVG.GetEnumerator(graph);
+            var vertices = graph.GetEnumerator();
             while (true)
             {
-                if (!CEnumerableVG.MoveNext(ref vertices)) break;
-                c.Add(CEnumerableVG.Current(ref vertices), Colour.White);
+                if (!CEnumeratorVG.MoveNext(ref vertices)) break;
+                c.Add(CEnumeratorVG.Current(ref vertices), Colour.White);
             }
 
             vis.DiscoverVertex(root, graph, ref q);
@@ -136,11 +138,11 @@ namespace AssociatedTypes
                 var u = q.Dequeue();
                 vis.ExamineVertex(u, graph, ref q);
 
-                ES edges = CEnumerableEG.GetEnumerator((u, graph));
+                var edges = (u, graph).GetEnumerator();
                 while (true)
                 {
-                    if (!CEnumerableEG.MoveNext(ref edges)) break;
-                    E edge = CEnumerableEG.Current(ref edges);
+                    if (!CEnumeratorEG.MoveNext(ref edges)) break;
+                    var edge = CEnumeratorEG.Current(ref edges);
 
                     var v = CEdgeE.Target(edge);
                     vis.ExamineEdge(edge, graph, ref q);
@@ -185,7 +187,7 @@ namespace AssociatedTypes
         public AdjacencyList(int n, (int, int)[] pairs)
         {
             list = new List<int>[n];
-            for (int i = 0; i < n; i++) list[i] = new List<int>();
+            for (var i = 0; i < n; i++) list[i] = new List<int>();
 
             foreach (var pair in pairs)
             {
@@ -219,9 +221,12 @@ namespace AssociatedTypes
         }
         int OutDegree(Vertex vertex, AdjacencyList graph) => graph.list[vertex.id].Count;
     }
-    instance CEnumerableAdjacencyListOutEdge : CEnumerable<(Vertex, AdjacencyList), (int, List<int>[], int, Edge), Edge>
+    instance CEnumerableAdjacencyListOutEdge : CEnumerable<(Vertex, AdjacencyList), (int, List<int>[], int, Edge)>
     {
-        (int, List<int>[], int, Edge) GetEnumerator((Vertex, AdjacencyList) idAndGraph) => (idAndGraph.Item1.id, idAndGraph.Item2.list, -1, default(Edge));
+        (int, List<int>[], int, Edge) GetEnumerator(this (Vertex, AdjacencyList) idAndGraph) => (idAndGraph.Item1.id, idAndGraph.Item2.list, -1, default(Edge));
+    }
+    instance CEnumeratorAdjacencyListOutEdge : CEnumerator<(int, List<int>[], int, Edge), Edge>
+    {
         void Reset(ref (int, List<int>[], int, Edge) enumerator)
         {
             enumerator.Item3 = -1;
@@ -245,9 +250,12 @@ namespace AssociatedTypes
         }
         int NumVertices(AdjacencyList graph) => graph.list.Length;
     }
-    instance CEnumerableAdjacencyListVertex : CEnumerable<AdjacencyList, (int, int, Vertex), Vertex>
+    instance CEnumerableAdjacencyListVertex : CEnumerable<AdjacencyList, (int, int, Vertex)>
     {
         (int, int, Vertex) GetEnumerator(AdjacencyList graph) => (graph.list.Length, -1, default(Vertex));
+    }
+    instance CEnumeratorAdjacencyListVertex : CEnumerator<(int, int, Vertex), Vertex>
+    {
         void Reset(ref (int, int, Vertex) enumerator)
         {
             enumerator.Item2 = -1;
@@ -317,7 +325,7 @@ namespace AssociatedTypes
             double itime = 0;
             double ctime = 0;
             Timer t;
-            for (int i = 0; i < 100; i++)
+            for (var i = 0; i < 100; i++)
             {
                 graph = RandomGraph();
 

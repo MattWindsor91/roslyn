@@ -47,16 +47,17 @@ namespace TinyLinq
         public Func<TElem, TInnerElem, TProj> innerProjection;
     }
 
-    public instance Enumerator_SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI>
+    public instance Enumerator_SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI, implicit NI>
         : CEnumerator<SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>, TProj>
             where ES : CEnumerator<TSrc, TElem>
-            where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
+            where EI : CEnumerable<TInnerColl, TInnerSrc>
+            where NI : CEnumerator<TInnerSrc, TInnerElem>
     {
         void Reset(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
             if (sm.currentInnerSource != null)
             {
-                EI.Dispose(ref sm.currentInnerSource);
+                NI.Dispose(ref sm.currentInnerSource);
             }
             sm.started = sm.finished = false;
 
@@ -92,14 +93,14 @@ namespace TinyLinq
                 mustCycleOuter = true;
 
                 // Does the inner enumerator have something left in it?
-                if (EI.MoveNext(ref sm.currentInnerSource))
+                if (NI.MoveNext(ref sm.currentInnerSource))
                 {
-                    sm.current = sm.innerProjection(sm.currentElem, EI.Current(ref sm.currentInnerSource));
+                    sm.current = sm.innerProjection(sm.currentElem, NI.Current(ref sm.currentInnerSource));
                     return true;
                 }
 
                 // It doesn't, so move the outer enumerator.
-                EI.Dispose(ref sm.currentInnerSource);
+                NI.Dispose(ref sm.currentInnerSource);
             }
         }
 
@@ -109,17 +110,18 @@ namespace TinyLinq
         {
             if (sm.started && !sm.finished)
             {
-                EI.Dispose(ref sm.currentInnerSource);
+                NI.Dispose(ref sm.currentInnerSource);
             }
             ES.Dispose(ref sm.source);
         }
     }
 
     [Overlappable]
-    public instance SelectMany_Enumerator<TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType] TInnerElem, TProj, implicit EI, implicit ES>
+    public instance SelectMany_Enumerator<TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType] TInnerElem, TProj, implicit EI, implicit ES, implicit NI>
         : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
         where ES : CEnumerator<TSrc, TElem>
-        where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
+        where EI : CEnumerable<TInnerColl, TInnerSrc>
+        where NI : CEnumerator<TInnerSrc, TInnerElem>
     {
         SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
             => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
@@ -133,19 +135,12 @@ namespace TinyLinq
     }
 
     [Overlappable]
-    public instance SelectMany_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType]TInnerElem, TProj, implicit EI, implicit ES>
-        : CSelectMany<TColl, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
-        where ES : CEnumerable<TColl, TSrc, TElem>
-        where EI : CEnumerable<TInnerColl, TInnerSrc, TInnerElem>
+    public instance SelectMany_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType]TInnerElem, TProj, [AssociatedType]TDest, implicit S, implicit E>
+        : CSelectMany<TColl, TElem, TInnerColl, TInnerElem, TProj, TDest>
+        where S : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, TDest>
+        where E : CEnumerable<TColl, TSrc>
     {
-        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
-            {
-                source = ES.GetEnumerator(coll),
-                started = false,
-                finished = false,
-                outerProjection = outerProj,
-                innerProjection = innerProj
-            };
+        TDest SelectMany(this TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
+            => coll.GetEnumerator().SelectMany(outerProj, innerProj);
     }
 }
