@@ -20,10 +20,10 @@ Modified version of the [LinqOptimizer][] benchmarks library.
 
 Each benchmark compares:
 
-- `Linq`: normal .NET Framework 4.7 LINQ
-- `UTL`: TinyLINQ with no data structure specialisation
-- `STL`: TinyLINQ with array data structure specialisation and fusion
-- `Opt`: LinqOptimizer (aggressive query expression optimisation)
+- Normal .NET Framework 4.7 LINQ
+- TinyLINQ with no data structure specialisation ('U' TinyLINQ)
+- TinyLINQ with array data structure specialisation and fusion ('S' TinyLINQ)
+- LinqOptimizer (aggressive query expression optimisation)
 
 [LinqOptimizer]: http://nessos.github.io/LinqOptimizer/
 
@@ -40,7 +40,8 @@ In normal _LINQ to Objects_, this is:
 
 The concept version is:
 
-    public concept CSelect<TSourceColl, TSource, TResult, [AssociatedType]TResultColl>
+    public concept CSelect<TSourceColl, TSource, TResult,
+                           [AssociatedType]TResultColl>
     {
         TResultColl Select(this TSourceColl source,
                            Func<TSource, TResult> selector);
@@ -49,7 +50,7 @@ The concept version is:
 This encoding lets us specialise according to the collection we're given by
 varying `TResultColl`
 
-# Select: Unspecialised Instance
+# Select: Unspecialised Instance (UTL)
 
 Create a struct to hold the state of the enumeration:
 
@@ -66,15 +67,21 @@ And an instance to return `Select`s for any enumerator:
         : CSelect<TSourceEnum, Select<TSourceEnum, TSource, TResult>>
         where E : CEnumerator<TSourceEnum, TSource>
     {
-        Select<TSourceEnum, TSource, TResult> Select(this TSourceEnum source,
-                                                     Func<TSource, TResult> selector)
-            => new Select<TSourceEnum, TSource, TResult>
-                   { source = source, selector = selector };
+        Select<TSourceEnum, TSource, TResult> Select(
+            this TSourceEnum source,
+            Func<TSource, TResult> selector) 
+        {
+            return new Select<TSourceEnum, TSource, TResult>
+            {
+                source = source,
+                selector = selector
+            };
+        }
     }
 
 Not seen: glue instance to lift this to `CEnumerable`
 
-# Select: Specialised Instance
+# Select: Specialised Instance (STL)
 
 Hand-inline the array enumeration:
 
@@ -82,31 +89,58 @@ Hand-inline the array enumeration:
     {
         public TSource[] source;
         public Func<TSource, TResult> selector;
-        public int index;
-        public int length;
+        public int index, length;
         public TResult current;
     }
 
 And make a new, more specialised instance:
 
-    public instance Select_ArrayCursor<TSource, TProj> : CSelect<TSource, TProj, Instances.ArrayCursor<TSource>, ArraySelect<TSource, TProj>>
+    public instance Select_ArrayCursor<TSource, TResult>
+        : CSelect<ArrayCursor<TSource>, TSource, TResult,
+                  ArraySelect<TSource, TResult>>
     {
-        ArraySelect<TSource, TProj> Select(this Instances.ArrayCursor<TSource> t, Func<TSource, TProj> projection) =>
-            new ArraySelect<TSource, TProj>
+        ArraySelect<TSource, TResult> Select(this ArrayCursor<TSource> source,
+                                             Func<TSource, TResult> selector)
+        {
+            return new ArraySelect<TSource, TResult>
             {
-                source = t.source,
-                projection = projection,
-                lo = -1,
-                hi = t.source.Length
+                source = source.array, // underlying array
+                selector = selector,
+                index = -1, length = source.array.Length
             };
+        }
     }
 
 where `ArrayCursor` is the enumerator struct we use for `CEnumerator` on arrays
 (similar to `List.Enumerator`)
 
+**Known issue**: should really take `ArrayCursor`'s current index
+
 # Select Benchmark
 
+Sum of squares:
+
+    return values.Select(x => x * x).Sum();
+
+where
+
+    const int useSameSeedEveryTimeToHaveSameData = 08041988;
+    protected Random rnd = new Random(useSameSeedEveryTimeToHaveSameData);
+    values = Enumerable.Range(1, 1000000).Select(x => rnd.NextDouble()).ToArray();
+
+ |          Method |                Mean |              Error |           Std. Dev. |              Median |       Scaled |    Scaled SD |      Gen 0 |     Allocated |
+ |---------------- |--------------------:|-------------------:|--------------------:|--------------------:|-------------:|-------------:|-----------:|--------------:|
+ | LINQ (baseline) |     6,973,307.75 ns |        376.9286 ns |         314.7524 ns |     6,973,387.06 ns |         1.00 |         0.00 |          - |         128 B |
+ | U. TinyLINQ     |     7,944,699.07 ns |     19,191.1397 ns |      17,951.4022 ns |     7,938,954.14 ns |         1.14 |         0.00 |          - |           0 B |
+ | **S. TinyLINQ** | **4,573,600.18 ns** | **88,844.7148 ns** | **127,418.4352 ns** | **4,498,185.13 ns** |     **0.66** |     **0.02** |      **-** |       **0 B** |
+ | LINQOptimizer   |       942,023.65 ns |      9,273.0175 ns |       7,743.3889 ns |       940,342.03 ns |         0.14 |         0.00 |     3.9063 |       20880 B |
+
+Specialised: One-third reduction in time compared to LINQ.
+Unspecialised: slight slowdown, likely due to enumerator call overhead.
+
 # SelectMany
+
+
 
 # Complex Queries
 
