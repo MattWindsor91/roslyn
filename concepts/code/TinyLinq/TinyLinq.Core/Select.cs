@@ -77,10 +77,10 @@ namespace TinyLinq
     /// Adapts any selection over enumerators into one over enumerables.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerable<TColl, [AssociatedType] TSrc, [AssociatedType] TElem, TProj, [AssociatedType] TDst, implicit S, implicit E>
+    public instance Select_Enumerable<TColl, [AssociatedType] TSrc, TElem, TProj, [AssociatedType] TDst, implicit S, implicit E>
         : CSelect<TElem, TProj, TColl, TDst>
         where S : CSelect<TElem, TProj, TSrc, TDst>
-        where E : CEnumerable<TColl, TSrc, TElem>
+        where E : CEnumerable<TColl, TSrc>
     {
         TDst Select(this TColl t, Func<TElem, TProj> projection) => S.Select(E.GetEnumerator(t), projection);
     }

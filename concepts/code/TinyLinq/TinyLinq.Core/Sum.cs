@@ -22,6 +22,17 @@ namespace TinyLinq
         TElem Sum(this TEnum e);        
     }
 
+    /// <summary>
+    /// If we can sum over an enumerator, we can average over its enumerable.
+    /// </summary>
+    [Overlappable]
+    public instance Sum_Enumerable<TColl, [AssociatedType]TEnum, [AssociatedType]TDst, implicit E, implicit S> : CSum<TColl, TDst>
+        where E : CEnumerable<TColl, TEnum>
+        where S : CSum<TEnum, TDst>
+    {
+        TDst Sum(this TColl c) => c.GetEnumerator().Sum();
+    }
+
     public class MonoidInstances
     {
         /// <summary>
@@ -36,31 +47,6 @@ namespace TinyLinq
             {
                 var sum = M.Empty;
 
-                E.Reset(ref e);
-                while (E.MoveNext(ref e))
-                {
-                    sum = M.Append(sum, E.Current(ref e));
-                }
-
-                return sum;
-            }
-        }
-
-        /// <summary>
-        /// Summation over a general enumerable, when the element is a monoid.
-        /// Summation is iterated monoid append with monoid empty as a unit.
-        /// </summary>
-        public instance Sum_Enumerator_Monoid<TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit M> : CSum<TColl, TElem>
-            where E : CEnumerable<TColl, TEnum, TElem>
-            where M : Monoid<TElem>
-        {
-            TElem Sum(this TColl c)
-            {
-                var e = E.GetEnumerator(c);
-
-                var sum = M.Empty;
-
-                E.Reset(ref e);
                 while (E.MoveNext(ref e))
                 {
                     sum = M.Append(sum, E.Current(ref e));
@@ -83,32 +69,6 @@ namespace TinyLinq
             var sum = N.FromInteger(0);
             var count = 0;
 
-            E.Reset(ref e);
-            while (E.MoveNext(ref e))
-            {
-                count++;
-                sum += E.Current(ref e);
-            }
-
-            return sum;
-        }
-    }
-
-    /// <summary>
-    /// Summation over a general enumerable, when the element is a number.
-    /// </summary>
-    public instance Sum_Enumerable_Num<TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit N> : CSum<TColl, TElem>
-        where E : CEnumerable<TColl, TEnum, TElem>
-        where N : Num<TElem>
-    {
-        TElem Sum(this TColl c)
-        {
-            var e = E.GetEnumerator(c);
-
-            var sum = N.FromInteger(0);
-            var count = 0;
-
-            E.Reset(ref e);
             while (E.MoveNext(ref e))
             {
                 count++;

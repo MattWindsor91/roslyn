@@ -2,7 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
+using System.Concepts.Indexable;
+using System.Concepts.Prelude;
+using static System.Concepts.Enumerable.Instances;
 using System.Linq;
 
 /// <summary>
@@ -10,6 +14,8 @@ using System.Linq;
 /// </summary>
 namespace AssociatedTypes
 {
+    using System.Concepts.Countable;
+    using System.Concepts.Indexable;
     using static Utils;
 
     public static class Utils
@@ -32,16 +38,19 @@ namespace AssociatedTypes
         /// <returns>
         ///     An <see cref="IEnumerable"/> for <see cref="c"/>.
         /// </returns>
-        public static IEnumerable<TElem> Enumerate<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N>(TColl c) where N : CEnumerable<TColl, TState, TElem> => new EnumerableShim<TColl>(c);
+        public static IEnumerable<TElem> Enumerate<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N, implicit T>(TColl c)
+            where N : CEnumerable<TColl, TState>
+            where T : CEnumerator<TState, TElem> => new EnumerableShim<TColl>(c);
 
-        public static void Foreach<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N>(TColl c, Action<TElem> f)
-            where N : CEnumerable<TColl, TState, TElem>
+        public static void Foreach<TColl, [AssociatedType] TState, [AssociatedType] TElem, implicit N, implicit T>(TColl c, Action<TElem> f)
+            where N : CEnumerable<TColl, TState>
+            where T : CEnumerator<TState, TElem>
         {
             var state = N.GetEnumerator(c);
             while (true)
             {
-                if (!N.MoveNext(ref state)) return;
-                f(N.Current(ref state));
+                if (!T.MoveNext(ref state)) return;
+                f(T.Current(ref state));
             }
         }
     }
@@ -68,69 +77,30 @@ namespace AssociatedTypes
     }
 
     /// <summary>
-    ///     Concept for types which may be addressed by an integer index.
-    /// </summary>
-    /// <typeparam name="TColl">
-    ///     The type to be addressed by index.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    ///     The element returned by the indexing operation.
-    /// </typeparam>
-    public concept CIndexable<TColl, [AssociatedType] TElem>
-    {
-        /// <summary>
-        ///     Gets the element at a given index.
-        /// </summary>
-        /// <param name="container">
-        ///     The container being accessed.
-        /// </param>
-        /// <param name="i">
-        ///     The index being accessed.
-        /// </param>
-        /// <returns>
-        ///     The <paramref name="i"/>th element, or an exception if out of
-        ///     bounds.
-        /// </returns>
-        TElem At(TColl container, int i);
-    }
-
-    /// <summary>
-    ///     Instance of <see cref="CIndexable"/> for arrays, using
-    ///     array-element indexing.
-    /// </summary>
-    /// <typeparam name="TElem">
-    ///     The array element.
-    /// </typeparam>
-    public instance CIndexableArray<TElem> : CIndexable<TElem[], TElem>
-    {
-        TElem At(TElem[] container, int i) => container[i];
-    }
-
-    /// <summary>
     ///     Instance of <see cref="CIndexable"/> for strings, using
     ///     character indexing.
     /// </summary>
-    public instance CIndexableString : CIndexable<string, char>
+    public instance CIndexableString : CIndexable<string, int, char>
     {
-        char At(string container, int i) => container[i];
+        char At(this string container, int i) => container[i];
     }
 
     /// <summary>
     ///     Instance of <see cref="CIndexable"/> for bit arrays, using
     ///     bitwise indexing.
     /// </summary>
-    public instance CIndexableBitArray : CIndexable<BitArray, bool>
+    public instance CIndexableBitArray : CIndexable<BitArray, int, bool>
     {
-        bool At(BitArray container, int i) => container[i];
+        bool At(this BitArray container, int i) => container[i];
     }
 
     /// <summary>
     ///     Instance of <see cref="CIndexable"/> for ranges, calculating the
     ///     indexed term in the bounded arithmetic sequence.
     /// </summary>
-    public instance CIndexableRange : CIndexable<Range, int>
+    public instance CIndexableRange : CIndexable<Range, int, int>
     {
-        int At(Range range, int n) => range.start + (range.step * n);
+        int At(this Range range, int n) => range.start + (range.step * n);
     }
 
     /// <summary>
@@ -149,67 +119,36 @@ namespace AssociatedTypes
     /// <typeparam name="BE">
     ///     The second container.
     /// </typeparam>
-    public instance CIndexableZip2<A, [AssociatedType] AE, B, [AssociatedType] BE, implicit IA, implicit IB> : CIndexable<(A, B), (AE, BE)>
-        where IA : CIndexable<A, AE>
-        where IB : CIndexable<B, BE>
+    public instance CIndexableZip2<A, [AssociatedType] AE, B, [AssociatedType] BE, [AssociatedType]Ix, implicit IA, implicit IB> : CIndexable<(A, B), Ix, (AE, BE)>
+        where IA : CIndexable<A, Ix, AE>
+        where IB : CIndexable<B, Ix, BE>
     {
-        (AE, BE) At((A, B) tup, int i) => (IA.At(tup.Item1, i), IB.At(tup.Item2, i));
-    }
-
-    /// <summary>
-    ///     Concept for types which have a length, or upper bound on indexing.
-    /// </summary>
-    /// <typeparam name="C">
-    ///     The type whose length is to be assessed.
-    /// </typeparam>
-    public concept CLength<C>
-    {
-        /// <summary>
-        ///     Returns the length of a given container.
-        /// </summary>
-        /// <param name="container">
-        ///     The item whose length is to be assessed.
-        /// </param>
-        /// <returns>
-        ///     The length of <paramref name="c"/>.
-        /// </returns>
-        int Length(C container);
-    }
-
-    /// <summary>
-    ///     Instance of <see cref="CLength"/> for arrays, using array length.
-    /// </summary>
-    /// <typeparam name="TElem">
-    ///     The array element.
-    /// </typeparam>
-    public instance CLengthArray<TElem> : CLength<TElem[]>
-    {
-        int Length(TElem[] container) => container.Length;
+        (AE, BE) At(this (A, B) tup, Ix i) => (IA.At(tup.Item1, i), IB.At(tup.Item2, i));
     }
 
     /// <summary>
     ///     Instance of <see cref="CLength"/> for strings, using string length.
     /// </summary>
-    public instance CLengthString : CLength<string>
+    public instance StaticCountable_String : CStaticCountable<string>
     {
-        int Length(string container) => container.Length;
+        int Count(this string container) => container.Length;
     }
 
     /// <summary>
     ///     Instance of <see cref="CLength"/> for bit arrays, using bit length.
     /// </summary>
-    public instance CLengthBitArray : CLength<BitArray>
+    public instance StaticCountable_BitArray : CStaticCountable<BitArray>
     {
-        int Length(BitArray container) => container.Length;
+        int Count(this BitArray container) => container.Length;
     }
 
     /// <summary>
-    ///     Instance of <see cref="CLength"/> for ranges, calculating the
+    ///     Static count for ranges, calculating the
     ///     number of terms in the bounded arithmetic sequence.
     /// </summary>
-    public instance CLengthRange : CLength<Range>
+    public instance StaticCountable_Range : CStaticCountable<Range>
     {
-        int Length(Range range) => ((range.end - range.start) / range.step) + 1;
+        int Count(this Range range) => ((range.end - range.start) / range.step) + 1;
     }
 
     /// <summary>
@@ -222,11 +161,11 @@ namespace AssociatedTypes
     /// <typeparam name="B">
     ///     The second container.
     /// </typeparam>
-    public instance CLengthZip2<A, B, implicit LA, implicit LB> : CLength<(A, B)>
-        where LA : CLength<A>
-        where LB : CLength<B>
+    public instance StaticCountable_Zip2<A, B, implicit LA, implicit LB> : CStaticCountable<(A, B)>
+        where LA : CStaticCountable<A>
+        where LB : CStaticCountable<B>
     {
-        int Length((A, B) tup) => Math.Min(LA.Length(tup.Item1), LB.Length(tup.Item2));
+        int Count(this (A, B) tup) => Math.Min(tup.Item1.Count(), tup.Item2.Count());
     }
 
     /// <summary>
@@ -235,49 +174,19 @@ namespace AssociatedTypes
     /// </summary>
     static class Unspecialised
     {
-        /// <summary>
-        ///     Instance of <see cref="CEnumerable"/> converting any indexable
-        ///     collection with a length into an enumerator.
-        /// </summary>
-        /// <typeparam name="C">
-        ///     The type to be enumerated.
-        /// </typeparam>
-        /// <typeparam name="E">
-        ///     The element returned by the enumerator.
-        /// </typeparam>
-        public instance CEnumerableLE<C, [AssociatedType] E, implicit I, implicit L> : CEnumerable<C, (C, int, E), E>
-            where I : CIndexable<C, E>
-            where L : CLength<C>
-        {
-            (C, int, E) GetEnumerator(C container) => (container, -1, default(E));
-            void Reset(ref (C, int, E) enumerator)
-            {
-                enumerator.Item2 = -1;
-                enumerator.Item3 = default(E);
-            }
-            bool MoveNext(ref (C, int, E) enumerator)
-            {
-                if (++enumerator.Item2 >= L.Length(enumerator.Item1)) return false;
-                enumerator.Item3 = I.At(enumerator.Item1, enumerator.Item2);
-                return true;
-            }
-            E Current(ref (C, int, E) enumerator) => enumerator.Item3;
-            void Dispose(ref (C, int, E) enumerator) {}
-        }
-
         public static void RunWordTest(string[] words1, string[] words2, int[][] scores, int runs)
         {
             Enumerate("xyzzy");
             Enumerate(("abcdefghijklmnopqrstuvwxyz", new int[] { }));
-            WordTest wt = new WordTest(words1, words2, scores, runs);
+            var wt = new WordTest(words1, words2, scores, runs);
 
-            double cenumerableShimTotalTime = wt.RunCEnumerableShim();
+            var cenumerableShimTotalTime = wt.RunCEnumerableShim();
             Console.Out.WriteLine($"TOTAL (CEnumerable Shim):     {cenumerableShimTotalTime}s");
 
-            double cenumerableForeachTotalTime = wt.RunCEnumerableForeach();
+            var cenumerableForeachTotalTime = wt.RunCEnumerableForeach();
             Console.Out.WriteLine($"TOTAL (CEnumerable Foreach):  {cenumerableForeachTotalTime}s");
 
-            double cenumerableUnrolledTotalTime = wt.RunCEnumerableUnrolled();
+            var cenumerableUnrolledTotalTime = wt.RunCEnumerableUnrolled();
             Console.Out.WriteLine($"TOTAL (CEnumerable Unrolled): {cenumerableUnrolledTotalTime}s");
         }
 
@@ -400,42 +309,42 @@ namespace AssociatedTypes
                     Timer t = new Timer();
                     for (int i = 0; i < runs; i++)
                     {
-                        var state1 = CEnumerable<(string[], string[])>.GetEnumerator((words1, words2));
+                        var state1 = (words1, words2).GetEnumerator();
                         while (true)
                         {
-                            if (!CEnumerable<(string[], string[])>.MoveNext(ref state1)) break;
-                            var tup1 = CEnumerable<(string[], string[])>.Current(ref state1);
+                            if (!CEnumerator<IndexBoundCursor<(string[], string[]), int, (string, string)>>.MoveNext(ref state1)) break;
+                            var tup1 = CEnumerator<IndexBoundCursor<(string[], string[]), int, (string, string)>>.Current(ref state1);
 
                             var ltotal = 0;
                             var rtotal = 0;
 
-                            var state2 = CEnumerable<int[][]>.GetEnumerator(scores);
+                            var state2 = CEnumerable<int[][], IndexBoundCursor<int[][], int, int[]>>.GetEnumerator(scores);
                             while (true)
                             {
-                                if (!CEnumerable<int[][]>.MoveNext(ref state2)) break;
-                                var score = CEnumerable<int[][]>.Current(ref state2);
+                                if (!CEnumerator<IndexBoundCursor<int[][], int, int[]>>.MoveNext(ref state2)) break;
+                                var score = CEnumerator<IndexBoundCursor<int[][], int, int[]>>.Current(ref state2);
 
                                 var lcount = 0;
                                 var rcount = 0;
 
-                                var state3 = CEnumerable<(string, int[])>.GetEnumerator(("abcdefghijklmnopqrstuvwxyz", score));
+                                var state3 = (("abcdefghijklmnopqrstuvwxyz", score)).GetEnumerator();
                                 while (true)
                                 {
-                                    if (!CEnumerable<(string, int[])>.MoveNext(ref state3)) break;
-                                    var tup2 = CEnumerable<(string, int[])>.Current(ref state3);
+                                    if (!CEnumerator<IndexBoundCursor<(string, int[]), int, (char, int)>>.MoveNext(ref state3)) break;
+                                    var tup2 = CEnumerator<IndexBoundCursor<(string, int[]), int, (char, int)>>.Current(ref state3);
 
                                     var state4 = CEnumerable<string>.GetEnumerator(tup1.Item1);
                                     while (true)
                                     {
-                                        if (!CEnumerable<string>.MoveNext(ref state4)) break;
-                                        var letter = CEnumerable<string>.Current(ref state4);
+                                        if (!CEnumerator<IndexBoundCursor<string, int, char>>.MoveNext(ref state4)) break;
+                                        var letter = CEnumerator<IndexBoundCursor<string, int, char>>.Current(ref state4);
                                         if (letter == tup2.Item1) lcount += tup2.Item2;
                                     }
                                     var state5 = CEnumerable<string>.GetEnumerator(tup1.Item1);
                                     while (true)
                                     {
-                                        if (!CEnumerable<string>.MoveNext(ref state5)) break;
-                                        var letter = CEnumerable<string>.Current(ref state5);
+                                        if (!CEnumerator<IndexBoundCursor<string, int, char>>.MoveNext(ref state5)) break;
+                                        var letter = CEnumerator<IndexBoundCursor<string, int, char>>.Current(ref state5);
                                         if (letter == tup2.Item1) rcount += tup2.Item2;
                                     }
                                 }
@@ -466,9 +375,12 @@ namespace AssociatedTypes
     /// </summary>
     static class Specialised
     {
-        public instance CEnumerableString : CEnumerable<string, (char[], int, char), char>
+        public instance CEnumerableString : CEnumerable<string, (char[], int, char)>
         {
-            (char[], int, char) GetEnumerator(string str) => (str.ToCharArray(), -1, default(char));
+            (char[], int, char) GetEnumerator(this string str) => (str.ToCharArray(), -1, default(char));
+        }
+        public instance CEnumeratorString : CEnumerator<(char[], int, char), char>
+        {
             void Reset(ref (char[], int, char) enumerator)
             {
                 enumerator.Item2 = -1;
@@ -484,27 +396,11 @@ namespace AssociatedTypes
             void Dispose(ref (char[], int, char) enumerator) {}
         }
 
-        public instance CEnumerableArray<E> : CEnumerable<E[], (E[], int, E), E>
-        {
-            (E[], int, E) GetEnumerator(E[] ary) => (ary, -1, default(E));
-            void Reset(ref (E[], int, E) enumerator)
-            {
-                enumerator.Item2 = -1;
-                enumerator.Item3 = default(E);
-            }
-            bool MoveNext(ref (E[], int, E) enumerator)
-            {
-                if (++enumerator.Item2 >= (enumerator.Item1.Length)) return false;
-                enumerator.Item3 = enumerator.Item1[enumerator.Item2];
-                return true;
-            }
-            E Current(ref (E[], int, E) enumerator) => enumerator.Item3;
-            void Dispose(ref (E[], int, E) enumerator) { }
-        }
+        // use ArrayCursor for the specialised array enumerator.
 
         /// <summary>
         ///     Instance of <see cref="CEnumerable"/> for zipping a tuple of
-        ///     enumerables into an enumerables of tuples.
+        ///     enumerables into an enumerable of tuples.
         /// </summary>
         /// <typeparam name="A">
         ///     The first container.
@@ -524,15 +420,13 @@ namespace AssociatedTypes
         /// <typeparam name="BS">
         ///     The second enumerator state.
         /// </typeparam>
-        public instance CEnumerableZip2<A, [AssociatedType] AE, [AssociatedType] AS,
-                                        B, [AssociatedType] BE, [AssociatedType] BS,
+        public instance CEnumeratorZip2<AS, [AssociatedType] AE,
+                                        BS, [AssociatedType] BE,
                                         implicit EA, implicit EB>
-                                        : CEnumerable<(A, B), (AS, BS), (AE, BE)>
-            where EA : CEnumerable<A, AS, AE>
-            where EB : CEnumerable<B, BS, BE>
+                                        : CEnumerator<(AS, BS), (AE, BE)>
+            where EA : CEnumerator<AS, AE>
+            where EB : CEnumerator<BS, BE>
         {
-            (AS, BS) GetEnumerator((A, B) tup) =>
-                (EA.GetEnumerator(tup.Item1), EB.GetEnumerator(tup.Item2));
             void Reset(ref (AS, BS) tup)
             {
                 EA.Reset(ref tup.Item1);
@@ -550,6 +444,39 @@ namespace AssociatedTypes
                 EA.Dispose(ref tup.Item1);
                 EB.Dispose(ref tup.Item2);
             }
+        }
+
+        /// <summary>
+        ///     Instance of <see cref="CEnumerable"/> for zipping a tuple of
+        ///     enumerables into an enumerable of tuples.
+        /// </summary>
+        /// <typeparam name="A">
+        ///     The first container.
+        /// </typeparam>
+        /// <typeparam name="AE">
+        ///     The first element.
+        /// </typeparam>
+        /// <typeparam name="AS">
+        ///     The first enumerator state.
+        /// </typeparam>
+        /// <typeparam name="B">
+        ///     The second container.
+        /// </typeparam>
+        /// <typeparam name="BE">
+        ///     The second container.
+        /// </typeparam>
+        /// <typeparam name="BS">
+        ///     The second enumerator state.
+        /// </typeparam>
+        public instance CEnumerableZip2<A, [AssociatedType] AS,
+                                        B, [AssociatedType] BS,
+                                        implicit EA, implicit EB>
+                                        : CEnumerable<(A, B), (AS, BS)>
+            where EA : CEnumerable<A, AS>
+            where EB : CEnumerable<B, BS>
+        {
+            (AS, BS) GetEnumerator((A, B) tup) =>
+                (EA.GetEnumerator(tup.Item1), EB.GetEnumerator(tup.Item2));
         }
 
         public static void RunWordTest(string[] words1, string[] words2, int[][] scores, int runs)
@@ -689,11 +616,11 @@ namespace AssociatedTypes
                     Timer t = new Timer();
                     for (int i = 0; i < runs; i++)
                     {
-                        var state1 = CEnumerable<(string[], string[])>.GetEnumerator((words1, words2));
+                        var state1 = (words1, words2).GetEnumerator();
                         while (true)
                         {
-                            if (!CEnumerable<(string[], string[])>.MoveNext(ref state1)) break;
-                            var tup1 = CEnumerable<(string[], string[])>.Current(ref state1);
+                            if (!CEnumerator<(ArrayCursor<string>, ArrayCursor<string>)>.MoveNext(ref state1)) break;
+                            var tup1 = CEnumerator<(ArrayCursor<string>, ArrayCursor<string>)>.Current(ref state1);
 
                             var ltotal = 0;
                             var rtotal = 0;
@@ -701,30 +628,30 @@ namespace AssociatedTypes
                             var state2 = CEnumerable<int[][]>.GetEnumerator(scores);
                             while (true)
                             {
-                                if (!CEnumerable<int[][]>.MoveNext(ref state2)) break;
-                                var score = CEnumerable<int[][]>.Current(ref state2);
+                                if (!CEnumerator<ArrayCursor<int[]>>.MoveNext(ref state2)) break;
+                                var score = CEnumerator<ArrayCursor<int[]>>.Current(ref state2);
 
                                 var lcount = 0;
                                 var rcount = 0;
 
-                                var state3 = CEnumerable<(string, int[])>.GetEnumerator(("abcdefghijklmnopqrstuvwxyz", score));
+                                var state3 = ("abcdefghijklmnopqrstuvwxyz", score).GetEnumerator();
                                 while (true)
                                 {
-                                    if (!CEnumerable<(string, int[])>.MoveNext(ref state3)) break;
-                                    var tup2 = CEnumerable<(string, int[])>.Current(ref state3);
+                                    if (!CEnumerator<((char[], int, char), ArrayCursor<int>)>.MoveNext(ref state3)) break;
+                                    var tup2 = CEnumerator<((char[], int, char), ArrayCursor<int>)>.Current(ref state3);
 
                                     var state4 = CEnumerable<string>.GetEnumerator(tup1.Item1);
                                     while (true)
                                     {
-                                        if (!CEnumerable<string>.MoveNext(ref state4)) break;
-                                        var letter = CEnumerable<string>.Current(ref state4);
+                                        if (!CEnumerator<(char[], int, char)>.MoveNext(ref state4)) break;
+                                        var letter = CEnumerator<(char[], int, char)>.Current(ref state4);
                                         if (letter == tup2.Item1) lcount += tup2.Item2;
                                     }
                                     var state5 = CEnumerable<string>.GetEnumerator(tup1.Item1);
                                     while (true)
                                     {
-                                        if (!CEnumerable<string>.MoveNext(ref state5)) break;
-                                        var letter = CEnumerable<string>.Current(ref state5);
+                                        if (!CEnumerator<(char[], int, char)>.MoveNext(ref state5)) break;
+                                        var letter = CEnumerator<(char[], int, char)>.Current(ref state5);
                                         if (letter == tup2.Item1) rcount += tup2.Item2;
                                     }
                                 }
@@ -759,20 +686,20 @@ namespace AssociatedTypes
     /// <typeparam name="E">
     ///     The element returned by the enumerator.
     /// </typeparam>
-    class EnumeratorShim<C, S, E, implicit N> : IEnumerator<E>
-        where N : CEnumerable<C, S, E>
+    class EnumeratorShim<S, E, implicit N> : IEnumerator<E>
+        where N : CEnumerator<S, E>
     {
         private S _state;
 
         /// <summary>
-        ///     Creates an enumerator for the given collection.
+        ///     Creates an enumerator shim.
         /// </summary>
-        /// <param name="collection">
-        ///     The collection to be enumerated.
+        /// <param name="state">
+        ///     The collection shim to erase.
         /// </param>
-        public EnumeratorShim(C collection)
+        public EnumeratorShim(S state)
         {
-            _state = N.GetEnumerator(collection);
+            _state = state;
         }
 
         public E Current => N.Current(ref _state);
@@ -795,8 +722,9 @@ namespace AssociatedTypes
     /// <typeparam name="E">
     ///     The element returned by the enumerator.
     /// </typeparam>
-    class EnumerableShim<C, [AssociatedType] S, [AssociatedType] E, implicit N> : IEnumerable<E>
-        where N : CEnumerable<C, S, E>
+    class EnumerableShim<C, [AssociatedType] S, [AssociatedType] E, implicit N, implicit T> : IEnumerable<E>
+        where N : CEnumerable<C, S>
+        where T : CEnumerator<S, E>
     {
         private C _collection;
 
@@ -811,8 +739,8 @@ namespace AssociatedTypes
             _collection = collection;
         }
 
-        public IEnumerator<E> GetEnumerator() => new EnumeratorShim<C, S, E>(_collection);
-        IEnumerator IEnumerable.GetEnumerator() => new EnumeratorShim<C, S, E>(_collection);
+        public IEnumerator<E> GetEnumerator() => new EnumeratorShim<S, E>(_collection.GetEnumerator());
+        IEnumerator IEnumerable.GetEnumerator() => new EnumeratorShim<S, E>(_collection.GetEnumerator());
     }
 
     public class Timer

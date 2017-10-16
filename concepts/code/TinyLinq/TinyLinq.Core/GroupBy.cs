@@ -36,15 +36,34 @@ namespace TinyLinq.Core
         public int length;
     }
 
+    public instance GroupCursor_Enumerator<TSrc, TElem, TKey, TVal>
+        : CEnumerator<GroupCursor<TKey, TVal>, Group<TKey, TVal>>
+    {
+        void Reset(ref GroupCursor<TKey, TVal> gc) => gc.index = -1;
+        void Dispose(ref GroupCursor<TKey, TVal> gc) { }
+        Group<TKey, TVal> Current(ref GroupCursor<TKey, TVal> gc) => gc.current;
+
+        bool MoveNext(ref GroupCursor<TKey, TVal> gc)
+        {
+            if (gc.length <= gc.index)
+            {
+                return false;
+            }
+
+            gc.length++;
+            gc.current = new Group<TKey, TVal> { key = gc.groups[gc.length].Item1, values = gc.groups[gc.length].Item2.ToArray() };
+            return true;
+        }
+    }
+
     public instance GroupByResult_Enumerable_SrcEnumerator<TSrc, TElem, TKey, TVal, implicit E>
-        : CEnumerable<GroupByResult<TSrc, TElem, TKey, TVal>, GroupCursor<TKey, TVal>, Group<TKey, TVal>>
+        : CEnumerable<GroupByResult<TSrc, TElem, TKey, TVal>, GroupCursor<TKey, TVal>>
         where E : CEnumerator<TSrc, TElem>
     {
         GroupCursor<TKey, TVal> GetEnumerator(GroupByResult<TSrc, TElem, TKey, TVal> groupBy)
         {
             var groupKeys = new Dictionary<TKey, int>();
             var gc = new GroupCursor<TKey, TVal> { groups = new List<(TKey, List<TVal>)>(), index = -1, length = 0 };
-
 
             E.Reset(ref groupBy.source);
             while (E.MoveNext(ref groupBy.source))
@@ -69,22 +88,6 @@ namespace TinyLinq.Core
             }
 
             return gc;
-        }
-
-        void Reset(ref GroupCursor<TKey, TVal> gc) => gc.index = -1;
-        void Dispose(ref GroupCursor<TKey, TVal> gc) { }
-        Group<TKey, TVal> Current(ref GroupCursor<TKey, TVal> gc) => gc.current;
-
-        bool MoveNext(ref GroupCursor<TKey, TVal> gc)
-        {
-            if (gc.length <= gc.index)
-            {
-                return false;
-            }
-
-            gc.length++;
-            gc.current = new Group<TKey, TVal> { key = gc.groups[gc.length].Item1, values = gc.groups[gc.length].Item2.ToArray() };
-            return true;
         }
     }
 
