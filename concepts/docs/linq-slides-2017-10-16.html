@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Claudio Russo" />
+  <meta name="author" content="Matt Windsor" />
+  <title>Concept-C#</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Concept-C#</h1>
+  <p class="subtitle">Progress with TinyLINQ</p>
+  <p class="author">
+Claudio Russo<br/>Matt Windsor
+  </p>
+  <p class="date">Monday 16 November 2017</p>
+</div>
+<div id="tinylinq" class="slide section level1">
+<h1>TinyLINQ</h1>
+<ul>
+<li>Implementation of LINQ to Objects in Concept-C#</li>
+<li>Why?</li>
+<li>Reduce virtualisation</li>
+<li>Open up for better specialisation</li>
+<li>Demonstrate a nontrivial application of concepts</li>
+</ul>
+</div>
+<div id="benchmarks" class="slide section level1">
+<h1>Benchmarks</h1>
+<p>Modified version of the <a href="http://nessos.github.io/LinqOptimizer/">LinqOptimizer</a> benchmarks library.</p>
+<p>Each benchmark compares:</p>
+<ul>
+<li>Normal .NET Framework 4.7 LINQ</li>
+<li>TinyLINQ with no data structure specialisation ('U' TinyLINQ)</li>
+<li>TinyLINQ with array data structure specialisation and fusion ('S' TinyLINQ)</li>
+<li>LinqOptimizer (aggressive query expression optimisation)</li>
+</ul>
+</div>
+<div id="sum-vanilla-linq" class="slide section level1">
+<h1>Sum: Vanilla LINQ</h1>
+<p>LINQ's <code>Sum</code> methods are hand-specialized to some (but not all) numeric types. Same is true for <code>Max</code>, <code>Min</code>, <code>Average</code> etc.</p>
+<pre><code>public static int Sum(this IEnumerable&lt;int&gt; source)
+{
+    if (source == null)
+        throw Error.ArgumentNull(nameof(source));
+    int sum = 0;
+    checked {
+      foreach (int v in source)
+        sum += v;
+    }
+    return sum;
+}
+public static int? Sum(this IEnumerable&lt;int?&gt; source) {...ditto...}
+public static long Sum(this IEnumerable&lt;long&gt; source) {...ditto...}
+public static long? Sum(this IEnumerable&lt;long?&gt; source)  {...ditto...}
+public static float Sum(this IEnumerable&lt;float&gt; source)  {...ditto...}
+public static float? Sum(this IEnumerable&lt;float?&gt; source)  {...ditto...}
+public static double Sum(this IEnumerable&lt;double&gt; source)  {...ditto...}
+public static double? Sum(this IEnumerable&lt;double?&gt; source)  {...ditto...}
+public static decimal Sum(this IEnumerable&lt;decimal&gt; source)  {...ditto...}
+public static decimal? Sum(this IEnumerable&lt;decimal?&gt; source)  {...ditto...}
+   </code></pre>
+<p>(iteration (via <code>foreach</code>) is unspecialized!)</p>
+</div>
+<div id="sum-tinylinq" class="slide section level1">
+<h1>Sum: TinyLINQ</h1>
+<p>TinyLINQ has <em>one</em> generic implementation of <code>Sum</code>, abstracted on all current (and future) numeric instances:</p>
+<pre><code>public concept CSum&lt;TEnum, [AssociatedType] TElem&gt;
+{
+    TElem Sum(this TEnum source);
+}
+
+public instance Sum_Enumerable_Num&lt;TColl, [AssociatedType] TEnum, [AssociatedType] TElem, implicit E, implicit N&gt; : CSum&lt;TColl, TElem&gt;
+    where E : CEnumerable&lt;TColl, TEnum, TElem&gt;
+    where N : Num&lt;TElem&gt;
+{
+    TElem Sum(this TColl c)
+    {
+        var e = E.GetEnumerator(c);
+        var sum = N.FromInteger(0);
+        var count = 0;
+        E.Reset(ref e);  // FIXME: remove this
+        while (E.MoveNext(ref e))
+        {
+            count++;
+            sum += E.Current(ref e);
+        }
+        return sum;
+    }
+}</code></pre>
+<p>Moreover, iteration (via CEnumerable<TColl,TENum,Elem>) can be specialized!</p>
+</div>
+<div id="sum-benchmarks" class="slide section level1">
+<h1>Sum Benchmarks</h1>
+<pre><code>return values.Sum();</code></pre>
+<p>where</p>
+<pre><code>const int useSameSeedEveryTimeToHaveSameData = 08041988;
+protected Random rnd = new Random(useSameSeedEveryTimeToHaveSameData);
+values = Enumerable.Range(1, 1000000).Select(x =&gt; rnd.NextDouble()).ToArray();</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th align="right">Mean (ns)</th>
+<th align="right">Error (ns)</th>
+<th align="right">StdDev (ns)</th>
+<th align="right">Median (ns)</th>
+<th align="right">Scaled</th>
+<th align="right">Gen 0</th>
+<th align="right">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>LINQ (baseline)</td>
+<td align="right">5,033,907.45</td>
+<td align="right">8,971.8780</td>
+<td align="right">7,491.9237</td>
+<td align="right">5,032,082.93</td>
+<td align="right">1.00</td>
+<td align="right">-</td>
+<td align="right">64 B</td>
+</tr>
+<tr class="even">
+<td>U. TinyLINQ</td>
+<td align="right">2,189,911.82</td>
+<td align="right">244.1549</td>
+<td align="right">190.6201</td>
+<td align="right">2,189,913.06</td>
+<td align="right">0.44</td>
+<td align="right">-</td>
+<td align="right">0 B</td>
+</tr>
+<tr class="odd">
+<td><strong>S. TinyLINQ</strong></td>
+<td align="right"><strong>2,189,101.51</strong></td>
+<td align="right"><strong>530.0816</strong></td>
+<td align="right"><strong>413.8528</strong></td>
+<td align="right"><strong>2,189,012.44</strong></td>
+<td align="right"><strong>0.43</strong></td>
+<td align="right"><strong>-</strong></td>
+<td align="right"><strong>0 B</strong></td>
+</tr>
+<tr class="even">
+<td>LINQOptimizer</td>
+<td align="right">880,015.47</td>
+<td align="right">371.2546</td>
+<td align="right">289.8511</td>
+<td align="right">879,941.68</td>
+<td align="right">0.17</td>
+<td align="right">2.9297</td>
+<td align="right">18920 B</td>
+</tr>
+</tbody>
+</table>
+<p>(U. TinyLINQ and S. TinyLINQ run the same code here)</p>
+</div>
+<div id="select" class="slide section level1">
+<h1>Select</h1>
+<p>In normal <em>LINQ to Objects</em>, this is:</p>
+<pre><code>public static partial class Enumerable
+{
+    IEnumerable&lt;TResult&gt; Select(this IEnumerable&lt;TSource&gt; source,
+                                Func&lt;TSource, TResult&gt; selector)
+    { /* ... */ }
+}</code></pre>
+<p>The concept version is:</p>
+<pre><code>public concept CSelect&lt;TSourceColl, TSource, TResult,
+                       [AssociatedType]TResultColl&gt;
+{
+    TResultColl Select(this TSourceColl source,
+                       Func&lt;TSource, TResult&gt; selector);
+}</code></pre>
+<p>This encoding lets us specialise according to the collection we're given by varying <code>TResultColl</code></p>
+</div>
+<div id="select-unspecialised-instance-utl" class="slide section level1">
+<h1>Select: Unspecialised Instance (UTL)</h1>
+<p>Create a struct to hold the state of the enumeration:</p>
+<pre><code>public struct Select&lt;TSourceEnum, TSource, TResult&gt;
+{
+    public TSourceEnum source;
+    public Func&lt;TSource, TResult&gt; selector;
+    public TResult current;
+}</code></pre>
+<p>And an instance to return <code>Select</code>s for any enumerator:</p>
+<pre><code>public instance Select_Enumerator&lt;TSourceEnum, TSource, TResult, implicit E&gt;
+    : CSelect&lt;TSourceEnum, Select&lt;TSourceEnum, TSource, TResult&gt;&gt;
+    where E : CEnumerator&lt;TSourceEnum, TSource&gt;
+{
+    Select&lt;TSourceEnum, TSource, TResult&gt; Select(
+        this TSourceEnum source,
+        Func&lt;TSource, TResult&gt; selector) 
+    {
+        return new Select&lt;TSourceEnum, TSource, TResult&gt;
+        {
+            source = source,
+            selector = selector
+        };
+    }
+}</code></pre>
+<p>Not seen: glue instance to lift this to <code>CEnumerable</code></p>
+</div>
+<div id="select-specialised-instance-stl" class="slide section level1">
+<h1>Select: Specialised Instance (STL)</h1>
+<p>Hand-inline the array enumeration:</p>
+<pre><code>public struct ArraySelect&lt;TSource, TResult&gt;
+{
+    public TSource[] source;
+    public Func&lt;TSource, TResult&gt; selector;
+    public int index, length;
+    public TResult current;
+}</code></pre>
+<p>And make a new, more specialised instance:</p>
+<pre><code>public instance Select_ArrayCursor&lt;TSource, TResult&gt;
+    : CSelect&lt;ArrayCursor&lt;TSource&gt;, TSource, TResult,
+              ArraySelect&lt;TSource, TResult&gt;&gt;
+{
+    ArraySelect&lt;TSource, TResult&gt; Select(this ArrayCursor&lt;TSource&gt; source,
+                                         Func&lt;TSource, TResult&gt; selector)
+    {
+        return new ArraySelect&lt;TSource, TResult&gt;
+        {
+            source = source.array, // underlying array
+            selector = selector,
+            index = -1, length = source.array.Length
+        };
+    }
+}</code></pre>
+<p>where <code>ArrayCursor</code> is the enumerator struct we use for <code>CEnumerator</code> on arrays (similar to <code>List.Enumerator</code>)</p>
+<p><strong>Known issue</strong>: should really take <code>ArrayCursor</code>'s current index</p>
+</div>
+<div id="select-benchmark" class="slide section level1">
+<h1>Select Benchmark</h1>
+<p>Sum of squares:</p>
+<pre><code>return values.Select(x =&gt; x * x).Sum();</code></pre>
+<p>where</p>
+<pre><code>const int useSameSeedEveryTimeToHaveSameData = 08041988;
+protected Random rnd = new Random(useSameSeedEveryTimeToHaveSameData);
+values = Enumerable.Range(1, 1000000).Select(x =&gt; rnd.NextDouble()).ToArray();</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th align="right">Mean (ns)</th>
+<th align="right">Error (ns)</th>
+<th align="right">StdDev (ns)</th>
+<th align="right">Median (ns)</th>
+<th align="right">Scaled</th>
+<th align="right">Gen 0</th>
+<th align="right">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>LINQ (baseline)</td>
+<td align="right">6,973,307.75</td>
+<td align="right">376.9286</td>
+<td align="right">314.7524</td>
+<td align="right">6,973,387.06</td>
+<td align="right">1.00</td>
+<td align="right">-</td>
+<td align="right">128 B</td>
+</tr>
+<tr class="even">
+<td>U. TinyLINQ</td>
+<td align="right">7,944,699.07</td>
+<td align="right">19,191.1397</td>
+<td align="right">17,951.4022</td>
+<td align="right">7,938,954.14</td>
+<td align="right">1.14</td>
+<td align="right">-</td>
+<td align="right">0 B</td>
+</tr>
+<tr class="odd">
+<td><strong>S. TinyLINQ</strong></td>
+<td align="right"><strong>4,573,600.18</strong></td>
+<td align="right"><strong>88,844.7148</strong></td>
+<td align="right"><strong>127,418.4352</strong></td>
+<td align="right"><strong>4,498,185.13</strong></td>
+<td align="right"><strong>0.66</strong></td>
+<td align="right"><strong>-</strong></td>
+<td align="right"><strong>0 B</strong></td>
+</tr>
+<tr class="even">
+<td>LINQOptimizer</td>
+<td align="right">942,023.65</td>
+<td align="right">9,273.0175</td>
+<td align="right">7,743.3889</td>
+<td align="right">940,342.03</td>
+<td align="right">0.14</td>
+<td align="right">3.9063</td>
+<td align="right">20880 B</td>
+</tr>
+</tbody>
+</table>
+<p>Specialised: One-third reduction in time compared to LINQ. Unspecialised: slight slowdown, likely due to enumerator call overhead.</p>
+</div>
+<div id="selectmany" class="slide section level1">
+<h1>SelectMany</h1>
+<p>Normally, SelectMany looks like:</p>
+<pre><code>public static IEnumerable&lt;TResult&gt;
+SelectMany&lt;TSource, TCollection, TResult&gt;(this IEnumerable&lt;TSource&gt; source,
+                                          Func&lt;TSource, IEnumerable&lt;TCollection&gt;&gt; collectionSelector,
+                                          Func&lt;TSource, TCollection, TResult&gt; resultSelector)</code></pre>
+<p>Ours is:</p>
+<pre><code>public concept CSelectMany&lt;TElemColl, [AssociatedType] TElem,
+                           TCollectionColl, [AssociatedType] TCollection,
+                           TResult, [AssociatedType] TResultColl&gt;
+{
+    TResultColl SelectMany(this TElemColl src,
+                           Func&lt;TElem, TCollectionColl&gt; selector,
+                           Func&lt;TElem, TCollection, TResult&gt; resultSelector);
+}</code></pre>
+<p>Generic soup?</p>
+</div>
+<div id="selectmany-benchmark" class="slide section level1">
+<h1>SelectMany Benchmark</h1>
+<pre><code>return (from x in dim1
+        from y in dim2
+        select x * y).Sum();</code></pre>
+<p>where</p>
+<pre><code>const int useSameSeedEveryTimeToHaveSameData = 08041988;
+protected Random rnd = new Random(useSameSeedEveryTimeToHaveSameData);
+values = Enumerable.Range(1, 1000000).Select(x =&gt; rnd.NextDouble()).ToArray();
+dim1 = values.Take(values.Length / 10).ToArray();
+dim2 = values.Take(20).ToArray();</code></pre>
+<table style="width:100%;">
+<colgroup>
+<col width="12%" />
+<col width="14%" />
+<col width="13%" />
+<col width="13%" />
+<col width="14%" />
+<col width="10%" />
+<col width="10%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th align="right">Mean (ns)</th>
+<th align="right">Error (ns)</th>
+<th align="right">StdDev (ns)</th>
+<th align="right">Median (ns)</th>
+<th align="right">Scaled</th>
+<th align="right">Gen 0</th>
+<th align="right">Allocated</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>LINQ (baseline)</td>
+<td align="right">28,007,892.30</td>
+<td align="right">48,721.2904</td>
+<td align="right">40,684.4801</td>
+<td align="right">28,006,118.71</td>
+<td align="right">1.00</td>
+<td align="right">593.7500</td>
+<td align="right">3200289 B</td>
+</tr>
+<tr class="even">
+<td>U. TinyLINQ</td>
+<td align="right">20,427,620.20</td>
+<td align="right">408,539.5068</td>
+<td align="right">501,723.2035</td>
+<td align="right">20,625,689.87</td>
+<td align="right">0.73</td>
+<td align="right">-</td>
+<td align="right">256 B</td>
+</tr>
+<tr class="odd">
+<td><strong>S. TinyLINQ</strong></td>
+<td align="right"><strong>10,931,075.23</strong></td>
+<td align="right"><strong>11,392.2479</strong></td>
+<td align="right"><strong>10,098.9300</strong></td>
+<td align="right"><strong>10,927,728.40</strong></td>
+<td align="right"><strong>0.39</strong></td>
+<td align="right"><strong>-</strong></td>
+<td align="right"><strong>128 B</strong></td>
+</tr>
+<tr class="even">
+<td>LINQOptimizer</td>
+<td align="right">1,813,231.38</td>
+<td align="right">14,839.7519</td>
+<td align="right">12,391.8637</td>
+<td align="right">1,807,227.35</td>
+<td align="right">0.06</td>
+<td align="right">5.8594</td>
+<td align="right">39713 B</td>
+</tr>
+</tbody>
+</table>
+<p>LINQ doesn't do any optimisation here, so the more fair comparison is to U. TinyLINQ.</p>
+</div>
+<div id="obligatory-bad-benchmark" class="slide section level1">
+<h1>Obligatory bad benchmark</h1>
+<pre><code>return (from a in Enumerable.Range(1, 1000 + 1)
+        from b in Enumerable.Range(a, 1000 + 1 - a)
+        from c in Enumerable.Range(b, 1000 + 1 - b)
+        where a * a + b * b == c * c
+        select true).Count();</code></pre>
+<p>For S. TinyLINQ, we use a struct rewriting of <code>Range</code>.</p>
+<table style="width:100%;">
+<colgroup>
+<col width="12%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="10%" />
+<col width="10%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th align="right">Mean</th>
+<th align="right">Error</th>
+<th align="right">StdDev</th>
+<th align="right">Median</th>
+<th align="right">Scaled</th>
+<th align="right">ScaledSD</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>S. TinyLINQ</strong></td>
+<td align="right"><strong>4,966,219,778.7 ns</strong></td>
+<td align="right"><strong>11,769,027.1854 ns</strong></td>
+<td align="right"><strong>10,432,935.0296 ns</strong></td>
+<td align="right"><strong>4,963,239,193.8 ns</strong></td>
+<td align="right"><strong>1.40</strong></td>
+<td align="right"><strong>0.00</strong></td>
+</tr>
+<tr class="even">
+<td>U. TinyLINQ</td>
+<td align="right">3,916,384,212.6 ns</td>
+<td align="right">5,913,565.2231 ns</td>
+<td align="right">5,531,552.0405 ns</td>
+<td align="right">3,914,310,472.2 ns</td>
+<td align="right">1.10</td>
+<td align="right">0.00</td>
+</tr>
+<tr class="odd">
+<td>LINQ (baseline)</td>
+<td align="right">3,553,785,148.6 ns</td>
+<td align="right">4,300,104.4210 ns</td>
+<td align="right">4,022,319.9520 ns</td>
+<td align="right">3,552,339,246.8 ns</td>
+<td align="right">1.00</td>
+<td align="right">0.00</td>
+</tr>
+<tr class="even">
+<td>LINQOptimizer</td>
+<td align="right">167,583,382.8 ns</td>
+<td align="right">1,571,614.0967 ns</td>
+<td align="right">1,393,194.8243 ns</td>
+<td align="right">166,821,341.4 ns</td>
+<td align="right">0.05</td>
+<td align="right">0.00</td>
+</tr>
+</tbody>
+</table>
+<p>Not sure why we get this upside-down benchmark...!</p>
+</div>
+<div id="caveats" class="slide section level1">
+<h1>Caveats</h1>
+<ul>
+<li>TinyLINQ plays hard and fast with enumerators</li>
+<li>Lots of assumptions that enumerators are fresh and won't be re-used</li>
+<li>Thread-unsafe</li>
+<li>Very little argument checking</li>
+<li>Working to clean up the concepts enumerator library to mitigate some of these problems</li>
+<li>No rigorous testing (yet) of the results coming out</li>
+<li>We use our <code>SerialPBT</code> property based testing library to test certain queries, but this only tests small input spaces</li>
+<li>Quick validation of the final results used in the benchmarks</li>
+</ul>
+<h2 id="conclusions">Conclusions</h2>
+<ul>
+<li>Promising results for simple queries</li>
+<li>Faster than LINQ when matching or surpassing corefx's level of</li>
+<li>Unclear why complex queries become slower</li>
+<li>further investigation required</li>
+</ul>
+</div>
+</body>
+</html>
