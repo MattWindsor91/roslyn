@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Concepts;
 using System.Concepts.Prelude;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
+using System.Concepts.Indexable;
 using static System.Concepts.Enumerable.Instances;
 using System.Concepts.Showable;
 using TinyLinq.SpecialisedInstances;
@@ -11,6 +13,10 @@ using SerialPBT;
 
 namespace TinyLinq
 {   
+    /// <summary>
+    /// Tests that perform queries over arrays and use specialised
+    /// TinyLINQ instances.
+    /// </summary>
     public static class SpecialisedArrayTests
     {
         /// <summary>
@@ -226,7 +232,7 @@ namespace TinyLinq
 
         public static void Run()
         {
-            PBTHelpers.Check(Prop_SelectIdentityIntArray, 7);
+            PBTHelpers.Check((Func<int[], bool>)GenericTests.Prop_SelectIdentity, 7);
 
             PBTHelpers.Check(Prop_SumEqualIntArray, 7);
             PBTHelpers.Check(Prop_SumSquaresEqualIntArray, 7);

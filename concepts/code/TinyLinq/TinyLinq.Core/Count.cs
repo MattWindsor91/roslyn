@@ -1,111 +1,10 @@
-﻿using System.Concepts;
-using System.Concepts.Enumerable;
+﻿using System.Concepts.Countable;
 
 namespace TinyLinq
 {
-    /// <summary>
-    /// Concept for enumerators that can be counted.
-    /// <para>
-    /// The count may force evaluation of the enumerator's value.
-    /// For guarantees that this will not happen, see
-    /// the descendent <see cref="CStaticCount{TEnum}"/></para>
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// The type of the enumerator.
-    /// </typeparam>
-    public concept CCount<TEnum>
-    {
-        /// <summary>
-        /// Returns the number of elements over which this enumerator ranges.
-        /// <para>
-        /// This may cause evaluation of elements in the enumerator and move
-        /// the iterator, and need not be thread-safe.
-        /// </para>
-        /// </summary>
-        /// <param name="t">The enumerator to count.</param>
-        /// <returns>
-        /// The total number of elements accessible from this enumerator,
-        /// including any previously moved-over.
-        /// </returns>
-        int Count(this TEnum t);
-    }
-
-    /// <summary>
-    /// Naive instance of <see cref="CCount{TEnum}"/> for enumerators,
-    /// where we just reset and spin the enumerator.
-    /// </summary>
-    [Overlappable]
-    public instance Count_Enumerator<TEnum, [AssociatedType]TElem, implicit E> : CCount<TEnum> where E : CEnumerator<TEnum, TElem>
-    {
-        int Count(this TEnum t)
-        {
-            E.Reset(ref t);
-            var count = 0;
-            while (E.MoveNext(ref t))
-            {
-                count++;
-            }
-            return count;
-        }
-    }
-
-    /// <summary>
-    /// Concept for enumerators that can be counted without enumerating.
-    /// <para>
-    /// Instances for this concept must guarantee that the enumerator is not
-    /// modified at any point.</para>
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// The type of the enumerator.
-    /// </typeparam>
-    public concept CStaticCount<TEnum> : CCount<TEnum>
-    {
-        // This concept adds only additional semantic guarantees to CCount.
-    }
-
-    /// <summary>
-    /// Instance for O(1) length lookup of arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public instance StaticCount_Array<TElem> : CStaticCount<TElem[]>
-    {
-        int Count(this TElem[] t) => t.Length;
-    }
-
-    /// <summary>
-    /// Instance for O(1) length lookup of array cursors.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public instance StaticCount_ArrayCursor<TElem> : CStaticCount<Instances.ArrayCursor<TElem>>
-    {
-        int Count(this Instances.ArrayCursor<TElem> t) => t.hi;
-    }
-
-    /// <summary>
-    /// Instance for O(1) length lookup of ranges.
-    /// </summary>
-    /// <typeparam name="TNum">
-    /// Type of the number in the range.
-    /// </typeparam>
-    public instance StaticCount_Range<TNum> : CStaticCount<Range<TNum>>
-    {
-        int Count(this Range<TNum> t) => t.count;
-    }
-
-    /// <summary>
-    /// Instance for O(1) length lookup of range cursors.
-    /// </summary>
-    /// <typeparam name="TNum">
-    /// Type of the number in the range.
-    /// </typeparam>
-    public instance StaticCount_RangeCursor<TNum> : CStaticCount<Instances.RangeCursor<TNum>>
-    {
-        int Count(this Instances.RangeCursor<TNum> t) => t.range.count;
-    }
+    // Count is already implemented in the concept library.
+    // This just adds new instances to CCountable and CStaticCountable
+    // for LINQ stuff.
 
     /// <summary>
     /// Instance for O(1) length lookup of selections, when the selected-over
@@ -123,8 +22,8 @@ namespace TinyLinq
     /// <typeparam name="B">
     /// Instance of <see cref="CStaticCount{T}"/> for <typeparamref name="TEnum"/>.
     /// </typeparam>
-    public instance CBounded_Select<TEnum, TElem, TProj, implicit S> : CStaticCount<Select<TEnum, TElem, TProj>>
-        where S : CStaticCount<TEnum>
+    public instance StaticCountable_Select<TEnum, TElem, TProj, implicit S> : CStaticCountable<Select<TEnum, TElem, TProj>>
+        where S : CStaticCountable<TEnum>
     {
         int Count(this Select<TEnum, TElem, TProj> sel) => S.Count(sel.source);
     }

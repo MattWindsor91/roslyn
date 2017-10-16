@@ -82,24 +82,6 @@ namespace System.Concepts.Enumerable
     }
 
     /// <summary>
-    /// A generic range.
-    /// </summary>
-    /// <typeparam name="TNum">
-    /// Type of numbers in the range.
-    /// </typeparam>
-    public struct Range<TNum>
-    {
-        /// <summary>
-        /// The start of the range.
-        /// </summary>
-        public TNum start;
-        /// <summary>
-        /// The number of items in the range.
-        /// </summary>
-        public int count;
-    }
-
-    /// <summary>
     /// Instances for common enumerables.
     /// </summary>
     public static class Instances

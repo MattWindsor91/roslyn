@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
 
 namespace TinyLinq.SpecialisedInstances
@@ -357,7 +358,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    instance Count_ArrayWhere<TElem> : CCount<ArrayWhere<TElem>>
+    instance Countable_ArrayWhere<TElem> : CCountable<ArrayWhere<TElem>>
     {
         int Count(this ArrayWhere<TElem> aw)
         {

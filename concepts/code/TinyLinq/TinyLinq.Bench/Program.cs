@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Prelude;
 using System.Concepts.Enumerable;
 using static System.Concepts.Enumerable.Instances;

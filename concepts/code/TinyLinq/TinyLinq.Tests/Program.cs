@@ -1,15 +1,10 @@
-﻿using System.Concepts.Enumerable;
-using static System.Concepts.Enumerable.Instances;
-using System.Concepts.Showable;
-
-namespace TinyLinq
+﻿namespace TinyLinq.Tests
 {
     class Program
     {
         static void Main(string[] args)
         {
-            ConceptExtensionTests.Run();
-
+            SpecialisedRangeTests.Run();
             UnspecialisedArrayTests.Run();
             SpecialisedArrayTests.Run();
             LinqSyntaxTests.Run();

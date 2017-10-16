@@ -54,7 +54,10 @@ namespace TinyLinq
     {
         void Reset(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
-            EI.Dispose(ref sm.currentInnerSource);
+            if (sm.currentInnerSource != null)
+            {
+                EI.Dispose(ref sm.currentInnerSource);
+            }
             sm.started = sm.finished = false;
 
             ES.Reset(ref sm.source);
