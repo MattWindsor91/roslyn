@@ -11,7 +11,7 @@ using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Attributes.Exporters;
 using TinyLinq.SpecialisedInstances;
 
-namespace TinyLinq
+namespace TinyLinq.Bench
 {
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
     [LegacyJitX86Job, RyuJitX64Job]
@@ -161,6 +161,16 @@ namespace TinyLinq
     {
         static void Main(string[] args)
         {
+            if (args.Length == 1 && args[0] == "pythagorean")
+            {
+                if (!PythagoreanBenchmarks.SanityCheck())
+                {
+                    return;
+                }
+                BenchmarkRunner.Run<PythagoreanBenchmarks>();
+                return;
+            }
+
             BenchmarkRunner.Run<WarrenSumBenchmarks>();
             BenchmarkRunner.Run<WarrenCountBenchmarks>();    
         }

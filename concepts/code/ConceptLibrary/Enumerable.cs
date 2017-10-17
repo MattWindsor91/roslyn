@@ -179,6 +179,13 @@ namespace System.Concepts.Enumerable
 
         public struct RangeCursor<TNum>
         {
+            public enum State
+            {
+                OneBefore,
+                Okay,
+                OneAfter
+            }
+
             /// <summary>
             /// The range over which we are iterating.
             /// </summary>
@@ -192,13 +199,9 @@ namespace System.Concepts.Enumerable
             /// </summary>
             public TNum current;
             /// <summary>
-            /// Whether we are one below the first item in the range.
+            /// The state of the cursor.
             /// </summary>
-            public bool reset;
-            /// <summary>
-            /// Whether we are one after the last item in the range.
-            /// </summary>
-            public bool finished;
+            public State state;
         }
 
         /// <summary>
@@ -213,28 +216,30 @@ namespace System.Concepts.Enumerable
 
             void Reset(ref RangeCursor<TNum> e)
             {
-                e.reset = true;
-                e.finished = false;
+                e.state = e.range.count == 0
+                    ? RangeCursor<TNum>.State.OneAfter
+                    : RangeCursor<TNum>.State.OneBefore;
             }
             bool MoveNext(ref RangeCursor<TNum> e)
             {
-                if (e.finished)
+                switch (e.state)
                 {
-                    return false;
+                    case RangeCursor<TNum>.State.OneAfter:
+                        return false;
+                    case RangeCursor<TNum>.State.OneBefore:
+                        e.current = e.range.start;
+                        e.state = RangeCursor<TNum>.State.Okay;
+                        // Assume we can't have a 0-length range.
+                        return true;
+                    default:
+                        e.current += FromInteger(1);
+                        if (Equals(e.end, e.current))
+                        {
+                            e.state = RangeCursor<TNum>.State.OneAfter;
+                            return false;
+                        }
+                        return true;
                 }
-
-                if (e.reset)
-                {
-                    e.current = e.range.start;
-                    e.reset = false;
-                }
-                else
-                {
-                    e.current += FromInteger(1);
-                }
-
-                e.finished = Equals(e.end, e.current);
-                return !e.finished;
             }
                 
             TNum Current(ref RangeCursor<TNum> e) => e.current;
@@ -251,7 +256,12 @@ namespace System.Concepts.Enumerable
             where N : Num<TNum>
         {
             RangeCursor<TNum> GetEnumerator(this Range<TNum> range) =>
-                new RangeCursor<TNum> { range = range, end = range.start + FromInteger(range.count), reset = true, finished = false };
+                new RangeCursor<TNum>
+                {
+                    range = range,
+                    end = range.start + FromInteger(range.count),
+                    state = range.count == 0 ? RangeCursor<TNum>.State.OneAfter : RangeCursor<TNum>.State.OneBefore
+                };
         }
 
         #endregion Ranges
