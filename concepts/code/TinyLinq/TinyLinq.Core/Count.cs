@@ -22,9 +22,9 @@ namespace TinyLinq
     /// <typeparam name="B">
     /// Instance of <see cref="CStaticCount{T}"/> for <typeparamref name="TEnum"/>.
     /// </typeparam>
-    public instance StaticCountable_Select<TEnum, TElem, TProj, implicit S> : CStaticCountable<Select<TEnum, TElem, TProj>>
+    public instance StaticCountable_Select<TEnum, TElem, TProj, implicit S> : CStaticCountable<SelectCursor<TEnum, TElem, TProj>>
         where S : CStaticCountable<TEnum>
     {
-        int Count(this Select<TEnum, TElem, TProj> sel) => S.Count(sel.source);
+        int Count(this SelectCursor<TEnum, TElem, TProj> sel) => S.Count(sel.source);
     }
 }

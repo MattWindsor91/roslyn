@@ -33,7 +33,7 @@ namespace TinyLinq
         TDest SelectMany(this TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
     }
 
-    public struct SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
+    public struct SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
     {
         public TSrc source;
         public TElem currentElem;
@@ -47,13 +47,13 @@ namespace TinyLinq
         public Func<TElem, TInnerElem, TProj> innerProjection;
     }
 
-    public instance Enumerator_SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI, implicit NI>
-        : CEnumerator<SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>, TProj>
-            where ES : CEnumerator<TSrc, TElem>
-            where EI : CEnumerable<TInnerColl, TInnerSrc>
-            where NI : CEnumerator<TInnerSrc, TInnerElem>
+    public instance Enumerator_SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI, implicit NI>
+        : CEnumerator<SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>, TProj>
+        where ES : CEnumerator<TSrc, TElem>
+        where EI : CEnumerable<TInnerColl, TInnerSrc>
+        where NI : CEnumerator<TInnerSrc, TInnerElem>
     {
-        void Reset(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+        void Reset(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
             if (sm.currentInnerSource != null)
             {
@@ -64,7 +64,7 @@ namespace TinyLinq
             ES.Reset(ref sm.source);
         }
 
-        bool MoveNext(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+        bool MoveNext(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
             // Outer enumerator has finished: we're done.
             if (sm.finished)
@@ -104,9 +104,9 @@ namespace TinyLinq
             }
         }
 
-        TProj Current(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm) => sm.current;
+        TProj Current(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm) => sm.current;
 
-        void Dispose(ref SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+        void Dispose(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
             if (sm.started && !sm.finished)
             {
@@ -118,13 +118,13 @@ namespace TinyLinq
 
     [Overlappable]
     public instance SelectMany_Enumerator<TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType] TInnerElem, TProj, implicit EI, implicit ES, implicit NI>
-        : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
+        : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
         where ES : CEnumerator<TSrc, TElem>
         where EI : CEnumerable<TInnerColl, TInnerSrc>
         where NI : CEnumerator<TInnerSrc, TInnerElem>
     {
-        SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => new SelectMany<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
+        SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
+            => new SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
             {
                 source = src,
                 started = false,
