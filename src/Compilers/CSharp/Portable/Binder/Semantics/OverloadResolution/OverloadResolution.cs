@@ -2844,8 +2844,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             Debug.Assert(0 < method.Arity, "A 0-arity method should not have concept witnesses.");
 
+                            // Concept features disable if concept attributes aren't
+                            // present, and the semantics of concept inference depends
+                            // on these attributes being available anyway.
+                            if (!_binder.Compilation.HasConceptAttributes)
+                            {
+                                return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.TypeInferenceFailed());
+                            }
+
                             typeArguments = PartInferImplicitTypeParameters(typeArgumentsBuilder, method);
-                            if (typeArguments.IsEmpty) return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.TypeInferenceFailed());
+                            if (typeArguments.IsEmpty)
+                            {
+                                return new MemberResolutionResult<TMember>(member, leastOverriddenMember, MemberAnalysisResult.TypeInferenceFailed());
+                            }
                             // Fall through to below.
                         }
                         else
