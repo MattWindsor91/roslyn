@@ -40,6 +40,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!AllFixed(),
                 "Concept witness inference is pointless if there is nothing to infer");
 
+            // Concept features disable if concept attributes aren't
+            // present, and the semantics of concept inference depends
+            // on these attributes being available anyway.
+            if (!binder.Compilation.HasConceptAttributes)
+            {
+                return false;
+            }
+
             var methodInfo = MakeMethodInfo(binder);
             var inferrer = new ConceptWitnessInferrer(binder);
             var fixedWithHeuristics = FixedArgsWithHeuristics(binder);

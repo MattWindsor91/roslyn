@@ -945,8 +945,19 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(typeArguments.Length + namedType.ImplicitTypeParameterCount == namedType.Arity,
                 $"Started {nameof(PartInferImplicitTypeParameters)} with incorrect number of missing arguments");
 
+            // Concept features disable if concept attributes aren't
+            // present, and the semantics of concept inference depends
+            // on these attributes being available anyway.
+            if (!Compilation.HasConceptAttributes)
+            {
+                return ImmutableArray<TypeSymbol>.Empty;
+            }
+
             // Pointless to part-infer without implicit type parameters.
-            if (namedType.ImplicitTypeParameterCount == 0) return ImmutableArray<TypeSymbol>.Empty;
+            if (namedType.ImplicitTypeParameterCount == 0)
+            {
+                return ImmutableArray<TypeSymbol>.Empty;
+            }
 
             var allArguments = new ConceptWitnessInferrer(this).PartInfer(typeArguments, namedType.TypeParameters, expandAssociatedIfFailed: namedType.IsConcept);
 
