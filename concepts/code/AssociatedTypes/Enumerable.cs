@@ -379,7 +379,7 @@ namespace AssociatedTypes
         {
             (char[], int, char) GetEnumerator(this string str) => (str.ToCharArray(), -1, default(char));
         }
-        public instance CEnumeratorString : CEnumerator<(char[], int, char), char>
+        public instance CEnumeratorString : CResettableEnumerator<(char[], int, char), char>
         {
             void Reset(ref (char[], int, char) enumerator)
             {
@@ -427,11 +427,6 @@ namespace AssociatedTypes
             where EA : CEnumerator<AS, AE>
             where EB : CEnumerator<BS, BE>
         {
-            void Reset(ref (AS, BS) tup)
-            {
-                EA.Reset(ref tup.Item1);
-                EB.Reset(ref tup.Item2);
-            }
             bool MoveNext(ref (AS, BS) tup)
             {
                 if (!EA.MoveNext(ref tup.Item1)) return false;
@@ -705,7 +700,7 @@ namespace AssociatedTypes
         public E Current => N.Current(ref _state);
         object IEnumerator.Current => N.Current(ref _state);
         public bool MoveNext() => N.MoveNext(ref _state);
-        public void Reset() { N.Reset(ref _state); }
+        public void Reset() { throw new NotSupportedException("can't reset a non-resettable CEnumerator"); }
         void IDisposable.Dispose() { N.Dispose(ref _state); }
     }
 

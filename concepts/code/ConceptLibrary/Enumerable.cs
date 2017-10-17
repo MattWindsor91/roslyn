@@ -7,7 +7,7 @@ using System.Concepts.Prelude;
 namespace System.Concepts.Enumerable
 {
     /// <summary>
-    ///     Concept for types which may be enumerated.
+    ///     Concept for types that may be enumerated.
     /// </summary>
     /// <typeparam name="TState">
     ///     The state held by the enumerator.
@@ -17,53 +17,43 @@ namespace System.Concepts.Enumerable
     /// </typeparam>
     public concept CEnumerator<TState, [AssociatedType] TElem>
     {
-        void Reset(ref TState enumerator);
         bool MoveNext(ref TState enumerator);
         TElem Current(ref TState enumerator);
         void Dispose(ref TState enumerator);
     }
 
     /// <summary>
-    /// Concept for enumerators that can be shallow-copied.
+    ///     Concept for enumerators that support resetting..
     /// </summary>
-    public concept CCopyEnumerator<TState, [AssociatedType] TElem> : CEnumerator<TState, TElem>
+    /// <typeparam name="TState">
+    ///     The state held by the enumerator.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    ///     The element returned by the enumerator.
+    /// </typeparam>
+    public concept CResettableEnumerator<TState, [AssociatedType] TElem> : CEnumerator<TState, TElem>
+    {
+        void Reset(ref TState enumerator);
+    }
+
+    /// <summary>
+    /// Concept for enumerators that can be cloned.
+    /// </summary>
+    public concept CClonableEnumerator<TState, [AssociatedType] TElem> : CResettableEnumerator<TState, TElem>
     {
         /// <summary>
-        /// Shallow-copies the enumerator.
+        /// Clones the enumerator.
         /// </summary>
         /// <remarks>
-        /// As this method does not take its enumerator by reference,
-        /// value-type enumerators can just in-place modify and
-        /// return <paramref name="enumerator"/>.
+        /// The new enumerator should be pre-reset.
         /// </remarks>
-        /// <param name="enumerator">
-        /// The enumerator to shallow-copy.
-        /// </param>
-        /// <returns>
-        /// A copy of the enumerator.
-        /// The copy can hold the same reference to the original data
-        /// as the previous copy, but must have separate storage for its
-        /// enumeration state.
-        /// </returns>
-        TState Copy(this TState enumerator);
-
-        /// <summary>
-        /// Shallow-copies the enumerator, also resetting it.
-        /// </summary>
         /// <param name="enumerator">
         /// The enumerator to shallow-copy.
         /// </param>
         /// <returns>
         /// A reset copy of the enumerator.
         /// </returns>
-        TState CopyAndReset(this TState enumerator)
-        {
-            // TODO: enumerator.Copy() should work
-            // TODO: var en = this.Copy(enumerator) gives an occurs check violation
-            var en = Copy(enumerator);
-            Reset(ref en);
-            return en;
-        }
+        TState Clone(ref this TState enumerator);
     }
 
     /// <summary>
@@ -91,7 +81,8 @@ namespace System.Concepts.Enumerable
         [Overlappable]
         public instance Enumerator_IEnumerator<TElem> : CEnumerator<IEnumerator<TElem>, TElem>
         {
-            void Reset(ref IEnumerator<TElem> e) => e.Reset();
+            // Not all IEnumerators actually support resetting, so
+            // we don't expose Reset by default.
             bool MoveNext(ref IEnumerator<TElem> e) => e.MoveNext();
             TElem Current(ref IEnumerator<TElem> e) => e.Current;
             void Dispose(ref IEnumerator<TElem> e) => e.Dispose();
@@ -107,14 +98,14 @@ namespace System.Concepts.Enumerable
         }
 
         /// <summary>
-        /// Any enumerator that can be shallow copied is a trivial enumerable,
-        /// where getting the enumerator is equal to copying.
+        /// Any enumerator that can be cloned is a trivial enumerable,
+        /// where getting the enumerator is equal to cloning.
         /// </summary>
         [Overlappable]
         public instance Enumerable_CopyEnumerator<TEnum, TElem, implicit C> : CEnumerable<TEnum, TEnum>
-            where C : CCopyEnumerator<TEnum, TElem>
+            where C : CClonableEnumerator<TEnum, TElem>
         {
-            TEnum GetEnumerator(this TEnum e) => e.Copy();
+            TEnum GetEnumerator(this TEnum e) => e.Clone();
         }
 
         #region Enumerables from index and bound
@@ -133,11 +124,20 @@ namespace System.Concepts.Enumerable
             public TElem current;
         }
 
-        public instance Enumerator_IndexBoundCursor<TColl, TIdx, TElem, implicit I, implicit N, implicit E> : CEnumerator<IndexBoundCursor<TColl, TIdx, TElem>, TElem>
+        public instance Enumerator_IndexBoundCursor<TColl, TIdx, TElem, implicit I, implicit N, implicit E>
+            : CClonableEnumerator<IndexBoundCursor<TColl, TIdx, TElem>, TElem>
             where I : CIndexable<TColl, TIdx, TElem>
             where N : Num<TIdx>
             where E : Eq<TIdx>
         {
+            IndexBoundCursor<TColl, TIdx, TElem> Clone(ref this IndexBoundCursor<TColl, TIdx, TElem> e) =>
+                new IndexBoundCursor<TColl, TIdx, TElem>
+                {
+                    container = e.container,
+                    pos = N.FromInteger(-1),
+                    len = e.len
+                };
+
             void Reset(ref IndexBoundCursor<TColl, TIdx, TElem> e)
             {
                 e.pos = N.FromInteger(-1);
@@ -163,13 +163,15 @@ namespace System.Concepts.Enumerable
         }
 
         [Overlappable]
-        public instance Enumerable_IndexBound<TColl, [AssociatedType]TIdx, [AssociatedType]TElem, implicit I, implicit N, implicit E, implicit L> : CEnumerable<TColl, IndexBoundCursor<TColl, TIdx, TElem>>
+        public instance Enumerable_IndexBound<TColl, [AssociatedType]TIdx, [AssociatedType]TElem, implicit I, implicit N, implicit E, implicit L>
+            : CEnumerable<TColl, IndexBoundCursor<TColl, TIdx, TElem>>
             where I : CIndexable<TColl, TIdx, TElem>
             where N : Num<TIdx>
             where E : Eq<TIdx>
             where L : CStaticCountable<TColl>
         {
-            IndexBoundCursor<TColl, TIdx, TElem> GetEnumerator(TColl container) => new IndexBoundCursor<TColl, TIdx, TElem> { container = container, len = N.FromInteger(container.Count()), pos = N.FromInteger(-1) };
+            IndexBoundCursor<TColl, TIdx, TElem> GetEnumerator(TColl container) =>
+                new IndexBoundCursor<TColl, TIdx, TElem> { container = container, len = N.FromInteger(container.Count()), pos = N.FromInteger(-1) };
         }
 
 
@@ -205,14 +207,21 @@ namespace System.Concepts.Enumerable
         }
 
         /// <summary>
-        /// Various enumerator instances for ranges.
+        /// Range cursors are clonable enumerators.
         /// </summary>
-        public instance CopyEnumerator_Range<TNum, implicit N, implicit E> : CCopyEnumerator<RangeCursor<TNum>, TNum>
+        public instance ClonableEnumerator_Range<TNum, implicit N, implicit E> : CClonableEnumerator<RangeCursor<TNum>, TNum>
             where N : Num<TNum>
             where E : Eq<TNum>
         {
             // TODO: catch inverted ranges and overflows
             // TODO: better optimisation if range is empty
+            RangeCursor<TNum> Clone(ref this RangeCursor<TNum> e) =>
+                new RangeCursor<TNum>
+                {
+                    range = e.range,
+                    end = e.end,
+                    state = e.range.count == 0 ? RangeCursor<TNum>.State.OneAfter : RangeCursor<TNum>.State.OneBefore
+                };
 
             void Reset(ref RangeCursor<TNum> e)
             {
@@ -220,6 +229,7 @@ namespace System.Concepts.Enumerable
                     ? RangeCursor<TNum>.State.OneAfter
                     : RangeCursor<TNum>.State.OneBefore;
             }
+
             bool MoveNext(ref RangeCursor<TNum> e)
             {
                 switch (e.state)
@@ -244,9 +254,6 @@ namespace System.Concepts.Enumerable
                 
             TNum Current(ref RangeCursor<TNum> e) => e.current;
             void Dispose(ref RangeCursor<TNum> e) { }
-
-            // RangeCursor is a value type.
-            RangeCursor<TNum> Copy(this RangeCursor<TNum> e) => e;
         }
 
         /// <summary>
@@ -285,10 +292,15 @@ namespace System.Concepts.Enumerable
         /// <see cref="CEnumerator{TColl, TState}"/> instance for array
         /// cursors.
         /// </summary>
-        public instance Enumerator_ArrayCursor<TElem> : CCopyEnumerator<ArrayCursor<TElem>, TElem>
+        public instance Enumerator_ArrayCursor<TElem> : CClonableEnumerator<ArrayCursor<TElem>, TElem>
         {
-            // ArrayCursor is a struct, so it inherently gets copied
-            ArrayCursor<TElem> Copy(this ArrayCursor<TElem> c) => c;
+            ArrayCursor<TElem> Clone(ref this ArrayCursor<TElem> e) =>
+                new ArrayCursor<TElem>
+                {
+                    source = e.source,
+                    lo = -1,
+                    hi = e.hi
+                };
 
             void Reset(ref ArrayCursor<TElem> enumerator)
             {
@@ -335,11 +347,8 @@ namespace System.Concepts.Enumerable
         /// <see cref="CEnumerator{TState, TElem}"/> instance for list
         /// enumerators.
         /// </summary>
-        public instance Enumerator_List<TElem> : CCopyEnumerator<List<TElem>.Enumerator, TElem>
+        public instance Enumerator_List<TElem> : CResettableEnumerator<List<TElem>.Enumerator, TElem>
         {
-            // Enumerator is a struct, so it implicitly gets shallow-copied.
-            List<TElem>.Enumerator Copy(this List<TElem>.Enumerator e) => e;
-
             void Reset(ref List<TElem>.Enumerator enumerator) => ((IEnumerator<TElem>)enumerator).Reset();
             bool MoveNext(ref List<TElem>.Enumerator enumerator) => enumerator.MoveNext();
             TElem Current(ref List<TElem>.Enumerator enumerator) => enumerator.Current;

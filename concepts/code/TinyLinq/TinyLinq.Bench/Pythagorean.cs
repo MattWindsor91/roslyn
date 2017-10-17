@@ -178,10 +178,20 @@ namespace TinyLinq.Bench
         /// <summary>
         /// Various enumerator instances for flat ranges.
         /// </summary>
-        public instance CopyEnumerator_FlatRange : CCopyEnumerator<FlatRangeCursor, int>
+        public instance CopyEnumerator_FlatRange : CClonableEnumerator<FlatRangeCursor, int>
         {
             // TODO: catch inverted ranges and overflows
             // TODO: better optimisation if range is empty
+
+            // RangeCursor is a value type.
+            FlatRangeCursor Clone(ref this FlatRangeCursor e) =>
+                new FlatRangeCursor
+                {
+                    range = e.range,
+                    end = e.end,
+                    reset = true,
+                    finished = false
+                };
 
             void Reset(ref FlatRangeCursor e)
             {
@@ -211,9 +221,6 @@ namespace TinyLinq.Bench
 
             int Current(ref FlatRangeCursor e) => e.current;
             void Dispose(ref FlatRangeCursor e) { }
-
-            // RangeCursor is a value type.
-            FlatRangeCursor Copy(this FlatRangeCursor e) => e;
         }
 
         /// <summary>

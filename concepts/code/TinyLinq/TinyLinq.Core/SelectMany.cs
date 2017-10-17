@@ -53,6 +53,7 @@ namespace TinyLinq
         where EI : CEnumerable<TInnerColl, TInnerSrc>
         where NI : CEnumerator<TInnerSrc, TInnerElem>
     {
+        /*
         void Reset(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {
             if (sm.currentInnerSource != null)
@@ -63,6 +64,7 @@ namespace TinyLinq
 
             ES.Reset(ref sm.source);
         }
+        */
 
         bool MoveNext(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
         {

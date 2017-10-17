@@ -53,8 +53,18 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Enumerator_ArraySelectCursor<TElem, TProj> : CEnumerator<ArraySelectCursor<TElem, TProj>, TProj>
+    public instance Enumerator_ArraySelectCursor<TElem, TProj> :
+        CClonableEnumerator<ArraySelectCursor<TElem, TProj>, TProj>
     {
+        ArraySelectCursor<TElem, TProj> Clone(ref this ArraySelectCursor<TElem, TProj> sw) =>
+            new ArraySelectCursor<TElem, TProj>
+            {
+                source = sw.source,
+                projection = sw.projection,
+                lo = -1,
+                hi = sw.hi
+            };
+
         void Reset(ref ArraySelectCursor<TElem, TProj> sw)
         {
             sw.lo = -1;
@@ -177,8 +187,16 @@ namespace TinyLinq.SpecialisedInstances
     }
 
     public instance Enumerator_ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
-        : CEnumerator<ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>, TProj>
+        : CClonableEnumerator<ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>, TProj>
     {
+        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> Clone(ref this ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) =>
+            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
+            {
+                source = sm.source,
+                sourceIndex = -1,
+                sourceLength = sm.sourceLength
+            };                
+
         void Reset(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm)
         {
             sm.sourceIndex = sm.innerIndex = -1;
@@ -313,8 +331,18 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    public instance Enumerator_ArrayWhereCursor<TElem> : CEnumerator<ArrayWhereCursor<TElem>, TElem>
+    public instance Enumerator_ArrayWhereCursor<TElem>
+        : CClonableEnumerator<ArrayWhereCursor<TElem>, TElem>
     {
+        ArrayWhereCursor<TElem> Clone(ref this ArrayWhereCursor<TElem> e) =>
+            new ArrayWhereCursor<TElem>
+            {
+                source = e.source,
+                filter = e.filter,
+                lo = -1,
+                hi = e.hi
+            };
+
         void Reset(ref ArrayWhereCursor<TElem> enumerator)
         {
             enumerator.lo = -1;
@@ -437,8 +465,19 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Enumerator_ArraySelectOfWhereCursor<TElem, TProj> : CEnumerator<ArraySelectOfWhereCursor<TElem, TProj>, TProj>
+    public instance Enumerator_ArraySelectOfWhereCursor<TElem, TProj>
+        : CClonableEnumerator<ArraySelectOfWhereCursor<TElem, TProj>, TProj>
     {
+        ArraySelectOfWhereCursor<TElem, TProj> Clone(ref this ArraySelectOfWhereCursor<TElem, TProj> sw) =>
+            new ArraySelectOfWhereCursor<TElem, TProj>
+            {
+                source = sw.source,
+                filter = sw.filter,
+                projection = sw.projection,
+                lo = -1,
+                hi = sw.hi
+            };
+
         void Reset(ref ArraySelectOfWhereCursor<TElem, TProj> sw)
         {
             sw.lo = -1;
