@@ -37,8 +37,16 @@ namespace TinyLinq.Core
     }
 
     public instance GroupCursor_Enumerator<TSrc, TElem, TKey, TVal>
-        : CEnumerator<GroupCursor<TKey, TVal>, Group<TKey, TVal>>
+        : CClonableEnumerator<GroupCursor<TKey, TVal>, Group<TKey, TVal>>
     {
+        GroupCursor<TKey, TVal> Clone(ref this GroupCursor<TKey, TVal> gc) =>
+            new GroupCursor<TKey, TVal>
+            {
+                groups = gc.groups,
+                index = -1,
+                length = gc.length
+            };
+
         void Reset(ref GroupCursor<TKey, TVal> gc) => gc.index = -1;
         void Dispose(ref GroupCursor<TKey, TVal> gc) { }
         Group<TKey, TVal> Current(ref GroupCursor<TKey, TVal> gc) => gc.current;
@@ -58,7 +66,7 @@ namespace TinyLinq.Core
 
     public instance GroupByResult_Enumerable_SrcEnumerator<TSrc, TElem, TKey, TVal, implicit E>
         : CEnumerable<GroupByResult<TSrc, TElem, TKey, TVal>, GroupCursor<TKey, TVal>>
-        where E : CEnumerator<TSrc, TElem>
+        where E : CResettableEnumerator<TSrc, TElem>
     {
         GroupCursor<TKey, TVal> GetEnumerator(GroupByResult<TSrc, TElem, TKey, TVal> groupBy)
         {

@@ -63,7 +63,7 @@ namespace TinyLinq
         : CEnumerator<WhereCursor<TEnum, TElem>, TElem>
         where E : CEnumerator<TEnum, TElem>
     {
-        void Reset(ref WhereCursor<TEnum, TElem> w) => E.Reset(ref w.source);
+        // void Reset(ref WhereCursor<TEnum, TElem> w) => E.Reset(ref w.source);
 
         bool MoveNext(ref WhereCursor<TEnum, TElem> w)
         {

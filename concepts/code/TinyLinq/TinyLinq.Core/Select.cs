@@ -37,7 +37,7 @@ namespace TinyLinq
         : CEnumerator<SelectCursor<TEnum, TElem, TProj>, TProj>
         where E : CEnumerator<TEnum, TElem>
     {
-        void Reset(ref SelectCursor<TEnum, TElem, TProj> s) => E.Reset(ref s.source);
+        //void Reset(ref SelectCursor<TEnum, TElem, TProj> s) => E.Reset(ref s.source);
 
         bool MoveNext(ref SelectCursor<TEnum, TElem, TProj> s)
         {

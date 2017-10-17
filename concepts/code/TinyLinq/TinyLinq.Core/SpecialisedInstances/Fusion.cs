@@ -69,7 +69,7 @@ namespace TinyLinq.SpecialisedInstances
         : CEnumerator<WhereOfSelect<TEnum, TElem, TProj>, TProj>
         where E : CEnumerator<TEnum, TElem>
     {
-        void Reset(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
+        //void Reset(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
 
         bool MoveNext(ref WhereOfSelect<TEnum, TElem, TProj> enumerator)
         {
@@ -149,7 +149,7 @@ namespace TinyLinq.SpecialisedInstances
         : CEnumerator<SelectOfWhere<TEnum, TElem, TProj>, TProj>
         where E : CEnumerator<TEnum, TElem>
     {
-        void Reset(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Reset(ref sw.source);
+        //void Reset(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Reset(ref sw.source);
 
         bool MoveNext(ref SelectOfWhere<TEnum, TElem, TProj> sw)
         {

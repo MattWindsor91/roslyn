@@ -225,7 +225,7 @@ namespace AssociatedTypes
     {
         (int, List<int>[], int, Edge) GetEnumerator(this (Vertex, AdjacencyList) idAndGraph) => (idAndGraph.Item1.id, idAndGraph.Item2.list, -1, default(Edge));
     }
-    instance CEnumeratorAdjacencyListOutEdge : CEnumerator<(int, List<int>[], int, Edge), Edge>
+    instance CEnumeratorAdjacencyListOutEdge : CResettableEnumerator<(int, List<int>[], int, Edge), Edge>
     {
         void Reset(ref (int, List<int>[], int, Edge) enumerator)
         {
@@ -254,7 +254,7 @@ namespace AssociatedTypes
     {
         (int, int, Vertex) GetEnumerator(AdjacencyList graph) => (graph.list.Length, -1, default(Vertex));
     }
-    instance CEnumeratorAdjacencyListVertex : CEnumerator<(int, int, Vertex), Vertex>
+    instance CEnumeratorAdjacencyListVertex : CResettableEnumerator<(int, int, Vertex), Vertex>
     {
         void Reset(ref (int, int, Vertex) enumerator)
         {
