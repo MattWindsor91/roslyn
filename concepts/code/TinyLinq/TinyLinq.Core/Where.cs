@@ -31,7 +31,7 @@ namespace TinyLinq
     /// <typeparam name="TElem">
     /// Type of the element <typeparamref name="TEnum"/> returns.
     /// </typeparam>
-    public struct Where<TEnum, TElem>
+    public struct WhereCursor<TEnum, TElem>
     {
         /// <summary>
         /// The source of the elements being filtered.
@@ -48,7 +48,7 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Enumerator instance for <see cref="Where{TEnum, TElem}"/>.
+    /// Enumerator instance for <see cref="WhereCursor{TEnum, TElem}"/>.
     /// </summary>
     /// <typeparam name="TEnum">
     /// Type of the inner enumerator we are filtering over.
@@ -59,13 +59,13 @@ namespace TinyLinq
     /// <typeparam name="E">
     /// Enumerator instance for the inner enumerator.
     /// </typeparam>
-    public instance Enumerator_Where<TEnum, [AssociatedType] TElem, implicit E>
-        : CEnumerator<Where<TEnum, TElem>, TElem>
+    public instance Enumerator_WhereCursor<TEnum, [AssociatedType] TElem, implicit E>
+        : CEnumerator<WhereCursor<TEnum, TElem>, TElem>
         where E : CEnumerator<TEnum, TElem>
     {
-        void Reset(ref Where<TEnum, TElem> w) => E.Reset(ref w.source);
+        void Reset(ref WhereCursor<TEnum, TElem> w) => E.Reset(ref w.source);
 
-        bool MoveNext(ref Where<TEnum, TElem> w)
+        bool MoveNext(ref WhereCursor<TEnum, TElem> w)
         {
             do
             {
@@ -79,21 +79,21 @@ namespace TinyLinq
             return true;
         }
 
-        TElem Current(ref Where<TEnum, TElem> w) => w.current;
+        TElem Current(ref WhereCursor<TEnum, TElem> w) => w.current;
 
-        void Dispose(ref Where<TEnum, TElem> w) => E.Dispose(ref w.source);
+        void Dispose(ref WhereCursor<TEnum, TElem> w) => E.Dispose(ref w.source);
     }
 
     /// <summary>
     /// Unspecialised instance for filtering over an enumerator, producing
-    /// a basic <see cref="Where{TEnum, TElem}"/>.
+    /// a basic <see cref="WhereCursor{TEnum, TElem}"/>.
     /// </summary>
     [Overlappable]
     public instance Where_Enumerator<TEnum, [AssociatedType] TElem, implicit E>
-        : CWhere<TEnum, TElem, Where<TEnum, TElem>>
+        : CWhere<TEnum, TElem, WhereCursor<TEnum, TElem>>
         where E : CEnumerator<TEnum, TElem>
     {
-        Where<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter };
+        WhereCursor<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new WhereCursor<TEnum, TElem> { source = e, filter = filter };
     }
 
     /// <summary>

@@ -85,9 +85,9 @@ namespace TinyLinq.Bench
             var results = items.Where(i => i % 10 == 0).Select(i => i + 5);
             var counter = 0;
             // TODO: work out why this inference is failing.
-            while (CEnumerator<ArraySelectOfWhere<int, int>, int>.MoveNext(ref results))
+            while (CEnumerator<ArraySelectOfWhereCursor<int, int>, int>.MoveNext(ref results))
             {
-                counter += CEnumerator<ArraySelectOfWhere<int, int>, int>.Current(ref results);
+                counter += CEnumerator<ArraySelectOfWhereCursor<int, int>, int>.Current(ref results);
             }
 
             return counter;

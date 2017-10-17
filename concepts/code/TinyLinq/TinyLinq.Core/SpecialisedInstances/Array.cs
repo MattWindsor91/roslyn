@@ -20,7 +20,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public struct ArraySelect<TElem, TProj>
+    public struct ArraySelectCursor<TElem, TProj>
     {
         /// <summary>
         /// The source array.
@@ -53,14 +53,14 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Enumerator_ArraySelect<TElem, TProj> : CEnumerator<ArraySelect<TElem, TProj>, TProj>
+    public instance Enumerator_ArraySelectCursor<TElem, TProj> : CEnumerator<ArraySelectCursor<TElem, TProj>, TProj>
     {
-        void Reset(ref ArraySelect<TElem, TProj> sw)
+        void Reset(ref ArraySelectCursor<TElem, TProj> sw)
         {
             sw.lo = -1;
         }
 
-        bool MoveNext(ref ArraySelect<TElem, TProj> sw)
+        bool MoveNext(ref ArraySelectCursor<TElem, TProj> sw)
         {
             if (sw.hi <= sw.lo)
             {
@@ -78,14 +78,14 @@ namespace TinyLinq.SpecialisedInstances
             return true;
         }
 
-        TProj Current(ref ArraySelect<TElem, TProj> sw) => sw.current;
+        TProj Current(ref ArraySelectCursor<TElem, TProj> sw) => sw.current;
 
-        void Dispose(ref ArraySelect<TElem, TProj> enumerator) { }
+        void Dispose(ref ArraySelectCursor<TElem, TProj> enumerator) { }
     }
 
     /// <summary>
     /// Instance reducing a Select on an array cursor to a single
-    /// composed <see cref="ArraySelect{TElem, TProj}"/>.
+    /// composed <see cref="ArraySelectCursor{TElem, TProj}"/>.
     /// </summary>
     /// <typeparam name="TElem">
     /// Type of elements in the array.
@@ -93,10 +93,10 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Select_ArrayCursor<TElem, TProj> : CSelect<TElem, TProj, Instances.ArrayCursor<TElem>, ArraySelect<TElem, TProj>>
+    public instance Select_ArrayCursor<TElem, TProj> : CSelect<TElem, TProj, Instances.ArrayCursor<TElem>, ArraySelectCursor<TElem, TProj>>
     {
-        ArraySelect<TElem, TProj> Select(this Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
-            new ArraySelect<TElem, TProj>
+        ArraySelectCursor<TElem, TProj> Select(this Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
+            new ArraySelectCursor<TElem, TProj>
             {
                 source = t.source,
                 projection = projection,
@@ -107,7 +107,7 @@ namespace TinyLinq.SpecialisedInstances
 
     /// <summary>
     /// Instance reducing a Select on an array to a single
-    /// composed <see cref="ArraySelect{TElem, TProj}"/>.
+    /// composed <see cref="ArraySelectCursor{TElem, TProj}"/>.
     /// </summary>
     /// <typeparam name="TElem">
     /// Type of elements in the array.
@@ -115,10 +115,10 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], ArraySelect<TElem, TProj>>
+    public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], ArraySelectCursor<TElem, TProj>>
     {
-        ArraySelect<TElem, TProj> Select(this TElem[] t, Func<TElem, TProj> projection) =>
-            new ArraySelect<TElem, TProj>
+        ArraySelectCursor<TElem, TProj> Select(this TElem[] t, Func<TElem, TProj> projection) =>
+            new ArraySelectCursor<TElem, TProj>
             {
                 source = t,
                 projection = projection,
@@ -131,7 +131,7 @@ namespace TinyLinq.SpecialisedInstances
 
     #region SelectMany
 
-    public struct ArrayToArraySelectMany<TElem, TInnerElem, TProj>
+    public struct ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
     {
         /// <summary>
         /// The source array.
@@ -176,15 +176,15 @@ namespace TinyLinq.SpecialisedInstances
         public Func<TElem, TInnerElem, TProj> innerProjection;
     }
 
-    public instance Enumerator_SelectMany_ArrayToArray<TElem, TInnerElem, TProj>
-        : CEnumerator<ArrayToArraySelectMany<TElem, TInnerElem, TProj>, TProj>
+    public instance Enumerator_ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
+        : CEnumerator<ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>, TProj>
     {
-        void Reset(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm)
+        void Reset(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm)
         {
             sm.sourceIndex = sm.innerIndex = -1;
         }
 
-        bool MoveNext(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm)
+        bool MoveNext(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm)
         {
             // Outer array has finished: we're done.
             if (sm.sourceLength <= sm.sourceIndex)
@@ -223,15 +223,15 @@ namespace TinyLinq.SpecialisedInstances
             }
         }
 
-        TProj Current(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm) => sm.current;
+        TProj Current(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) => sm.current;
 
-        void Dispose(ref ArrayToArraySelectMany<TElem, TInnerElem, TProj> sm) {}
+        void Dispose(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) {}
     }
 
-    public instance SelectMany_ArrayCursorToArray<TElem, TInnerElem, TProj> : CSelectMany<Instances.ArrayCursor<TElem>, TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
+    public instance SelectMany_ArrayCursorToArray<TElem, TInnerElem, TProj> : CSelectMany<Instances.ArrayCursor<TElem>, TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>>
     {
-        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(this Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
-            new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
+        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> SelectMany(this Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
             {
                 source = t.source,
                 sourceIndex = -1,
@@ -242,10 +242,10 @@ namespace TinyLinq.SpecialisedInstances
             };
     }
 
-    public instance SelectMany_ArrayToArray<TElem, TInnerElem, TProj> : CSelectMany<TElem[], TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectMany<TElem, TInnerElem, TProj>>
+    public instance SelectMany_ArrayToArray<TElem, TInnerElem, TProj> : CSelectMany<TElem[], TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>>
     {
-        ArrayToArraySelectMany<TElem, TInnerElem, TProj> SelectMany(this TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
-            new ArrayToArraySelectMany<TElem, TInnerElem, TProj>
+        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> SelectMany(this TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
+            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
             {
                 source = t,
                 sourceIndex = -1,
@@ -263,12 +263,12 @@ namespace TinyLinq.SpecialisedInstances
 
     /// <summary>
     /// Instance reducing chained array Select queries to a single
-    /// <see cref="ArraySelect{TElem, TProj}"/> on a composed projection.
+    /// <see cref="ArraySelectCursor{TElem, TProj}"/> on a composed projection.
     /// </summary>
-    public instance Select_Select_Array<TElem, TProj1, TProj2> : CSelect<TProj1, TProj2, ArraySelect<TElem, TProj1>, ArraySelect<TElem, TProj2>>
+    public instance Select_Select_Array<TElem, TProj1, TProj2> : CSelect<TProj1, TProj2, ArraySelectCursor<TElem, TProj1>, ArraySelectCursor<TElem, TProj2>>
     {
-        ArraySelect<TElem, TProj2> Select(this ArraySelect<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
-            new ArraySelect<TElem, TProj2>
+        ArraySelectCursor<TElem, TProj2> Select(this ArraySelectCursor<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
+            new ArraySelectCursor<TElem, TProj2>
             {
                 source = t.source,
                 projection = x => projection(t.projection(x)),
@@ -287,7 +287,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    public struct ArrayWhere<TElem>
+    public struct ArrayWhereCursor<TElem>
     {
         /// <summary>
         /// The source array.
@@ -313,14 +313,14 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    public instance Enumerator_ArrayWhere<TElem> : CEnumerator<ArrayWhere<TElem>, TElem>
+    public instance Enumerator_ArrayWhereCursor<TElem> : CEnumerator<ArrayWhereCursor<TElem>, TElem>
     {
-        void Reset(ref ArrayWhere<TElem> enumerator)
+        void Reset(ref ArrayWhereCursor<TElem> enumerator)
         {
             enumerator.lo = -1;
         }
 
-        bool MoveNext(ref ArrayWhere<TElem> enumerator)
+        bool MoveNext(ref ArrayWhereCursor<TElem> enumerator)
         {
             if (enumerator.hi <= enumerator.lo)
             {
@@ -340,7 +340,7 @@ namespace TinyLinq.SpecialisedInstances
             return false;
         }
 
-        TElem Current(ref ArrayWhere<TElem> enumerator)
+        TElem Current(ref ArrayWhereCursor<TElem> enumerator)
         {
             if (enumerator.lo == -1)
             {
@@ -349,7 +349,7 @@ namespace TinyLinq.SpecialisedInstances
             return enumerator.source[enumerator.lo];
         }
 
-        void Dispose(ref ArrayWhere<TElem> enumerator) { }
+        void Dispose(ref ArrayWhereCursor<TElem> enumerator) { }
     }
 
     /// <summary>
@@ -358,9 +358,9 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    instance Countable_ArrayWhere<TElem> : CCountable<ArrayWhere<TElem>>
+    instance Countable_ArrayWhereCursor<TElem> : CCountable<ArrayWhereCursor<TElem>>
     {
-        int Count(this ArrayWhere<TElem> aw)
+        int Count(this ArrayWhereCursor<TElem> aw)
         {
             var count = 0;
             foreach (var s in aw.source)
@@ -380,10 +380,10 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TElem">
     /// Type of elements in the array.
     /// </typeparam>
-    public instance Where_Array<TElem> : CWhere<TElem[], TElem, ArrayWhere<TElem>>
+    public instance Where_Array<TElem> : CWhere<TElem[], TElem, ArrayWhereCursor<TElem>>
     {
-        ArrayWhere<TElem> Where(TElem[] src, Func<TElem, bool> f) =>
-            new ArrayWhere<TElem> { source = src, filter = f, lo = -1, hi = src.Length };
+        ArrayWhereCursor<TElem> Where(TElem[] src, Func<TElem, bool> f) =>
+            new ArrayWhereCursor<TElem> { source = src, filter = f, lo = -1, hi = src.Length };
     }
 
     #endregion Where
@@ -400,7 +400,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public struct ArraySelectOfWhere<TElem, TProj>
+    public struct ArraySelectOfWhereCursor<TElem, TProj>
     {
         /// <summary>
         /// The source array.
@@ -437,15 +437,15 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Enumerator_ArraySelectOfWhere<TElem, TProj> : CEnumerator<ArraySelectOfWhere<TElem, TProj>, TProj>
+    public instance Enumerator_ArraySelectOfWhereCursor<TElem, TProj> : CEnumerator<ArraySelectOfWhereCursor<TElem, TProj>, TProj>
     {
-        void Reset(ref ArraySelectOfWhere<TElem, TProj> sw)
+        void Reset(ref ArraySelectOfWhereCursor<TElem, TProj> sw)
         {
             sw.lo = -1;
             sw.current = default;
         }
 
-        bool MoveNext(ref ArraySelectOfWhere<TElem, TProj> sw)
+        bool MoveNext(ref ArraySelectOfWhereCursor<TElem, TProj> sw)
         {
             if (sw.hi <= sw.lo)
             {
@@ -466,14 +466,14 @@ namespace TinyLinq.SpecialisedInstances
             return false;
         }
 
-        TProj Current(ref ArraySelectOfWhere<TElem, TProj> sw) => sw.current;
+        TProj Current(ref ArraySelectOfWhereCursor<TElem, TProj> sw) => sw.current;
 
-        void Dispose(ref ArraySelectOfWhere<TElem, TProj> enumerator) { }
+        void Dispose(ref ArraySelectOfWhereCursor<TElem, TProj> enumerator) { }
     }
 
     /// <summary>
     /// Instance reducing a Select on a filtered array cursor to a single
-    /// composed <see cref="ArraySelectOfWhere{TElem, TProj}"/>.
+    /// composed <see cref="ArraySelectOfWhereCursor{TElem, TProj}"/>.
     /// </summary>
     /// <typeparam name="TElem">
     /// Type of elements in the array.
@@ -481,10 +481,10 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TProj">
     /// Type of elements exiting the select.
     /// </typeparam>
-    public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhere<TElem>, ArraySelectOfWhere<TElem, TProj>>
+    public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhereCursor<TElem>, ArraySelectOfWhereCursor<TElem, TProj>>
     {
-        ArraySelectOfWhere<TElem, TProj> Select(this ArrayWhere<TElem> t, Func<TElem, TProj> projection) =>
-            new ArraySelectOfWhere<TElem, TProj>
+        ArraySelectOfWhereCursor<TElem, TProj> Select(this ArrayWhereCursor<TElem> t, Func<TElem, TProj> projection) =>
+            new ArraySelectOfWhereCursor<TElem, TProj>
             {
                 source = t.source,
                 filter = t.filter,
