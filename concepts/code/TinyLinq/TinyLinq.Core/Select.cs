@@ -60,7 +60,7 @@ namespace TinyLinq
     /// a basic <see cref="Select{TEnum, TElem, TProj}"/>.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerator<TEnum, TElem, TProj, implicit E>
+    public instance Select_Enumerator<TEnum, [AssociatedType] TElem, TProj, implicit E>
         : CSelect<TElem, TProj, TEnum, Select<TEnum, TElem, TProj>>
         where E : CEnumerator<TEnum, TElem>
     {
@@ -77,7 +77,7 @@ namespace TinyLinq
     /// Adapts any selection over enumerators into one over enumerables.
     /// </summary>
     [Overlappable]
-    public instance Select_Enumerable<TColl, [AssociatedType] TSrc, TElem, TProj, [AssociatedType] TDst, implicit S, implicit E>
+    public instance Select_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TProj, [AssociatedType]TDst, implicit S, implicit E>
         : CSelect<TElem, TProj, TColl, TDst>
         where S : CSelect<TElem, TProj, TSrc, TDst>
         where E : CEnumerable<TColl, TSrc>

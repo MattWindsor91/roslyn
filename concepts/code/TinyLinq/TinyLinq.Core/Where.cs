@@ -93,7 +93,7 @@ namespace TinyLinq
         : CWhere<TEnum, TElem, Where<TEnum, TElem>>
         where E : CEnumerator<TEnum, TElem>
     {
-        Where<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter, current = default };
+        Where<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new Where<TEnum, TElem> { source = e, filter = filter };
     }
 
     /// <summary>

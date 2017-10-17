@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
 
 namespace TinyLinq.SpecialisedInstances
@@ -171,6 +172,47 @@ namespace TinyLinq.SpecialisedInstances
         TProj Current(ref SelectOfWhere<TEnum, TElem, TProj> sw) => sw.current;
 
         void Dispose(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Dispose(ref sw.source);
+    }
+
+    /// <summary>
+    /// Instance for destructive counting of select-of-where, which ignores
+    /// the selection entirely.
+    /// </summary>
+    /// <typeparam name="TEnum">
+    /// Type of the source of the selection.
+    /// </typeparam>
+    /// <typeparam name="TElem">
+    /// Type of the elements of <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="TProj">
+    /// Type of the projected elements of the selection.
+    /// </typeparam>
+    /// <typeparam name="B">
+    /// Instance of <see cref="CStaticCount{T}"/> for <typeparamref name="TEnum"/>.
+    /// </typeparam>
+    public instance Countable_SelectOfWhere<TEnum, TElem, TProj, implicit E> : CCountable<SelectOfWhere<TEnum, TElem, TProj>>
+        where E : CEnumerator<TEnum, TElem>
+    {
+        int Count(this SelectOfWhere<TEnum, TElem, TProj> sw)
+        {
+            TElem c;
+            ref var s = ref sw.source;
+            int count = 0;
+
+            while (E.MoveNext(ref s))
+            {
+                c = E.Current(ref s);
+                if (sw.filter(c))
+                {
+                    // Needed to ensure any exceptions or side-effects in the
+                    // projection occur.
+                    sw.projection(c);
+                    count++;
+                }
+            }
+
+            return count;
+        }
     }
 
     /// <summary>
