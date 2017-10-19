@@ -48,8 +48,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return false;
             }
 
-            var methodInfo = MakeMethodInfo(binder);
             var inferrer = new ConceptWitnessInferrer(binder);
+            var methodInfo = MakeMethodInfo(inferrer);
             var fixedWithHeuristics = FixedArgsWithHeuristics(binder);
             var round = inferrer.NewRound(_methodTypeParameters, fixedWithHeuristics, new ImmutableTypeMap(), methodInfo);
             var result = round.Infer(ref useSiteDiagnostics);
@@ -91,15 +91,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Generates a method info object for concept inference, using
         /// the method data from this round of method type inference.
         /// </summary>
-        /// <param name="binder">
-        /// The binder at the scope of this type inference round, used
-        /// for recursive type inference calls.
-        /// </param>
+        /// <param name="inf">The concept witness inferrer.</param>
         /// <returns>
         /// An appropriate <see cref="ConceptWitnessInferrer.MethodInfo"/>
         /// struct for this method.
         /// </returns>
-        private ConceptWitnessInferrer.MethodInfo MakeMethodInfo(Binder binder)
+        private ConceptWitnessInferrer.MethodInfo MakeMethodInfo(ConceptWitnessInferrer inf)
         {
             var unfixedParamsB = ArrayBuilder<TypeParameterSymbol>.GetInstance();
             var initialFixedMap = new MutableTypeMap();
@@ -119,7 +116,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Make sure everything in the method info is as fully substituted
             // as possible.
             // TODO: slightly inefficient, but doesn't duplicate code.
-            var methodInfo = new ConceptWitnessInferrer.PresentMethodInfo(binder, _constructedContainingTypeOfMethod, unfixedParams, _formalParameterTypes, _formalParameterRefKinds, _arguments);
+            var methodInfo = inf.MakeMethodInfo(_constructedContainingTypeOfMethod, unfixedParams, _formalParameterTypes, _formalParameterRefKinds, _arguments);
             return methodInfo.ApplySubstitution(initialFixedMap);
         }
 
@@ -290,6 +287,11 @@ namespace Microsoft.CodeAnalysis.CSharp
     /// </summary>
     internal class ConceptWitnessInferrer
     {
+        /// <summary>
+        /// The binder at the scope in which we are inferring witnesses.
+        /// </summary>
+        private readonly Binder _binder;
+
         /// <summary>
         /// The list of all instances in scope for this inferrer.
         /// These can be either type parameters (eg. witnesses passed in
@@ -710,6 +712,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             private readonly ImmutableArray<TypeSymbol> _formalParameterTypes;
             private readonly ImmutableArray<RefKind> _formalParameterRefKinds;
             private readonly ImmutableArray<BoundExpression> _arguments;
+            private readonly ImmutableHashSet<TypeParameterSymbol> _rigidParams;
 
             public PresentMethodInfo(
                 Binder binder,
@@ -717,7 +720,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ImmutableArray<TypeParameterSymbol> unfixedTypeParams,
                 ImmutableArray<TypeSymbol> formalParameterTypes,
                 ImmutableArray<RefKind> formalParameterRefKinds,
-                ImmutableArray<BoundExpression> arguments)
+                ImmutableArray<BoundExpression> arguments,
+                ImmutableHashSet<TypeParameterSymbol> rigidParams)
             {
                 Debug.Assert(binder != null, $"{nameof(binder)} cannot be null");
                 _binder = binder;
@@ -729,6 +733,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 _formalParameterTypes = formalParameterTypes;
                 _formalParameterRefKinds = formalParameterRefKinds;
                 _arguments = arguments;
+                _rigidParams = rigidParams;
             }
 
             public override bool IsUnfixed(TypeParameterSymbol tp) =>
@@ -753,16 +758,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                     newUnfixedTypeParams,
                     newFormalParameterTypes,
                     _formalParameterRefKinds,
-                    _arguments
+                    _arguments,
+                    _rigidParams
                 );
             }
 
             private ImmutableArray<TypeParameterSymbol> SubstituteUnfixed(AbstractTypeMap substitution)
             {
                 Debug.Assert(substitution != null,
-                    "shouldn't be applying a null substitution");
+                    "shouldn't apply a null substitution");
 
-                // Early out if we have no unfixed type parameters.
                 if (_unfixedTypeParams.IsEmpty)
                 {
                     return _unfixedTypeParams;
@@ -771,13 +776,24 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var newUnfixedTypeParamsB = ArrayBuilder<TypeParameterSymbol>.GetInstance();
                 foreach (var unfixedTypeParam in _unfixedTypeParams)
                 {
-                    if (substitution.SubstituteType(unfixedTypeParam).AsTypeSymbolOnly() == unfixedTypeParam)
+                    var subst = substitution.SubstituteType(unfixedTypeParam).AsTypeSymbolOnly();
+                    Debug.Assert(subst != null, "substitution teturned null");
+
+                    var haveFixed = subst != unfixedTypeParam && TypeArgumentIsFixed(subst, _rigidParams);
+                    if (!haveFixed)
                     {
-                        // This substitution didn't fix the type parameter.
-                        newUnfixedTypeParamsB.Add(unfixedTypeParam);
+                        Debug.Assert(subst.Kind == SymbolKind.TypeParameter || subst.Kind == SymbolKind.ErrorType,
+                            "allegedly unfixed substitution was neither a TP nor an error");
+
+                        // If the substitution mapped us to *another* unfixed
+                        // type parameter, we should fix that instead.
+                        var newUnfixedTypeParam =
+                            subst.Kind == SymbolKind.TypeParameter
+                            ? (TypeParameterSymbol)subst
+                            : unfixedTypeParam;
+                        newUnfixedTypeParamsB.Add(newUnfixedTypeParam);
                     }
                 }
-
                 return newUnfixedTypeParamsB.ToImmutableAndFree();
             }
 
@@ -786,7 +802,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(substitution != null,
                     "shouldn't be applying a null substitution");
 
-                // Early out if we have no formal type parameters.
                 if (_formalParameterTypes.IsDefaultOrEmpty)
                 {
                     return _formalParameterTypes;
@@ -872,9 +887,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             _allInstances = allInstances;
             _rigidParams = rigidParams;
             _conversions = binder.Conversions;
+            _binder = binder;
         }
 
         #region Setup from binder
+
+        public PresentMethodInfo MakeMethodInfo(
+            NamedTypeSymbol containerType,
+            ImmutableArray<TypeParameterSymbol> unfixedTypeParams,
+            ImmutableArray<TypeSymbol> formalParameterTypes,
+            ImmutableArray<RefKind> formalParameterRefKinds,
+            ImmutableArray<BoundExpression> arguments) =>
+            new PresentMethodInfo(_binder, containerType, unfixedTypeParams, formalParameterTypes, formalParameterRefKinds, arguments, _rigidParams);
 
         /// <summary>
         /// Traverses the scope induced by the given binder for visible
@@ -1007,66 +1031,38 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(typeParameters.Length == typeArguments.Length,
                 "There should be as many type parameters as arguments.");
 
-            var wBuilder = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
-            var aBuilder = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
+            var witnessB = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
+            var assocB = ImmutableHashSet.CreateBuilder<TypeParameterSymbol>();
             var fixedMapB = new MutableTypeMap();
 
             for (int i = 0; i < typeParameters.Length; i++)
             {
-                if (TypeArgumentIsFixed(typeArguments[i]))
+                if (TypeArgumentIsFixed(typeArguments[i], _rigidParams))
                 {
-                    // TODO: unfixed params?
+                    // TODO(@MattWindsor91): unfixed params?
                     fixedMapB.Add(typeParameters[i], new TypeWithModifiers(typeArguments[i]));
-                    continue;
                 }
-                // If we got here, the parameter is unfixed.
-
-                if (typeParameters[i].IsConceptWitness)
+                // typeArguments[i] might not be null here---it might have
+                // been set, for example, to typeParameters[i].
+                else if (typeParameters[i].IsConceptWitness)
                 {
-                    wBuilder.Add(typeParameters[i]);
-                    continue;
+                    witnessB.Add(typeParameters[i]);
                 }
-
-                if (typeParameters[i].IsAssociatedType)
+                else if (typeParameters[i].IsAssociatedType)
                 {
-                    aBuilder.Add(typeParameters[i]);
-                    continue;
+                    assocB.Add(typeParameters[i]);
                 }
-
-                if (methodInfoOpt.IsUnfixed(typeParameters[i]))
+                else if (!methodInfoOpt.IsUnfixed(typeParameters[i]))
                 {
-                    continue;
+                    // If we got here, we have an unexpected unfixed type parameter.
+                    return new FailedInferRound(typeParameters, existingFixedMap);
                 }
-
-                // We can treat a parameter slot as being associated or
-                // method-unfixed if it has been fixed to a parameter that is,
-                // itself, associated or method-unfixed.
-                //
-                // This allows recursive fixing of such types.
-                if (typeArguments[i] != null && typeArguments[i].Kind == SymbolKind.TypeParameter)
-                {
-                    var arg = (TypeParameterSymbol)typeArguments[i];
-
-                    if (arg.IsAssociatedType)
-                    {
-                        aBuilder.Add((TypeParameterSymbol)typeArguments[i]);
-                        continue;
-                    }
-
-                    if (methodInfoOpt.IsUnfixed(arg))
-                    {
-                        continue;
-                    }
-                }
-
-                // If we got here, we have an unexpected unfixed type parameter.
-                return new FailedInferRound(typeParameters, existingFixedMap);
             }
 
             return new NormalInferRound(
                 parent: this,
-                conceptWitnesses: wBuilder.ToImmutable(),
-                associatedTypes: aBuilder.ToImmutable(),
+                conceptWitnesses: witnessB.ToImmutable(),
+                associatedTypes: assocB.ToImmutable(),
                 fixedMap: existingFixedMap.Compose(fixedMapB.ToUnification()),
                 methodInfo: methodInfoOpt,
                 chain: chainOpt ?? ImmutableHashSet<NamedTypeSymbol>.Empty);
@@ -1076,15 +1072,14 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Decides whether a given type argument is fixed (successfully
         /// inferred).
         /// </summary>
-        /// <param name="typeArgument">
-        /// The type argument to check.
-        /// </param>
+        /// <param name="typeArgument">The type argument to check.</param>
+        /// <param name="rigidParams">The rigid type parameters.</param>
         /// <returns>
         /// True if the argument is fixed.  This method may sometimes
         /// return false negatives, which affects completeness
         /// (some valid type inference may fail) but not soundness.
         /// </returns>
-        internal bool TypeArgumentIsFixed(TypeSymbol typeArgument)
+        internal static bool TypeArgumentIsFixed(TypeSymbol typeArgument, ImmutableHashSet<TypeParameterSymbol> rigidParams)
         {
             // @t-mawind
             //   This is slightly ad-hoc and needs checking.
@@ -1096,7 +1091,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return false;
             }
             //   2) In other places, they are some type parameter.
-            if (typeArgument.Kind != SymbolKind.TypeParameter)
+            if (typeArgument.Kind != SymbolKind.TypeParameter && typeArgument.Kind != SymbolKind.ErrorType)
             {
                 return true;
             }
@@ -1111,7 +1106,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             //      one of the 'bound' parameters (ie universally quantified
             //      instead of existential) is evidence of being unfixed.
             //      This is probably wrong.
-            return _rigidParams.Contains(typeArgument as TypeParameterSymbol);
+            return rigidParams.Contains(typeArgument as TypeParameterSymbol);
         }
 
         /// <summary>
@@ -1264,7 +1259,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (initMethodProgress)
                 {
                     _fixedMap = _fixedMap.Compose(initMethodSubstitution);
-                    _methodInfo = _methodInfo.ApplySubstitution(_fixedMap);
+                    PropagateFixedMap();
                     // If we don't do this, we'll think the type parameters we
                     // just fixed through MTI are unfixable, since they're no
                     // longer present in the method info.
@@ -1360,6 +1355,25 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             /// <summary>
+            /// The array of type parameters we still need to fix.
+            /// </summary>
+            private ImmutableArray<TypeParameterSymbol> ToFix
+            {
+                get
+                {
+                    if (FixedEverything)
+                    {
+                        return ImmutableArray<TypeParameterSymbol>.Empty;
+                    }
+                    var builder = ArrayBuilder<TypeParameterSymbol>.GetInstance();
+                    builder.AddRange(_methodInfo.Unfixed);
+                    builder.AddRange(_associatedTypes);
+                    builder.AddRange(_conceptWitnesses);
+                    return builder.ToImmutableAndFree();
+                }
+            }
+
+            /// <summary>
             /// Updates the method context and associated types with the
             /// current substitution.
             /// </summary>
@@ -1430,7 +1444,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 //    This is a sequential composition, so order matters.
                 //    We must make sure that, if there are clashes on type
                 //    parameters, the outermost assignment wins.
-                _fixedMap = _fixedMap.Compose(candidate.Unification);
+                _fixedMap = _fixedMap.RestrictedCompose(candidate.Unification, ToFix);
 
                 return true;
             }
@@ -1770,7 +1784,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             foreach (var providedConcept in providedConcepts)
             {
-                if (TypeUnification.CanUnify(providedConcept, requiredConcept, ref unifyingSubstitutions, boundAndUnfixedParams))
+                if (TypeUnification.CanUnify(requiredConcept, providedConcept, ref unifyingSubstitutions, boundAndUnfixedParams))
                 {
                     return true;
                 }
@@ -1875,7 +1889,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             // TODO: understand exactly why this is.
             // TODO: maybe we only need to keep the fixed map around, not
             //       the whole unification?
-            var round = NewRound(nt.TypeParameters, nt.TypeArguments, candidate.Unification, methodInfo, chain.Add(nt));
+            var newMethodInfo = methodInfo.ApplySubstitution(candidate.Unification);
+            var round = NewRound(nt.TypeParameters, nt.TypeArguments, candidate.Unification, newMethodInfo, chain.Add(nt));
             var diags = new HashSet<DiagnosticInfo>();
             var result = round.Infer(ref diags);
             if (!result.Success)

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -87,14 +89,62 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
+        /// Sequentially composes this map with another one, then filters out
+        /// the set of additions to the map using the given allowed set.
+        /// </summary>
+        /// <param name="other">The RHS of the sequential composition.</param>
+        /// <param name="allowed">The array of allowed type parameters.</param>
+        /// <returns>
+        /// The composed map, with the present keys restricted to those either
+        /// in this map or in <paramref name="allowed"/>.
+        /// </returns>
+        public ImmutableTypeMap RestrictedCompose(ImmutableTypeMap other, ImmutableArray<TypeParameterSymbol> allowed)
+        {
+            // Don't return 'other' if we're empty.
+            // 'other' might need restricting.
+            if (other.IsEmpty)
+            {
+                return this;
+            }
+
+            // TODO(MattWindsor91): efficiency: we're creating and disposing
+            //     of a lot of intermediate data structures here.
+            var unfiltered = Compose(other);
+
+            var rdict = new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>();
+
+            // De-duplicating this is important: SmallDictionary errors
+            // on duplicate key insertion.
+            var allAllowed = allowed.AddRange(Mapping.Keys).Distinct();
+            foreach (var a in allAllowed)
+            {
+                if (unfiltered.Mapping.ContainsKey(a))
+                {
+                    rdict.Add(a, unfiltered.Mapping[a]);
+                }
+            }
+            return new ImmutableTypeMap(rdict);
+        }
+
+        /// <summary>
         /// Sequentially composes two unifications, creating a new unification.
         /// </summary>
-        /// <param name="other">
-        /// The RHS of the sequential composition.</param>
+        /// <param name="other">The RHS of the sequential composition.</param>
         /// <returns>
         /// The composed unification (this; <paramref name="other"/>). 
         /// </returns>
-        internal ImmutableTypeMap Compose(ImmutableTypeMap other) => ComposeDict(other.Mapping);
+        internal ImmutableTypeMap Compose(ImmutableTypeMap other)
+        {
+            if (IsEmpty)
+            {
+                return other;
+            }
+            if (other.IsEmpty)
+            {
+                return this;
+            }
+            return ComposeDict(other.Mapping);
+        }
 
         /// <summary>
         /// Sequentially composes a unification with a dictionary, creating a new unification.
@@ -124,12 +174,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             foreach (var theirKey in dict.Keys)
             {
-                // This means the other mapping contained this.
-                if (result.Mapping.ContainsKey(theirKey))
+                if (!result.Mapping.ContainsKey(theirKey))
                 {
-                    continue;
+                    result.Mapping.Add(theirKey, dict[theirKey]);
                 }
-                result.Mapping.Add(theirKey, dict[theirKey]);
             }
 
             Debug.Assert(IsNormalised, "map should be normalised after composition");
@@ -155,6 +203,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             var sd = new SmallDictionary<TypeParameterSymbol, TypeWithModifiers>();
             sd.Add(key, value);
             return ComposeDict(sd);
+        }
+
+        /// <summary>
+        /// Returns true if the type map is empty.
+        /// </summary>
+        private bool IsEmpty
+        {
+            get
+            {
+                // TODO(MattWindsor91): is there any easier way of doing this?
+                foreach (var _ in Mapping)
+                {
+                    return false;
+                }
+                return true;
+            }
         }
 
         /// <summary>
