@@ -11,224 +11,346 @@ namespace TinyLinq.SpecialisedInstances
 
     #region Select of Select
 
-    /// <summary>
-    /// Instance reducing chained unspecialised Select queries to a single
-    /// <see cref="SelectCursor{TEnum, TElem, TProj}"/> on a composed projection.
-    /// </summary>
-    public instance Select_Select<TElem, TProj1, TProj2, TDest> : CSelect<TProj1, TProj2, SelectCursor<TDest, TElem, TProj1>, SelectCursor<TDest, TElem, TProj2>>
+    /// <summary>Fusion of two Select queries.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TFused"> Type of fused elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Select_Select<TSourceColl, TSourceEnum, TSource, TFused, TResult>
+        : CSelect<SelectCursor<TSourceColl, TSourceEnum, TSource, TFused>, TFused, TResult, SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>>
     {
-        SelectCursor<TDest, TElem, TProj2> Select(this SelectCursor<TDest, TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
-            new SelectCursor<TDest, TElem, TProj2>
-            {
-                source = t.source,
-                projection = x => projection(t.projection(x)),
-                current = default
-            };
+        SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Select(this SelectCursor<TSourceColl, TSourceEnum, TSource, TFused> c, Func<TFused, TResult> selector) =>
+            new SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, x => selector(c.selector(x)));
     }
 
     #endregion Select of Select
 
     #region Where of Select
 
-    /// <summary>
-    /// Fused Where query on an unspecialised Select.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the enumerator being selected over.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of elements leaving <typeparamref name="TEnum"/>.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements being selected and filtered.
-    /// </typeparam>
-    public struct WhereOfSelect<TEnum, TElem, TProj>
+    /// <summary>Cursor representing a fused Where-of-Select query.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>
     {
-        /// <summary>
-        /// The source enumerator.
-        /// </summary>
-        public TEnum source;
-        /// <summary>
-        /// The projection function from the Select.
-        /// </summary>
-        public Func<TElem, TProj> projection;
-        /// <summary>
-        /// The filtering predicate from the Where.
-        /// </summary>
-        public Func<TProj, bool> filter;
-        /// <summary>
-        /// The cached current item.
-        /// </summary>
-        public TProj current;
+        /// <summary>The selector function.</summary>
+        public readonly Func<TSource, TResult> selector;
+        /// <summary>The filtering predicate.</summary>
+        public readonly Func<TResult, bool> predicate;
+        /// <summary> The source collection.</summary>
+        public readonly TSourceColl source;
+
+        /// <summary>The state of this cursor.</summary>
+        public CursorState state;
+        /// <summary>The source enumerator, lazily fetched.</summary>
+        public TSourceEnum sourceEnum;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
+
+        /// <summary>Constructs a new Where-of-Select cursor.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="selector">The selector function.</param>
+        /// <param name="predicate">The predicate function.</param>
+        public WhereOfSelectCursor(TSourceColl source, Func<TSource, TResult> selector, Func<TResult, bool> predicate)
+        {
+            this.selector = selector;
+            this.predicate = predicate;
+            this.source = source;
+
+            state = CursorState.Uninitialised;
+            sourceEnum = default;
+            result = default;
+        }
     }
 
-    /// <summary>
-    /// Enumerator instance for fused Wheres on unspecialised Selects.
-    /// </summary>
-    public instance Enumerator_WhereSelect<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<WhereOfSelect<TEnum, TElem, TProj>, TProj>
-        where E : CEnumerator<TEnum, TElem>
+    /// <summary>Where-Of-Select cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Enumerator_WhereOfSelectCursor<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, TResult, implicit Eb, implicit Et>
+        : CCloneableEnumerator<WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>, TResult>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        //void Reset(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Reset(ref enumerator.source);
+        WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
+            new WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.selector, c.predicate);
 
-        bool MoveNext(ref WhereOfSelect<TEnum, TElem, TProj> enumerator)
+        void Reset(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
-            do
+            if (c.state == CursorState.Active)
             {
-                if (!E.MoveNext(ref enumerator.source))
-                {
-                    return false;
-                }
-                enumerator.current = enumerator.projection(E.Current(ref enumerator.source));
-            } while (!enumerator.filter(enumerator.current));
-
-            return true;
+                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum = default;
+                c.result = default;
+            }
+            c.state = CursorState.Uninitialised;
         }
 
-        TProj Current(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => enumerator.current;
+        bool MoveNext(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            switch (c.state)
+            {
+                case CursorState.Exhausted:
+                    return false;
+                case CursorState.Uninitialised:
+                    c.sourceEnum = c.source.GetEnumerator();
+                    c.state = CursorState.Active;
+                    goto case CursorState.Active;
+                case CursorState.Active:
+                    while (Et.MoveNext(ref c.sourceEnum))
+                    {
+                        c.result = c.selector(Et.Current(ref c.sourceEnum));
+                        if (c.predicate(c.result))
+                        {
+                            return true;
+                        }
+                    }
 
-        void Dispose(ref WhereOfSelect<TEnum, TElem, TProj> enumerator) => E.Dispose(ref enumerator.source);
+                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum = default;
+                    c.result = default;
+                    c.state = CursorState.Exhausted;
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        TResult Current(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+
+        void Dispose(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+            }
+        }
     }
 
-    /// <summary>
-    /// Instance reducing a Where on a Select to a single composed
-    /// qyery.
-    /// </summary>
-    public instance Where_Select<TEnum, TElem, TProj> : CWhere<SelectCursor<TEnum, TElem, TProj>, TProj, WhereOfSelect<TEnum, TElem, TProj>>
+    /// <summary>Where-Of-Select cursors are countable.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Countable_WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult, implicit Eb, implicit Et>
+        : CCountable<WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        WhereOfSelect<TEnum, TElem, TProj> Where(this SelectCursor<TEnum, TElem, TProj> selection, Func<TProj, bool> filter) =>
-            new WhereOfSelect<TEnum, TElem, TProj>
+        int Count(this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            var e = c.source.GetEnumerator();
+            var count = 0;
+
+            while (Et.MoveNext(ref e))
             {
-                source = selection.source,
-                projection = selection.projection,
-                filter = filter,
-                current = default
-            };
+                var current = c.selector(Et.Current(ref e));
+                if (c.predicate(current))
+                {
+                    count++;
+                }
+            }
+
+            Et.Dispose(ref e);
+            return count;
+        }
+    }
+
+    /// <summary>Fusion of Where on Select.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Where_Select<TSourceColl, TSourceEnum, TSource, TResult>
+        : CWhere<SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>, TResult, WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>>
+    {
+        WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Where(this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> source, Func<TResult, bool> predicate) =>
+            new WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(source.source, source.selector, predicate);
     }
 
     #endregion Where of Select
 
     #region Select of Where
 
-    /// <summary>
-    /// Fused Select query on an unspecialised Where.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the enumerator being selected over.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of elements leaving <typeparamref name="TEnum"/>.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements being selected and filtered.
-    /// </typeparam>
-    public struct SelectOfWhere<TEnum, TElem, TProj>
+    /// <summary>Cursor representing a fused Select-of-Where query.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>
     {
-        /// <summary>
-        /// The original source enumerator.
-        /// </summary>
-        public TEnum source;
-        /// <summary>
-        /// The filtering predicate from the Where query.
-        /// </summary>
-        public Func<TElem, bool> filter;
-        /// <summary>
-        /// The projection function from the Select query.
-        /// </summary>
-        public Func<TElem, TProj> projection;
-        /// <summary>
-        /// The cached current item.
-        /// </summary>
-        public TProj current;
+        /// <summary>The filtering predicate.</summary>
+        public readonly Func<TSource, bool> predicate;
+        /// <summary>The selector function.</summary>
+        public readonly Func<TSource, TResult> selector;
+        /// <summary> The source collection.</summary>
+        public readonly TSourceColl source;
+
+        /// <summary>The state of this cursor.</summary>
+        public CursorState state;
+        /// <summary>The source enumerator, lazily fetched.</summary>
+        public TSourceEnum sourceEnum;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
+
+        /// <summary>Constructs a new Where-of-Select cursor.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="predicate">The predicate function.</param>
+        /// <param name="selector">The selector function.</param>
+        public SelectOfWhereCursor(TSourceColl source, Func<TSource, bool> predicate, Func<TSource, TResult> selector)
+        {
+            this.predicate = predicate;
+            this.selector = selector;
+            this.source = source;
+
+            state = CursorState.Uninitialised;
+            sourceEnum = default;
+            result = default;
+        }
     }
 
-    /// <summary>
-    /// Enumerator instance for fused Selects on unspecialised Wheres.
-    /// </summary>
-    public instance Enumerator_SelectWhere<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CEnumerator<SelectOfWhere<TEnum, TElem, TProj>, TProj>
-        where E : CEnumerator<TEnum, TElem>
+    /// <summary>Select-of-Where cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Enumerator_SelectOfWhereCursor<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, TResult, implicit Eb, implicit Et>
+        : CCloneableEnumerator<SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>, TResult>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        //void Reset(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Reset(ref sw.source);
+        SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
+            new SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.predicate, c.selector);
 
-        bool MoveNext(ref SelectOfWhere<TEnum, TElem, TProj> sw)
+        void Reset(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
-            TElem c;
-            ref var s = ref sw.source;
-
-            do
+            if (c.state == CursorState.Active)
             {
-                if (!E.MoveNext(ref s))
-                {
-                    return false;
-                }
-                c = E.Current(ref s);
-            } while (!sw.filter(c));
-
-            sw.current = sw.projection(c);
-            return true;
+                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum = default;
+                c.result = default;
+            }
+            c.state = CursorState.Uninitialised;
         }
 
-        TProj Current(ref SelectOfWhere<TEnum, TElem, TProj> sw) => sw.current;
+        bool MoveNext(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            switch (c.state)
+            {
+                case CursorState.Exhausted:
+                    return false;
+                case CursorState.Uninitialised:
+                    c.sourceEnum = c.source.GetEnumerator();
+                    c.state = CursorState.Active;
+                    goto case CursorState.Active;
+                case CursorState.Active:
+                    while (Et.MoveNext(ref c.sourceEnum))
+                    {
+                        var tmp = Et.Current(ref c.sourceEnum);
+                        if (c.predicate(tmp))
+                        {
+                            c.result = c.selector(tmp);
+                            return true;
+                        }
+                    }
 
-        void Dispose(ref SelectOfWhere<TEnum, TElem, TProj> sw) => E.Dispose(ref sw.source);
+                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum = default;
+                    c.result = default;
+                    c.state = CursorState.Exhausted;
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        TResult Current(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+
+        void Dispose(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+            }
+        }
     }
 
-    /// <summary>
-    /// Instance for destructive counting of select-of-where, which ignores
-    /// the selection entirely.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the source of the selection.
+    /// <summary>Select-of-Where cursors are countable.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
     /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of the elements of <typeparamref name="TEnum"/>.
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
     /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of the projected elements of the selection.
-    /// </typeparam>
-    /// <typeparam name="B">
-    /// Instance of <see cref="CStaticCount{T}"/> for <typeparamref name="TEnum"/>.
-    /// </typeparam>
-    public instance Countable_SelectOfWhere<TEnum, TElem, TProj, implicit E> : CCountable<SelectOfWhere<TEnum, TElem, TProj>>
-        where E : CEnumerator<TEnum, TElem>
+    public instance Countable_SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult, implicit Eb, implicit Et>
+        : CCountable<SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        int Count(this SelectOfWhere<TEnum, TElem, TProj> sw)
+        int Count(this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
-            TElem c;
-            ref var s = ref sw.source;
-            int count = 0;
+            var e = c.source.GetEnumerator();
+            var count = 0;
 
-            while (E.MoveNext(ref s))
+            while (Et.MoveNext(ref e))
             {
-                c = E.Current(ref s);
-                if (sw.filter(c))
+                var current = Et.Current(ref e);
+                if (c.predicate(current))
                 {
                     // Needed to ensure any exceptions or side-effects in the
                     // projection occur.
-                    sw.projection(c);
+                    c.selector(current);
                     count++;
                 }
             }
 
+            Et.Dispose(ref e);
             return count;
         }
     }
 
-    /// <summary>
-    /// Instance reducing a Select on a Where to a single composed
-    /// query.
-    /// </summary>
-    public instance Select_Where<TElem, TProj, TDest> : CSelect<TElem, TProj, WhereCursor<TDest, TElem>, SelectOfWhere<TDest, TElem, TProj>>
+    /// <summary>Fusion of Select on Where.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Select_Where<TSourceColl, TSourceEnum, TSource, TResult>
+        : CSelect<WhereCursor<TSourceColl, TSourceEnum, TSource>, TSource, TResult, SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>>
     {
-        SelectOfWhere<TDest, TElem, TProj> Select(this WhereCursor<TDest, TElem> t, Func<TElem, TProj> projection) =>
-            new SelectOfWhere<TDest, TElem, TProj>
-            {
-                source = t.source,
-                filter = t.filter,
-                projection = projection,
-                current = default
-            };
+        SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> Select(this WhereCursor<TSourceColl, TSourceEnum, TSource> source, Func<TSource, TResult> selector) =>
+            new SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>(source.source, source.predicate, selector);
     }
 
     #endregion Select of Where

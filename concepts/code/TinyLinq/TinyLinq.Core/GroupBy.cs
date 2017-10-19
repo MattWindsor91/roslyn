@@ -37,7 +37,7 @@ namespace TinyLinq.Core
     }
 
     public instance GroupCursor_Enumerator<TSrc, TElem, TKey, TVal>
-        : CClonableEnumerator<GroupCursor<TKey, TVal>, Group<TKey, TVal>>
+        : CCloneableEnumerator<GroupCursor<TKey, TVal>, Group<TKey, TVal>>
     {
         GroupCursor<TKey, TVal> Clone(ref this GroupCursor<TKey, TVal> gc) =>
             new GroupCursor<TKey, TVal>

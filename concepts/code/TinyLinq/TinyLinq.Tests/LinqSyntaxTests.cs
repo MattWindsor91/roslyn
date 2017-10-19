@@ -11,6 +11,7 @@ namespace TinyLinq
     {
         public static void Run()
         {
+
             // List queries
             var l = new List<int>(new int[] { 1, 2, 3 });
 
@@ -22,7 +23,6 @@ namespace TinyLinq
             // Array queries
             var a = new int[] { 1, 2, 3 };
 
-            var ac = CEnumerable<int[]>.GetEnumerator(a);
             var aq = from x in a select x * 5;
 
             var a2 = from x in a where x % 2 == 0  select (double) x;

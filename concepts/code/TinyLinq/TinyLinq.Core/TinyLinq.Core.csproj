@@ -44,7 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Average.cs" />
-    <Compile Include="Count.cs" />
+    <Compile Include="CursorState.cs" />
     <Compile Include="GroupBy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Select.cs" />

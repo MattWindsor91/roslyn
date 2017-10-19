@@ -25,8 +25,8 @@ namespace TinyLinq
         /// <param name="toSum">The array to test against.</param>
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
         public static bool Prop_SelectIdentity<TColl, [AssociatedType]TElem, [AssociatedType]TSelectDst, implicit C, implicit S, implicit A, implicit I, implicit Q>(TColl toSum)
-            where C : CStaticCountable<TColl>
-            where S : CSelect<TElem, TElem, TColl, TSelectDst>
+            where C : CCountable<TColl>
+            where S : CSelect<TColl, TElem, TElem, TSelectDst>
             where A : CToArray<TSelectDst, TElem>
             where I : CIndexable<TColl, int, TElem>
             where Q : Eq<TElem>

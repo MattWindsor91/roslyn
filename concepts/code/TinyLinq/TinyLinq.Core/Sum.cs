@@ -6,31 +6,20 @@ using System.Concepts.Prelude;
 namespace TinyLinq
 {
     /// <summary>
-    /// Concept for summing over an enumerator.
+    /// Concept for summing over an enumerable.
     /// </summary>
-    public concept CSum<TEnum, [AssociatedType] TElem>
+    public concept CSum<TColl, [AssociatedType] TElem>
     {
         /// <summary>
-        /// Sums over all of the elements of an enumerator.
+        /// Sums over all of the elements of an enumerable.
         /// </summary>
-        /// <param name="e">
+        /// <param name="source">
         /// The enumerator to sum.
         /// </param>
         /// <returns>
-        /// The sum of all elements reachable by the enumerator.
+        /// The sum of all elements in the enumerable
         /// </returns>
-        TElem Sum(this TEnum e);        
-    }
-
-    /// <summary>
-    /// If we can sum over an enumerator, we can average over its enumerable.
-    /// </summary>
-    [Overlappable]
-    public instance Sum_Enumerable<TColl, [AssociatedType]TEnum, [AssociatedType]TDst, implicit E, implicit S> : CSum<TColl, TDst>
-        where E : CEnumerable<TColl, TEnum>
-        where S : CSum<TEnum, TDst>
-    {
-        TDst Sum(this TColl c) => c.GetEnumerator().Sum();
+        TElem Sum(this TColl source);        
     }
 
     public class MonoidInstances
@@ -39,17 +28,19 @@ namespace TinyLinq
         /// Summation over a general enumerator, when the element is a monoid.
         /// Summation is iterated monoid append with monoid empty as a unit.
         /// </summary>
-        public instance Sum_Enumerator_Monoid<TEnum, [AssociatedType] TElem, implicit E, implicit M> : CSum<TEnum, TElem>
-            where E : CEnumerator<TEnum, TElem>
-            where M : Monoid<TElem>
+        public instance Sum_Enumerable_Monoid<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, implicit Eb, implicit Et, implicit M> : CSum<TSourceColl, TSource>
+            where Eb : CEnumerable<TSourceColl, TSourceEnum>
+            where Et : CEnumerator<TSourceEnum, TSource>
+            where M : Monoid<TSource>
         {
-            TElem Sum(this TEnum e)
+            TSource Sum(this TSourceColl source)
             {
-                var sum = M.Empty;
+                var e = source.GetEnumerator();
 
-                while (E.MoveNext(ref e))
+                var sum = M.Empty;
+                while (Et.MoveNext(ref e))
                 {
-                    sum = M.Append(sum, E.Current(ref e));
+                    sum = M.Append(sum, Et.Current(ref e));
                 }
 
                 return sum;
@@ -58,21 +49,22 @@ namespace TinyLinq
     }
 
     /// <summary>
-    /// Summing over a general enumerator, when the element is a number.
+    /// Summing over a general enumerable, when the element is a number.
     /// </summary>
-    public instance Sum_Enumerator_Num<TEnum, [AssociatedType] TElem, implicit E, implicit N> : CSum<TEnum, TElem>
-        where E : CEnumerator<TEnum, TElem>
-        where N : Num<TElem>
+    [Overlappable]
+    public instance Sum_Enumerable_Num<TSourceColl, [AssociatedType] TSourceEnum, [AssociatedType]TSource, implicit Eb, implicit Et, implicit N> : CSum<TSourceColl, TSource>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
+        where N : Num<TSource>
     {
-        TElem Sum(this TEnum e)
+        TSource Sum(this TSourceColl source)
         {
-            var sum = N.FromInteger(0);
-            var count = 0;
+            var e = source.GetEnumerator();
 
-            while (E.MoveNext(ref e))
+            var sum = N.FromInteger(0);
+            while (Et.MoveNext(ref e))
             {
-                count++;
-                sum += E.Current(ref e);
+                sum += Et.Current(ref e);
             }
 
             return sum;

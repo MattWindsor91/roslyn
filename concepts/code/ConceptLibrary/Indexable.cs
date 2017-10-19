@@ -8,7 +8,7 @@
     /// <typeparam name="TColl">The type to index.</typeparam>
     /// <typeparam name="TIdx">The type of the index.</typeparam>
     /// <typeparam name="TElem">The type of elements returned.</typeparam>
-    public concept CIndexable<TColl, TIdx, [AssociatedType] TElem>
+    public concept CIndexable<TColl, [AssociatedType]TIdx, [AssociatedType] TElem>
     {
         // TODO(MattWindsor91): indexer operators
        

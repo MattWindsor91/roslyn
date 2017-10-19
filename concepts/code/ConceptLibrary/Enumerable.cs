@@ -33,13 +33,13 @@ namespace System.Concepts.Enumerable
     /// </typeparam>
     public concept CResettableEnumerator<TState, [AssociatedType] TElem> : CEnumerator<TState, TElem>
     {
-        void Reset(ref TState enumerator);
+        void Reset(ref this TState enumerator);
     }
 
     /// <summary>
     /// Concept for enumerators that can be cloned.
     /// </summary>
-    public concept CClonableEnumerator<TState, [AssociatedType] TElem> : CResettableEnumerator<TState, TElem>
+    public concept CCloneableEnumerator<TState, [AssociatedType] TElem> : CResettableEnumerator<TState, TElem>
     {
         /// <summary>
         /// Clones the enumerator.
@@ -102,8 +102,8 @@ namespace System.Concepts.Enumerable
         /// where getting the enumerator is equal to cloning.
         /// </summary>
         [Overlappable]
-        public instance Enumerable_CopyEnumerator<TEnum, TElem, implicit C> : CEnumerable<TEnum, TEnum>
-            where C : CClonableEnumerator<TEnum, TElem>
+        public instance Enumerable_CopyEnumerator<TEnum, [AssociatedType]TElem, implicit C> : CEnumerable<TEnum, TEnum>
+            where C : CCloneableEnumerator<TEnum, TElem>
         {
             TEnum GetEnumerator(this TEnum e) => e.Clone();
         }
@@ -125,7 +125,7 @@ namespace System.Concepts.Enumerable
         }
 
         public instance Enumerator_IndexBoundCursor<TColl, TIdx, TElem, implicit I, implicit N, implicit E>
-            : CClonableEnumerator<IndexBoundCursor<TColl, TIdx, TElem>, TElem>
+            : CCloneableEnumerator<IndexBoundCursor<TColl, TIdx, TElem>, TElem>
             where I : CIndexable<TColl, TIdx, TElem>
             where N : Num<TIdx>
             where E : Eq<TIdx>
@@ -171,9 +171,8 @@ namespace System.Concepts.Enumerable
             where L : CStaticCountable<TColl>
         {
             IndexBoundCursor<TColl, TIdx, TElem> GetEnumerator(TColl container) =>
-                new IndexBoundCursor<TColl, TIdx, TElem> { container = container, len = N.FromInteger(container.Count()), pos = N.FromInteger(-1) };
+                new IndexBoundCursor<TColl, TIdx, TElem> { container = container, len = N.FromInteger(L.Count(container)), pos = N.FromInteger(-1) };
         }
-
 
         #endregion Enumerables from length and bound
 
@@ -207,9 +206,9 @@ namespace System.Concepts.Enumerable
         }
 
         /// <summary>
-        /// Range cursors are clonable enumerators.
+        /// Range cursors are cloneable enumerators.
         /// </summary>
-        public instance ClonableEnumerator_Range<TNum, implicit N, implicit E> : CClonableEnumerator<RangeCursor<TNum>, TNum>
+        public instance CloneableEnumerator_Range<TNum, implicit N, implicit E> : CCloneableEnumerator<RangeCursor<TNum>, TNum>
             where N : Num<TNum>
             where E : Eq<TNum>
         {
@@ -223,7 +222,7 @@ namespace System.Concepts.Enumerable
                     state = e.range.count == 0 ? RangeCursor<TNum>.State.OneAfter : RangeCursor<TNum>.State.OneBefore
                 };
 
-            void Reset(ref RangeCursor<TNum> e)
+            void Reset(ref this RangeCursor<TNum> e)
             {
                 e.state = e.range.count == 0
                     ? RangeCursor<TNum>.State.OneAfter
@@ -259,8 +258,9 @@ namespace System.Concepts.Enumerable
         /// <summary>
         /// Various enumerator instances for ranges.
         /// </summary>
-        public instance Enumerable_Range<TNum, implicit N> : CEnumerable<Range<TNum>, RangeCursor<TNum>>
+        public instance Enumerable_Range<TNum, implicit N, implicit E> : CEnumerable<Range<TNum>, RangeCursor<TNum>>
             where N : Num<TNum>
+            where E : Eq<TNum>
         {
             RangeCursor<TNum> GetEnumerator(this Range<TNum> range) =>
                 new RangeCursor<TNum>
@@ -292,7 +292,7 @@ namespace System.Concepts.Enumerable
         /// <see cref="CEnumerator{TColl, TState}"/> instance for array
         /// cursors.
         /// </summary>
-        public instance Enumerator_ArrayCursor<TElem> : CClonableEnumerator<ArrayCursor<TElem>, TElem>
+        public instance Enumerator_ArrayCursor<TElem> : CCloneableEnumerator<ArrayCursor<TElem>, TElem>
         {
             ArrayCursor<TElem> Clone(ref this ArrayCursor<TElem> e) =>
                 new ArrayCursor<TElem>

@@ -75,40 +75,41 @@ namespace TinyLinq
         TElem[] ToArray(this TFrom from);
     }
 
-    /// <summary>
-    /// Baseline instance for <see cref="CToArray{TFrom, TElem}"/>,
-    /// when the source is an enumerator.
-    /// </summary>
+    /// <summary>Baseline to-array for enumerables.</summary>
     [Overlappable]
-    public instance ToArray_UnboundedEnumerator<TEnum, TElem, implicit E> : CToArray<TEnum, TElem>
-        where E : CEnumerator<TEnum, TElem>
+    public instance ToArray_Enumerable<TColl, [AssociatedType]TEnum, [AssociatedType]TElem, implicit Eb, implicit Et>
+        : CToArray<TColl, TElem>
+        where Eb : CEnumerable<TColl, TEnum>
+        where Et : CEnumerator<TEnum, TElem>
     {
-        TElem[] ToArray(this TEnum e)
+        TElem[] ToArray(this TColl from)
         {
-           // E.Reset(ref e);
+            var e = from.GetEnumerator();
             var q = new Queue<TElem>();
-            while (E.MoveNext(ref e))
+            while (Et.MoveNext(ref e))
             {
-                q.Enqueue(E.Current(ref e));
+                q.Enqueue(Et.Current(ref e));
             }
             return q.ToArray();
         }
     }
 
+    /// <summary>Optimised to-array for enumerables with O(1) count.</summary>
     [Overlappable]
-    public instance ToArray_BoundedEnumerator<TEnum, TElem, implicit S, implicit E> : CToArray<TEnum, TElem>
-        where S : CStaticCountable<TEnum>
-        where E : CEnumerator<TEnum, TElem>
+    public instance ToArray_SCEnumerable<TColl, [AssociatedType]TEnum, [AssociatedType]TElem, implicit S, implicit Eb, implicit Et>
+        where S : CStaticCountable<TColl>
+        where Eb : CEnumerable<TColl, TEnum>
+        where Et : CEnumerator<TEnum, TElem>
     {
-        TElem[] ToArray(this TEnum e)
+        TElem[] ToArray(this TColl from)
         {
-            //E.Reset(ref e);
-            var len = Count(e); // TODO: why doesn't e.Count work?
+            var len = S.Count(from); // TODO: why doesn't e.Count work?
             var result = new TElem[len];
+            var e = from.GetEnumerator();
             for (var i = 0; i < len; i++)
             {
-                E.MoveNext(ref e);
-                result[i] = E.Current(ref e);
+                Et.MoveNext(ref e);
+                result[i] = Et.Current(ref e);
             }
             return result;
         }

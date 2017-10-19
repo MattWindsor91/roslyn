@@ -5,144 +5,219 @@ using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
-    /// <summary>
-    /// Concept for selecting multiple items from each element of a collection,
-    /// then projecting them into a new enumerator.
-    /// </summary>
-    /// <typeparam name="TSrc">
-    /// Type of the collection to target.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of the elements of <typeparamref name="TSrc"/>.
-    /// </typeparam>
-    /// <typeparam name="TInner">
-    /// Type of the collection returned by the first projection.
-    /// </typeparam>
-    /// <typeparam name="TInnerElem">
-    /// Type of the elements of <typeparamref name="TInner"/>.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of the elements returned by the second projection.
-    /// </typeparam>
-    /// <typeparam name="TDest">
-    /// Type of the enumerator over <typeparamref name="TInner"/>
-    /// that the selection returns.
-    /// </typeparam>
-    public concept CSelectMany<TSrc, [AssociatedType] TElem, TInner, [AssociatedType] TInnerElem, TProj, [AssociatedType] TDest>
+    /// <summary>Concept for types that can be SelectMany-queried.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TCollectionColl">Type of inner collection.</typeparam>
+    /// <typeparam name="TCollection"> Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="TResultColl">Type of output collection.</typeparam>
+    public concept CSelectMany<TSourceColl, [AssociatedType]TSource, TCollectionColl, [AssociatedType]TCollection, TResult, [AssociatedType]TResultColl>
     {
-        TDest SelectMany(this TSrc src, Func<TElem, TInner> selector, Func<TElem, TInnerElem, TProj> resultSelector);
+        /// <summary>Creates a SelectMany query on a source.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="collectionSelector">The collection selector.</param>
+        /// <param name="resultSelector">The result selector.</param>
+        /// <returns>
+        /// A lazy query that, when enumerated, uses
+        /// <paramref name="collectionSelector"/> to select a collection for
+        /// each element of <paramref name="source"/>, then returns the
+        /// transformation of each item in each such collection, and its
+        /// parent source element, according to
+        /// <paramref name="resultSelector"/>.
+        /// </returns>
+        TResultColl SelectMany(this TSourceColl source, Func<TSource, TCollectionColl> collectionSelector, Func<TSource, TCollection, TResult> resultSelector);
     }
 
-    public struct SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
+    /// <summary>Cursor representing an unspecialised SelectMany.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TCollectionColl">Type of inner collection.</typeparam>
+    /// <typeparam name="TCollectionEnum">Type of inner enumerator.</typeparam>
+    /// <typeparam name="TCollection"> Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>
     {
-        public TSrc source;
-        public TElem currentElem;
-        public TInnerSrc currentInnerSource;
+        /// <summary>The collection selector.</summary>
+        public readonly Func<TSource, TCollectionColl> collectionSelector;
+        /// <summary>The result selector.</summary>
+        public readonly Func<TSource, TCollection, TResult> resultSelector;
+        /// <summary> The source collection.</summary>
+        public readonly TSourceColl source;
 
-        public TProj current;
-        public bool started;
-        public bool finished;
+        /// <summary>The state of this cursor.</summary>
+        public CursorState state;
+        /// <summary>The source enumerator, lazily fetched.</summary>
+        public TSourceEnum sourceEnum;
+        /// <summary>The current source element.</summary>
+        public TSource sourceElem;
+        /// <summary>The current collection enumerator.</summary>
+        public TCollectionEnum collectionEnum;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
 
-        public Func<TElem, TInnerColl> outerProjection;
-        public Func<TElem, TInnerElem, TProj> innerProjection;
-    }
-
-    public instance Enumerator_SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj, implicit ES, implicit EI, implicit NI>
-        : CEnumerator<SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>, TProj>
-        where ES : CEnumerator<TSrc, TElem>
-        where EI : CEnumerable<TInnerColl, TInnerSrc>
-        where NI : CEnumerator<TInnerSrc, TInnerElem>
-    {
-        /*
-        void Reset(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+        /// <summary>
+        /// Creates a new array-to-array SelectMany cursor.
+        /// </summary>
+        /// <param name="source">The source collection.</param>
+        /// <param name="collectionSelector">The collection selector.</param>
+        /// <param name="resultSelector">The result selector.</param>  
+        public SelectManyCursor(TSourceColl source, Func<TSource, TCollectionColl> collectionSelector, Func<TSource, TCollection, TResult> resultSelector)
         {
-            if (sm.currentInnerSource != null)
-            {
-                NI.Dispose(ref sm.currentInnerSource);
-            }
-            sm.started = sm.finished = false;
+            this.source = source;
+            this.collectionSelector = collectionSelector;
+            this.resultSelector = resultSelector;
 
-            ES.Reset(ref sm.source);
+            state = CursorState.Uninitialised;
+            sourceEnum = default;
+            sourceElem = default;
+            collectionEnum = default;
+            result = default;
         }
-        */
+    }
 
-        bool MoveNext(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+    /// <summary>SelectMany cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TCollectionColl">Type of inner collection.</typeparam>
+    /// <typeparam name="TCollectionEnum">Type of inner enumerator.</typeparam>
+    /// <typeparam name="TCollection"> Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="SEb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="SEt">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="CEb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TCollectionColl"/>.
+    /// </typeparam>
+    /// <typeparam name="CEt">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TCollectionEnum"/>.
+    /// </typeparam>
+    public instance Enumerator_SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult, implicit SEb, implicit SEt, implicit CEb, implicit CEt>
+        : CCloneableEnumerator<SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>, TResult>
+        where SEb : CEnumerable<TSourceColl, TSourceEnum>
+        where SEt : CEnumerator<TSourceEnum, TSource>
+        where CEb : CEnumerable<TCollectionColl, TCollectionEnum>
+        where CEt : CEnumerator<TCollectionEnum, TCollection>
+    {
+        SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> Clone(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) =>
+            new SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>(c.source, c.collectionSelector, c.resultSelector);
+
+        void Reset(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
         {
-            // Outer enumerator has finished: we're done.
-            if (sm.finished)
+            if (c.state == CursorState.Active)
             {
-                return false;
+                SEt.Dispose(ref c.sourceEnum);
+                CEt.Dispose(ref c.collectionEnum);
+                c.sourceEnum = default;
+                c.collectionEnum = default;
+                c.sourceElem = default;
+                c.result = default;
             }
+            c.state = CursorState.Uninitialised;
+        }
 
-            // Outer enumerator hasn't started yet: make sure we do so first.
-            var mustCycleOuter = !sm.started;
-            sm.started = true;
-
-            // Keep going until we run out of outer enumerators.
-            while (true)
+        bool MoveNext(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
+        {
+            switch (c.state)
             {
-                if (mustCycleOuter)
-                {
-                    if (!ES.MoveNext(ref sm.source))
+                case CursorState.Exhausted:
+                    return false;
+                case CursorState.Uninitialised:
+                    // Need to put *both* enumerators into stable states.
+                    c.sourceEnum = c.source.GetEnumerator();
+                    if (!SEt.MoveNext(ref c.sourceEnum))
                     {
-                        // We've run out of outer enumerators, so we're done.
-                        sm.finished = true;
-                        return false;
+                        goto sourceOut;
                     }
-                    sm.currentElem = ES.Current(ref sm.source);
-                    sm.currentInnerSource = EI.GetEnumerator(sm.outerProjection(sm.currentElem));
-                }
-                mustCycleOuter = true;
-
-                // Does the inner enumerator have something left in it?
-                if (NI.MoveNext(ref sm.currentInnerSource))
-                {
-                    sm.current = sm.innerProjection(sm.currentElem, NI.Current(ref sm.currentInnerSource));
-                    return true;
-                }
-
-                // It doesn't, so move the outer enumerator.
-                NI.Dispose(ref sm.currentInnerSource);
+                    c.sourceElem = SEt.Current(ref c.sourceEnum);
+                    c.collectionEnum = c.collectionSelector(c.sourceElem).GetEnumerator();
+                    c.state = CursorState.Active;
+                    goto case CursorState.Active;
+                case CursorState.Active:
+                    while (true)
+                    {
+                        // Stable state: we have a collection; it may be empty.
+                        if (CEt.MoveNext(ref c.collectionEnum))
+                        {
+                            c.result = c.resultSelector(c.sourceElem, CEt.Current(ref c.collectionEnum));
+                            return true;
+                        }
+                        // Collection empty, try get a new one from the source.
+                        CEt.Dispose(ref c.collectionEnum);
+                        if (!SEt.MoveNext(ref c.sourceEnum))
+                        {
+                            goto sourceOut;
+                        }
+                        c.sourceElem = SEt.Current(ref c.sourceEnum);
+                        c.collectionEnum = c.collectionSelector(c.sourceElem).GetEnumerator();
+                        // Now loop back to try this next collection.
+                    }
+                default:
+                    return false;
             }
+
+            sourceOut:
+            SEt.Dispose(ref c.sourceEnum);
+            c.sourceEnum = default;
+            c.result = default;
+            c.state = CursorState.Exhausted;
+            return false;
         }
 
-        TProj Current(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm) => sm.current;
+        TResult Current(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) => c.result;
 
-        void Dispose(ref SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> sm)
+        void Dispose(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
         {
-            if (sm.started && !sm.finished)
+            if (c.state == CursorState.Active)
             {
-                NI.Dispose(ref sm.currentInnerSource);
+                SEt.Dispose(ref c.sourceEnum);
+                CEt.Dispose(ref c.collectionEnum);
             }
-            ES.Dispose(ref sm.source);
         }
     }
 
+    /// <summary>Unspecialised SelectMany over enumerables.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TCollectionColl">Type of inner collection.</typeparam>
+    /// <typeparam name="TCollectionEnum">Type of inner enumerator.</typeparam>
+    /// <typeparam name="TCollection"> Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="SEb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="SEt">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    /// <typeparam name="CEb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TCollectionColl"/>.
+    /// </typeparam>
+    /// <typeparam name="CEt">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TCollectionEnum"/>.
+    /// </typeparam>
     [Overlappable]
-    public instance SelectMany_Enumerator<TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType] TInnerSrc, [AssociatedType] TInnerElem, TProj, implicit EI, implicit ES, implicit NI>
-        : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>>
-        where ES : CEnumerator<TSrc, TElem>
-        where EI : CEnumerable<TInnerColl, TInnerSrc>
-        where NI : CEnumerator<TInnerSrc, TInnerElem>
+    public instance SelectMany_Enumerable<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, TCollectionColl, [AssociatedType]TCollectionEnum, [AssociatedType]TCollection, TResult, implicit SEb, implicit SEt, implicit CEb, implicit CEt>
+        : CSelectMany<TSourceColl, TSource, TCollectionColl, TCollection, TResult, SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>>
+        where SEb : CEnumerable<TSourceColl, TSourceEnum>
+        where SEt : CEnumerator<TSourceEnum, TSource>
+        where CEb : CEnumerable<TCollectionColl, TCollectionEnum>
+        where CEt : CEnumerator<TCollectionEnum, TCollection>
     {
-        SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj> SelectMany(this TSrc src, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => new SelectManyCursor<TSrc, TElem, TInnerColl, TInnerSrc, TInnerElem, TProj>
-            {
-                source = src,
-                started = false,
-                finished = false,
-                outerProjection = outerProj,
-                innerProjection = innerProj
-            };
-    }
-
-    [Overlappable]
-    public instance SelectMany_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TInnerColl, [AssociatedType]TInnerElem, TProj, [AssociatedType]TDest, implicit S, implicit E>
-        : CSelectMany<TColl, TElem, TInnerColl, TInnerElem, TProj, TDest>
-        where S : CSelectMany<TSrc, TElem, TInnerColl, TInnerElem, TProj, TDest>
-        where E : CEnumerable<TColl, TSrc>
-    {
-        TDest SelectMany(this TColl coll, Func<TElem, TInnerColl> outerProj, Func<TElem, TInnerElem, TProj> innerProj)
-            => coll.GetEnumerator().SelectMany(outerProj, innerProj);
+        SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> SelectMany(this TSourceColl source, Func<TSource, TCollectionColl> collectionSelector, Func<TSource, TCollection, TResult> resultSelector)
+            => new SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>(source, collectionSelector, resultSelector);
     }
 }
