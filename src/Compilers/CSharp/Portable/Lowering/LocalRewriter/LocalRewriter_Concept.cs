@@ -7,14 +7,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 {
     internal sealed partial class LocalRewriter
     {
-        //
         // @MattWindsor91 (Concept-C# 2017):
         //
         // Functions for supporting rewriting of concept witness invocations.
         //
         // TODO: This and everything calling into it probably wants to go into
         // a new rewriter.
-        //
 
         /// <summary>
         /// All concept witnesses that have been seen during this local
@@ -28,21 +26,26 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Synthesizes the correct receiver of a witness invocation.
         /// </summary>
-        /// <param name="syntax">
-        /// The syntax from which the receiver is being synthesized.
-        /// </param>
-        /// <param name="witness">
-        /// The witness on which we are invoking a method.
-        /// </param>
-        /// <returns></returns>
+        /// <param name="syntax">The syntax to be attached to the node.</param>
+        /// <param name="witness">The witness we are calling into.</param>
+        /// <returns>
+        /// The appropriate receiver for this witness.
+        /// If we're in a block, this will be a local variable;
+        /// otherwise, this will be a <c>default()</c>.
+        /// </returns>
         private BoundExpression SynthesizeWitnessReceiver(SyntaxNode syntax, TypeSymbol witness)
         {
             Debug.Assert(syntax != null, "Syntax for witness receiver should not be null");
             Debug.Assert(witness != null, "Witness receiver should not be null");
             Debug.Assert(witness.IsInstanceType() || witness.IsConceptWitness, "Witness receiver should be a valid witness");
 
-            // @MattWindsor91
-            // TODO: this is probably inefficient
+            // If we're not in a block, we can't synthesise a local
+            if (_rootStatement.Kind != BoundKind.Block)
+            {
+                return new BoundDefaultExpression(syntax, witness) { WasCompilerGenerated = true };
+            }
+
+            // TODO(@MattWindsor91): this is probably inefficient
             if (_conceptWitnessesToHoist == null)
             {
                 _conceptWitnessesToHoist = new SmallDictionary<TypeSymbol, LocalSymbol>();
@@ -52,8 +55,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 _conceptWitnessesToHoist.Add(witness, WitnessDictionaryLocal(witness, syntax));
             }
 
-            // @MattWindsor91
-            // TODO: hoist this default creation, somehow.
             var local = _conceptWitnessesToHoist[witness];
             return new BoundLocal(syntax, local, null, witness) { WasCompilerGenerated = true };
         }
