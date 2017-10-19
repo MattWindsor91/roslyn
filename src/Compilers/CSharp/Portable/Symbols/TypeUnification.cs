@@ -222,7 +222,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                             return false;
                         }
 
-                        if (!untouchables.Contains(tp1))
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // Quickfix to make sure that, when there are two TPs
+                        // to be unified, and both are associated, we 
+                        //var isAssocFlowingInwards =
+                        //    t2.Type.IsTypeParameter()
+                        //    && ((TypeParameterSymbol)t2.Type).IsAssociatedType
+                        //    && tp1.IsAssociatedType;
+
+                        if (!untouchables.Contains(tp1))// && !isAssocFlowingInwards)
                         {
                             if (t1.CustomModifiers.IsDefaultOrEmpty)
                             {
