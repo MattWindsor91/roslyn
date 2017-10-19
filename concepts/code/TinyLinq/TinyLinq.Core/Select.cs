@@ -1,87 +1,195 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
-    public concept CSelect<T,
-                           U,
-                           S, [AssociatedType] D>
+    /// <summary>Concept for types that can be Select-queried.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="TResultColl">Type of output collection.</typeparam>
+    public concept CSelect<TSourceColl, [AssociatedType]TSource, TResult, [AssociatedType]TResultColl>
     {
-        D Select(this S src, Func<T, U> f);
+        /// <summary>Selects on a source using the given selector.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="selector">The selector function.</param>
+        /// <returns>
+        /// A lazy query that, when enumerated, returns each item from
+        /// <paramref name="source"/> after transformation by
+        /// <paramref name="selector"/>.
+        /// </returns>
+        TResultColl Select(this TSourceColl source, Func<TSource, TResult> selector);
     }
 
-    /// <summary>
-    /// Enumerator representing an unspecialised Select.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the enumerator we are selecting over.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of the element <typeparamref name="TEnum"/> returns.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of the projected element the selection returns.
-    /// </typeparam>
-    public struct SelectCursor<TEnum, TElem, TProj>
+    /// <summary>Cursor representing an unspecialised Select.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>
     {
-        public TEnum source;
-        public Func<TElem, TProj> projection;
-        public TProj current;
-    }
+        /// <summary>The selector function.</summary>
+        public readonly Func<TSource, TResult> selector;
+        /// <summary> The source collection.</summary>
+        public readonly TSourceColl source;
 
-    /// <summary>
-    /// Enumerator instance for <see cref="SelectCursor{TEnum, TElem, TProj}"/>.
-    /// </summary>
-    public instance Enumerator_Select<TEnum, TElem, TProj, implicit E>
-        : CEnumerator<SelectCursor<TEnum, TElem, TProj>, TProj>
-        where E : CEnumerator<TEnum, TElem>
-    {
-        //void Reset(ref SelectCursor<TEnum, TElem, TProj> s) => E.Reset(ref s.source);
+        /// <summary>The state of this cursor.</summary>
+        public CursorState state;
+        /// <summary>The source enumerator, lazily fetched.</summary>
+        public TSourceEnum sourceEnum;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
 
-        bool MoveNext(ref SelectCursor<TEnum, TElem, TProj> s)
+        /// <summary>Constructs a new Select cursor.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="selector">The selector function.</param>
+        public SelectCursor(TSourceColl source, Func<TSource, TResult> selector)
         {
-            if (!E.MoveNext(ref s.source))
-            {
-                return false;
-            }
+            this.selector = selector;
+            this.source = source;
 
-            s.current = s.projection(E.Current(ref s.source));
-            return true;
+            state = CursorState.Uninitialised;
+            sourceEnum = default;
+            result = default;
+        }
+    }
+
+    /// <summary>Wellformed Select cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Enumerator_Select<TSourceColl, TSourceEnum, TSource, TResult, implicit Eb, implicit Et>
+        : CCloneableEnumerator<SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>, TResult>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
+    {
+        SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
+            new SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.selector);
+
+        void Reset(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum = default;
+                c.result = default;
+            }
+            c.state = CursorState.Uninitialised;
         }
 
-        TProj Current(ref SelectCursor<TEnum, TElem, TProj> s) => s.current;
-
-        void Dispose(ref SelectCursor<TEnum, TElem, TProj> s) { }
-    }
-
-    /// <summary>
-    /// Unspecialised instance for selecting over an enumerator, producing
-    /// a basic <see cref="SelectCursor{TEnum, TElem, TProj}"/>.
-    /// </summary>
-    [Overlappable]
-    public instance Select_Enumerator<TEnum, [AssociatedType] TElem, TProj, implicit E>
-        : CSelect<TElem, TProj, TEnum, SelectCursor<TEnum, TElem, TProj>>
-        where E : CEnumerator<TEnum, TElem>
-    {
-        SelectCursor<TEnum, TElem, TProj> Select(this TEnum t, Func<TElem, TProj> projection) =>
-            new SelectCursor<TEnum, TElem, TProj>
+        bool MoveNext(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            switch (c.state)
             {
-                source = t,
-                projection = projection,
-                current = default
-            };
+                case CursorState.Exhausted:
+                    return false;
+                case CursorState.Uninitialised:
+                    c.sourceEnum = c.source.GetEnumerator();
+                    c.state = CursorState.Active;
+                    goto case CursorState.Active;
+                case CursorState.Active:
+                    if (Et.MoveNext(ref c.sourceEnum))
+                    {
+                        c.result = c.selector(Et.Current(ref c.sourceEnum));
+                        return true;
+                    }
+
+                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum = default;
+                    c.result = default;
+                    c.state = CursorState.Exhausted;
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        TResult Current(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+
+        void Dispose(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+            }
+        }
     }
 
     /// <summary>
-    /// Adapts any selection over enumerators into one over enumerables.
+    /// Instance for O(n) counting of Selects.
+    /// <para>
+    /// Counting evaluates the selector on each value.
+    /// </para>
     /// </summary>
-    [Overlappable]
-    public instance Select_Enumerable<TColl, [AssociatedType]TSrc, [AssociatedType]TElem, TProj, [AssociatedType]TDst, implicit S, implicit E>
-        : CSelect<TElem, TProj, TColl, TDst>
-        where S : CSelect<TElem, TProj, TSrc, TDst>
-        where E : CEnumerable<TColl, TSrc>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Countable_SelectCursor<TSourceColl, TSourceEnum, TSource, TResult, implicit Eb, implicit Et>
+        : CCountable<SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        TDst Select(this TColl t, Func<TElem, TProj> projection) => S.Select(E.GetEnumerator(t), projection);
+        // NOTE: If we knew that the selector was pure, we could also make a
+        //       CStaticCountable instance for Select.  Unfortunately, we
+        //       have no way of knowing this.
+
+        int Count(this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        {
+            var e = c.source.GetEnumerator();
+
+            var count = 0;
+            while (Et.MoveNext(ref e))
+            {
+                // The selector might be impure, so we need to let it run.
+                c.selector(Et.Current(ref e));
+                count++;
+            }
+
+            Et.Dispose(ref e);
+            return count;
+        }
+    }
+
+    /// <summary>Unspecialised Select over an enumerable.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    [Overlappable]
+    public instance Select_Basic<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, TResult, implicit Eb, implicit Et>
+        : CSelect<TSourceColl, TSource, TResult, SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
+    {
+        SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Select(this TSourceColl source, Func<TSource, TResult> selector) =>
+            new SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(source, selector);
     }
 }

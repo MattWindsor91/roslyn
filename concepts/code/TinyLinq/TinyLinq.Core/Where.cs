@@ -1,110 +1,179 @@
 ﻿using System;
 using System.Concepts;
+using System.Concepts.Countable;
 using System.Concepts.Enumerable;
 
 namespace TinyLinq
 {
-    /// <summary>
-    /// Concept for types that can be filtered by predicate.
-    /// </summary>
-    /// <typeparam name="TSrc">
-    /// The type that can be filtered.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// The type of elements from <typeparamref name="TSrc"/>.
-    /// </typeparam>
-    /// <typeparam name="TDest">
-    /// The type of the output, which will usually be a lazy enumerator over
-    /// the filtered elements.
-    /// </typeparam>
-    public concept CWhere<TSrc, [AssociatedType] TElem, [AssociatedType] TDest>
+    /// <summary>Concept for types that can be Where-queried.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResultColl">Type of output collection.</typeparam>
+    public concept CWhere<TSourceColl, [AssociatedType]TSource, [AssociatedType]TResultColl>
     {
-        TDest Where(this TSrc src, Func<TElem, bool> f);
+        /// <summary>Filters a source using the given predicate.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="predicate">The filtering predicate.</param>
+        /// <returns>
+        /// A lazy query that, when enumerated, returns each item from
+        /// <paramref name="source"/> satisfying <paramref name="predicate"/>.
+        /// </returns>
+        TResultColl Where(this TSourceColl source, Func<TSource, bool> predicate);
     }
 
-    /// <summary>
-    /// Enumerator representing an unspecialised Where.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the enumerator we are filtering over.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of the element <typeparamref name="TEnum"/> returns.
-    /// </typeparam>
-    public struct WhereCursor<TEnum, TElem>
+    /// <summary>Cursor representing an unspecialised Where.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    public struct WhereCursor<TSourceColl, TSourceEnum, TSource>
     {
-        /// <summary>
-        /// The source of the elements being filtered.
-        /// </summary>
-        public TEnum source;
-        /// <summary>
-        /// The filtering predicate.
-        /// </summary>
-        public Func<TElem, bool> filter;
-        /// <summary>
-        /// The cached current item.
-        /// </summary>
-        public TElem current;
-    }
+        /// <summary>The filtering predicate.</summary>
+        public readonly Func<TSource, bool> predicate;
+        /// <summary> The source collection.</summary>
+        public readonly TSourceColl source;
 
-    /// <summary>
-    /// Enumerator instance for <see cref="WhereCursor{TEnum, TElem}"/>.
-    /// </summary>
-    /// <typeparam name="TEnum">
-    /// Type of the inner enumerator we are filtering over.
-    /// </typeparam>
-    /// <typeparam name="TElem">
-    /// Type of the element <typeparamref name="TEnum"/> returns.
-    /// </typeparam>
-    /// <typeparam name="E">
-    /// Enumerator instance for the inner enumerator.
-    /// </typeparam>
-    public instance Enumerator_WhereCursor<TEnum, [AssociatedType] TElem, implicit E>
-        : CEnumerator<WhereCursor<TEnum, TElem>, TElem>
-        where E : CEnumerator<TEnum, TElem>
-    {
-        // void Reset(ref WhereCursor<TEnum, TElem> w) => E.Reset(ref w.source);
+        /// <summary>The state of this cursor.</summary>
+        public CursorState state;
+        /// <summary>The source enumerator, lazily fetched.</summary>
+        public TSourceEnum sourceEnum;
+        /// <summary>The cached current result.</summary>
+        public TSource result;
 
-        bool MoveNext(ref WhereCursor<TEnum, TElem> w)
+        /// <summary>Constructs a new Select cursor.</summary>
+        /// <param name="source">The source collection to query.</param>
+        /// <param name="predicate">The predicate function.</param>
+        public WhereCursor(TSourceColl source, Func<TSource, bool> predicate)
         {
-            do
-            {
-                if (!E.MoveNext(ref w.source))
-                {
-                    return false;
-                }
-                w.current = E.Current(ref w.source);
-            } while (!w.filter(w.current));
+            this.predicate = predicate;
+            this.source = source;
 
-            return true;
+            state = CursorState.Uninitialised;
+            sourceEnum = default;
+            result = default;
+        }
+    }
+
+    /// <summary>Wellformed Where cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Enumerator_WhereCursor<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType] TSource, implicit Eb, implicit Et>
+        : CCloneableEnumerator<WhereCursor<TSourceColl, TSourceEnum, TSource>, TSource>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
+    {
+        WhereCursor<TSourceColl, TSourceEnum, TSource> Clone(ref this WhereCursor<TSourceColl, TSourceEnum, TSource> c) =>
+            new WhereCursor<TSourceColl, TSourceEnum, TSource>(c.source, c.predicate);
+
+        void Reset(ref this WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum = default;
+                c.result = default;
+            }
+            c.state = CursorState.Uninitialised;
         }
 
-        TElem Current(ref WhereCursor<TEnum, TElem> w) => w.current;
+        bool MoveNext(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        {
+            switch (c.state)
+            {
+                case CursorState.Exhausted:
+                    return false;
+                case CursorState.Uninitialised:
+                    c.sourceEnum = c.source.GetEnumerator();
+                    c.state = CursorState.Active;
+                    goto case CursorState.Active;
+                case CursorState.Active:
+                    while (Et.MoveNext(ref c.sourceEnum))
+                    {
+                        c.result = Et.Current(ref c.sourceEnum);
+                        if (c.predicate(c.result))
+                        {
+                            return true;
+                        }
+                    }
 
-        void Dispose(ref WhereCursor<TEnum, TElem> w) => E.Dispose(ref w.source);
+                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum = default;
+                    c.result = default;
+                    c.state = CursorState.Exhausted;
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        TSource Current(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c) => c.result;
+
+        void Dispose(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        {
+            if (c.state == CursorState.Active)
+            {
+                Et.Dispose(ref c.sourceEnum);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Instance for O(n) counting of Wheres.
+    /// </summary>
+    /// <typeparam name="TSourceColl">Type of source collection.</typeparam>
+    /// <typeparam name="TSourceEnum">Type of source enumerator.</typeparam>
+    /// <typeparam name="TSource"> Type of source elements.</typeparam>
+    /// <typeparam name="Eb">
+    /// Instance of <see cref="CEnumerable{TColl, TEnum}"/> for
+    /// <typeparamref name="TSourceColl"/>.
+    /// </typeparam>
+    /// <typeparam name="Et">
+    /// Instance of <see cref="CEnumerator{TEnum, TElem}"/> for
+    /// <typeparamref name="TSourceEnum"/>.
+    /// </typeparam>
+    public instance Countable_WhereCursor<TSourceColl, TSourceEnum, TSource, implicit Eb, implicit Et>
+        : CCountable<WhereCursor<TSourceColl, TSourceEnum, TSource>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
+    {
+        int Count(this WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        {
+            var e = c.source.GetEnumerator();
+
+            var count = 0;
+            while (Et.MoveNext(ref e))
+            {
+                if (c.predicate(Et.Current(ref e)))
+                {
+                    count++;
+                }
+            }
+
+            Et.Dispose(ref e);
+            return count;
+        }
     }
 
     /// <summary>
     /// Unspecialised instance for filtering over an enumerator, producing
-    /// a basic <see cref="WhereCursor{TEnum, TElem}"/>.
+    /// a basic <see cref="WhereCursor{TSourceColl, TSourceEnum, TSource}"/>.
     /// </summary>
     [Overlappable]
-    public instance Where_Enumerator<TEnum, [AssociatedType] TElem, implicit E>
-        : CWhere<TEnum, TElem, WhereCursor<TEnum, TElem>>
-        where E : CEnumerator<TEnum, TElem>
+    public instance Where_Enumerable<TSourceColl, [AssociatedType]TSourceEnum, [AssociatedType]TSource, implicit Eb, implicit Et>
+        : CWhere<TSourceColl, TSource, WhereCursor<TSourceColl, TSourceEnum, TSource>>
+        where Eb : CEnumerable<TSourceColl, TSourceEnum>
+        where Et : CEnumerator<TSourceEnum, TSource>
     {
-        WhereCursor<TEnum, TElem> Where(this TEnum e, Func<TElem, bool> filter) => new WhereCursor<TEnum, TElem> { source = e, filter = filter };
-    }
-
-    /// <summary>
-    /// Adapts any Where over enumerators into one over enumerables.
-    /// </summary>
-    [Overlappable]
-    public instance Where_Enumerable<TColl, [AssociatedType] TSrc, TElem, [AssociatedType] TDst, implicit S, implicit E>
-        : CWhere<TColl, TElem, TDst>
-        where S : CWhere<TSrc, TElem, TDst>
-        where E : CEnumerable<TColl, TSrc>
-    {
-        TDst Where(this TColl t, Func<TElem, bool> filter) => S.Where(E.GetEnumerator(t), filter);
+        WhereCursor<TSourceColl, TSourceEnum, TSource> Where(this TSourceColl source, Func<TSource, bool> predicate) =>
+            new WhereCursor<TSourceColl, TSourceEnum, TSource>(source, predicate);
     }
 }

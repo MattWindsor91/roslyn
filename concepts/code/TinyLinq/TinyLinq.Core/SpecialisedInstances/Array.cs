@@ -11,267 +11,218 @@ namespace TinyLinq.SpecialisedInstances
 
     #region Select
 
-    /// <summary>
-    /// Specialised enumerator for executing Select queries on arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public struct ArraySelectCursor<TElem, TProj>
+    /// <summary>Specialised cursor for Select queries on arrays.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct ArraySelectCursor<TSource, TResult>
     {
-        /// <summary>
-        /// The source array.
-        /// </summary>
-        public TElem[] source;
-        /// <summary>
-        /// The projection function from the Select query.
-        /// </summary>
-        public Func<TElem, TProj> projection;
-        /// <summary>
-        /// The current array index.
-        /// </summary>
-        public int lo;
-        /// <summary>
-        /// The cached length of the array.
-        /// </summary>
-        public int hi;
-        /// <summary>
-        /// The cached current item.
-        /// </summary>
-        public TProj current;
+        /// <summary>The selector function.</summary>
+        public readonly Func<TSource, TResult> selector;
+        /// <summary>The source array.</summary>
+        public readonly TSource[] source;
+        /// <summary>The cached length of the source array.</summary>
+        public readonly int sourceLength;
+
+        /// <summary>The current source index,  May be +-1 bounds.</summary>
+        public int sourceIndex;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
+
+        /// <summary>Creates a new array select cursor.</summary>
+        /// <param name="source">The source array of the select.</param>
+        /// <param name="selector">The selector function.</param>
+        public ArraySelectCursor(TSource[] source, Func<TSource, TResult> selector)
+        {
+            this.selector = selector;
+            this.source = source;
+            sourceLength = source.Length;
+
+            sourceIndex = -1;
+            result = default;
+        }
     }
 
-    /// <summary>
-    /// Enumerator instance for selections of arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public instance Enumerator_ArraySelectCursor<TElem, TProj> :
-        CClonableEnumerator<ArraySelectCursor<TElem, TProj>, TProj>
+    /// <summary>Array Selects are cloneable enumerators.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Enumerator_ArraySelectCursor<TSource, TResult> :
+        CCloneableEnumerator<ArraySelectCursor<TSource, TResult>, TResult>
     {
-        ArraySelectCursor<TElem, TProj> Clone(ref this ArraySelectCursor<TElem, TProj> sw) =>
-            new ArraySelectCursor<TElem, TProj>
-            {
-                source = sw.source,
-                projection = sw.projection,
-                lo = -1,
-                hi = sw.hi
-            };
+        ArraySelectCursor<TSource, TResult> Clone(ref this ArraySelectCursor<TSource, TResult> c) =>
+            new ArraySelectCursor<TSource, TResult>(c.source, c.selector);
 
-        void Reset(ref ArraySelectCursor<TElem, TProj> sw)
+        void Reset(ref ArraySelectCursor<TSource, TResult> c)
         {
-            sw.lo = -1;
+            c.sourceIndex = -1;
         }
 
-        bool MoveNext(ref ArraySelectCursor<TElem, TProj> sw)
+        bool MoveNext(ref ArraySelectCursor<TSource, TResult> c)
         {
-            if (sw.hi <= sw.lo)
+            // Are we already on the last element?
+            if (c.sourceIndex == c.sourceLength - 1)
             {
                 return false;
             }
 
-            sw.lo++;
-
-            if (sw.hi <= sw.lo)
-            {
-                return false;
-            }
-
-            sw.current = sw.projection(sw.source[sw.lo]);
+            c.sourceIndex++;
+            c.result = c.selector(c.source[c.sourceIndex]);
             return true;
         }
 
-        TProj Current(ref ArraySelectCursor<TElem, TProj> sw) => sw.current;
+        TResult Current(ref ArraySelectCursor<TSource, TResult> c) => c.result;
 
-        void Dispose(ref ArraySelectCursor<TElem, TProj> enumerator) { }
+        void Dispose(ref ArraySelectCursor<TSource, TResult> c) { }
     }
 
-    /// <summary>
-    /// Instance reducing a Select on an array cursor to a single
-    /// composed <see cref="ArraySelectCursor{TElem, TProj}"/>.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public instance Select_ArrayCursor<TElem, TProj> : CSelect<TElem, TProj, Instances.ArrayCursor<TElem>, ArraySelectCursor<TElem, TProj>>
+
+    /// <summary>Array Selects are countable.</summary>
+    /// <typeparam name="TSource">Type of elements in the array.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+
+    public instance Countable_ArraySelectCursor<TSource, TResult> :
+        CCountable<ArraySelectCursor<TSource, TResult>>
     {
-        ArraySelectCursor<TElem, TProj> Select(this Instances.ArrayCursor<TElem> t, Func<TElem, TProj> projection) =>
-            new ArraySelectCursor<TElem, TProj>
+        int Count(this ArraySelectCursor<TSource, TResult> c)
+        {
+            // The selector might be impure, so we must run it for each element
+            foreach (var s in c.source)
             {
-                source = t.source,
-                projection = projection,
-                lo = -1,
-                hi = t.source.Length
-            };
+                c.selector(s);
+            }
+
+            return c.sourceLength;
+        }
     }
 
-    /// <summary>
-    /// Instance reducing a Select on an array to a single
-    /// composed <see cref="ArraySelectCursor{TElem, TProj}"/>.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public instance Select_Array<TElem, TProj> : CSelect<TElem, TProj, TElem[], ArraySelectCursor<TElem, TProj>>
+    /// <summary>Specialised instance for Select queries on arrays.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Select_Array<TSource, TResult> : CSelect<TSource[], TSource, TResult, ArraySelectCursor<TSource, TResult>>
     {
-        ArraySelectCursor<TElem, TProj> Select(this TElem[] t, Func<TElem, TProj> projection) =>
-            new ArraySelectCursor<TElem, TProj>
-            {
-                source = t,
-                projection = projection,
-                lo = -1,
-                hi = t.Length
-            };
+        ArraySelectCursor<TSource, TResult> Select(this TSource[] source, Func<TSource, TResult> selector) =>
+            new ArraySelectCursor<TSource, TResult>(source, selector);
     }
 
     #endregion Select
 
     #region SelectMany
 
-    public struct ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
+
+    /// <summary>
+    /// Specialised cursor for SelectMany queries where both
+    /// the source and the inner collection are arrays.
+    /// </summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TCollection">Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct ArrayToArraySelectManyCursor<TSource, TCollection, TResult>
     {
-        /// <summary>
-        /// The source array.
-        /// </summary>
-        public TElem[] source;
-        /// <summary>
-        /// The current index into the source array.
-        /// May be +/-1 past array bounds.
-        /// </summary>
+        /// <summary>The collection selector function.</summary>
+        public readonly Func<TSource, TCollection[]> collectionSelector;
+        /// <summary>The result selector function.</summary>
+        public readonly Func<TSource, TCollection, TResult> resultSelector;
+        /// <summary>The source array.</summary>
+        public readonly TSource[] source;
+        /// <summary>The cached length of the source array.</summary>
+        public readonly int sourceLength;
+
+        /// <summary>The current source index, may be +-1 bounds.</summary>
         public int sourceIndex;
-        /// <summary>
-        /// The cached length of the source array.
-        /// </summary>
-        public int sourceLength;
+        /// <summary>The current collection array.</summary>
+        public TCollection[] collection;
+        /// <summary>The current collection index, may be +-1 bounds.</summary>
+        public int collectionIndex;
+        /// <summary>The cached length of the collection array.</summary>
+        public int collectionLength;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
 
         /// <summary>
-        /// The current inner array.
+        /// Creates a new array-to-array SelectMany cursor.
         /// </summary>
-        public TInnerElem[] inner;
-        /// <summary>
-        /// The current index into the inner array.
-        /// May be +/-1 past array bounds.
-        /// </summary>
-        public int innerIndex;
-        /// <summary>
-        /// The cached length of the inner array.
-        /// </summary>
-        public int innerLength;
+        /// <param name="source">The source array.</param>
+        /// <param name="collectionSelector">The collection selector.</param>
+        /// <param name="resultSelector">The result selector.</param>  
+        public ArrayToArraySelectManyCursor(TSource[] source, Func<TSource, TCollection[]> collectionSelector, Func<TSource, TCollection, TResult> resultSelector)
+        {
+            this.source = source;
+            this.collectionSelector = collectionSelector;
+            this.resultSelector = resultSelector;
+            sourceLength = source.Length;
 
-        /// <summary>
-        /// The current element.
-        /// </summary>
-        public TProj current;
-
-        /// <summary>
-        /// The outer projection.
-        /// </summary>
-        public Func<TElem, TInnerElem[]> outerProjection;
-        /// <summary>
-        /// The inner projection.
-        /// </summary>
-        public Func<TElem, TInnerElem, TProj> innerProjection;
+            sourceIndex = -1;
+            collection = default;
+            collectionIndex = -1;
+            collectionLength = 0;
+            result = default;
+        }
     }
 
-    public instance Enumerator_ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
-        : CClonableEnumerator<ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>, TProj>
+    /// <summary>Array-array SelectMany yields cloneable enumerators.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TCollection">Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Enumerator_ArrayToArraySelectManyCursor<TSource, TCollection, TResult>
+        : CCloneableEnumerator<ArrayToArraySelectManyCursor<TSource, TCollection, TResult>, TResult>
     {
-        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> Clone(ref this ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) =>
-            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
-            {
-                source = sm.source,
-                sourceIndex = -1,
-                sourceLength = sm.sourceLength
-            };                
+        ArrayToArraySelectManyCursor<TSource, TCollection, TResult> Clone(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) =>
+            new ArrayToArraySelectManyCursor<TSource, TCollection, TResult>(c.source, c.collectionSelector, c.resultSelector);     
 
-        void Reset(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm)
+        void Reset(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
-            sm.sourceIndex = sm.innerIndex = -1;
+            c.sourceIndex = c.collectionIndex = -1;
+            c.collectionLength = 0;
         }
 
-        bool MoveNext(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm)
+        bool MoveNext(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
-            // Outer array has finished: we're done.
-            if (sm.sourceLength <= sm.sourceIndex)
+            // Are we already on the last element?
+            if ((c.sourceIndex == c.sourceLength - 1) && (c.collectionIndex == c.collectionLength - 1))
             {
                 return false;
             }
 
-            var mustCycleOuter = sm.sourceIndex < 0;
-
-            // Keep going until we run out of outer elements.
-            while (true)
+            // Do we need to get a new collection?
+            // If we just started/reset, inner index is -1 and length is 0.
+            while (c.collectionIndex == c.collectionLength - 1)
             {
-                if (mustCycleOuter)
+                // Do we have any collections left?
+                if (c.sourceIndex == c.sourceLength - 1)
                 {
-                    sm.sourceIndex++;
-                    if (sm.sourceLength <= sm.sourceIndex)
-                    {
-                        // We've run out of outer elements, so we're done.
-                        return false;
-                    }
-                    sm.inner = sm.outerProjection(sm.source[sm.sourceIndex]);
-                    sm.innerIndex = -1;
-                    sm.innerLength = sm.inner.Length;
-                }
-                mustCycleOuter = true;
-
-                // Does the inner array have something left in it?
-                sm.innerIndex++;
-                if (sm.innerIndex < sm.innerLength)
-                {
-                    sm.current = sm.innerProjection(sm.source[sm.sourceIndex], sm.inner[sm.innerIndex]);
-                    return true;
+                    return false;
                 }
 
-                // It doesn't, so loop back and increment the outer array.
+                c.sourceIndex++;
+                c.collection = c.collectionSelector(c.source[c.sourceIndex]);
+                c.collectionIndex = -1;
+                c.collectionLength = c.collection.Length;
+
+                // Must loop because this new collection might be empty.
             }
+
+            // At this stage, we have a collection with something in it.
+            c.collectionIndex++;
+            c.result = c.resultSelector(c.source[c.sourceIndex], c.collection[c.collectionIndex]);
+            return true;
         }
 
-        TProj Current(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) => sm.current;
+        TResult Current(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) => c.result;
 
-        void Dispose(ref ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> sm) {}
+        void Dispose(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) {}
     }
 
-    public instance SelectMany_ArrayCursorToArray<TElem, TInnerElem, TProj> : CSelectMany<Instances.ArrayCursor<TElem>, TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>>
+    /// <summary>
+    /// Specialised instance for SelectMany queries where both
+    /// the source and the inner collection are arrays.
+    /// </summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TCollection">Type of inner elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance SelectMany_ArrayToArray<TSource, TCollection, TResult>
+        : CSelectMany<TSource[], TSource, TCollection[], TCollection, TResult, ArrayToArraySelectManyCursor<TSource, TCollection, TResult>>
     {
-        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> SelectMany(this Instances.ArrayCursor<TElem> t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
-            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
-            {
-                source = t.source,
-                sourceIndex = -1,
-                sourceLength = t.source.Length,
-
-                outerProjection = outer,
-                innerProjection = inner
-            };
-    }
-
-    public instance SelectMany_ArrayToArray<TElem, TInnerElem, TProj> : CSelectMany<TElem[], TElem, TInnerElem[], TInnerElem, TProj, ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>>
-    {
-        ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj> SelectMany(this TElem[] t, Func<TElem, TInnerElem[]> outer, Func<TElem, TInnerElem, TProj> inner) =>
-            new ArrayToArraySelectManyCursor<TElem, TInnerElem, TProj>
-            {
-                source = t,
-                sourceIndex = -1,
-                sourceLength = t.Length,
-
-                outerProjection = outer,
-                innerProjection = inner
-            };
+        ArrayToArraySelectManyCursor<TSource, TCollection, TResult> SelectMany(this TSource[] source, Func<TSource, TCollection[]> collectionSelector, Func<TSource, TCollection, TResult> resultSelector) =>
+            new ArrayToArraySelectManyCursor<TSource, TCollection, TResult>(source, collectionSelector, resultSelector);
     }
 
 
@@ -279,121 +230,89 @@ namespace TinyLinq.SpecialisedInstances
 
     #region Select of Select
 
-    /// <summary>
-    /// Instance reducing chained array Select queries to a single
-    /// <see cref="ArraySelectCursor{TElem, TProj}"/> on a composed projection.
-    /// </summary>
-    public instance Select_Select_Array<TElem, TProj1, TProj2> : CSelect<TProj1, TProj2, ArraySelectCursor<TElem, TProj1>, ArraySelectCursor<TElem, TProj2>>
+    /// <summary>Fused instance for Selecting on array Selects.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TFused">Type of inner query results.</typeparam>
+    /// <typeparam name="TResult">Type of final query results.</typeparam>
+    public instance Select_Select_Array<TSource, TFused, TResult> : CSelect<ArraySelectCursor<TSource, TFused>, TFused, TResult, ArraySelectCursor<TSource, TResult>>
     {
-        ArraySelectCursor<TElem, TProj2> Select(this ArraySelectCursor<TElem, TProj1> t, Func<TProj1, TProj2> projection) =>
-            new ArraySelectCursor<TElem, TProj2>
-            {
-                source = t.source,
-                projection = x => projection(t.projection(x)),
-                lo = -1,
-                hi = t.source.Length
-            };
+        ArraySelectCursor<TSource, TResult> Select(this ArraySelectCursor<TSource, TFused> source, Func<TFused, TResult> selector) =>
+            new ArraySelectCursor<TSource, TResult>(source.source, x => selector(source.selector(x)));
     }
 
     #endregion Select of Select
 
     #region Where
 
-    /// <summary>
-    /// Specialised enumerator for executing Where queries on an array.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public struct ArrayWhereCursor<TElem>
+    /// <summary>Specialised cursor for Where queries on arrays.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    public struct ArrayWhereCursor<TSource>
     {
-        /// <summary>
-        /// The source array.
-        /// </summary>
-        public TElem[] source;
-        /// <summary>
-        /// The filtering predicate.
-        /// </summary>
-        public Func<TElem, bool> filter;
-        /// <summary>
-        /// The current index of the enumerator.
-        /// </summary>
-        public int lo;
-        /// <summary>
-        /// The length of the array.
-        /// </summary>
-        public int hi;
+        /// <summary>The predicate function.</summary>
+        public readonly Func<TSource, bool> predicate;
+        /// <summary>The source array.</summary>
+        public readonly TSource[] source;
+        /// <summary>The cached length of the source array.</summary>
+        public readonly int sourceLength;
+
+        /// <summary>The current source index, may be +-1 bounds.</summary>
+        public int sourceIndex;
+        // No point caching the current item, we can get it by index.
+
+        /// <summary>Creates a new array Where cursor.</summary>
+        /// <param name="source">The source array.</param>
+        /// <param name="predicate">The predicate function.</param>
+        public ArrayWhereCursor(TSource[] source, Func<TSource, bool> predicate)
+        {
+            this.predicate = predicate;
+            this.source = source;
+            sourceLength = source.Length;
+
+            sourceIndex = -1;
+        }
     }
 
-    /// <summary>
-    /// Enumerator instance for filtered arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public instance Enumerator_ArrayWhereCursor<TElem>
-        : CClonableEnumerator<ArrayWhereCursor<TElem>, TElem>
+    /// <summary>Array Where cursors are cloneable enumerators.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    public instance Enumerator_ArrayWhereCursor<TSource>
+        : CCloneableEnumerator<ArrayWhereCursor<TSource>, TSource>
     {
-        ArrayWhereCursor<TElem> Clone(ref this ArrayWhereCursor<TElem> e) =>
-            new ArrayWhereCursor<TElem>
-            {
-                source = e.source,
-                filter = e.filter,
-                lo = -1,
-                hi = e.hi
-            };
+        ArrayWhereCursor<TSource> Clone(ref this ArrayWhereCursor<TSource> e) =>
+            new ArrayWhereCursor<TSource>(e.source, e.predicate);
 
-        void Reset(ref ArrayWhereCursor<TElem> enumerator)
+        void Reset(ref ArrayWhereCursor<TSource> c)
         {
-            enumerator.lo = -1;
+            c.sourceIndex = -1;
         }
 
-        bool MoveNext(ref ArrayWhereCursor<TElem> enumerator)
+        bool MoveNext(ref ArrayWhereCursor<TSource> c)
         {
-            if (enumerator.hi <= enumerator.lo)
+            while (c.sourceIndex != c.sourceLength - 1)
             {
-                return false;
-            }
-
-            enumerator.lo++;
-            while (enumerator.lo < enumerator.hi)
-            {
-                if (enumerator.filter(enumerator.source[enumerator.lo]))
+                c.sourceIndex++;
+                if (c.predicate(c.source[c.sourceIndex]))
                 {
                     return true;
                 }
-                enumerator.lo++;
             }
-
             return false;
         }
 
-        TElem Current(ref ArrayWhereCursor<TElem> enumerator)
-        {
-            if (enumerator.lo == -1)
-            {
-                return default;
-            }
-            return enumerator.source[enumerator.lo];
-        }
+        TSource Current(ref ArrayWhereCursor<TSource> c) => c.source[c.sourceIndex];
 
-        void Dispose(ref ArrayWhereCursor<TElem> enumerator) { }
+        void Dispose(ref ArrayWhereCursor<TSource> c) { }
     }
 
-    /// <summary>
-    /// Count instance for filtered arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    instance Countable_ArrayWhereCursor<TElem> : CCountable<ArrayWhereCursor<TElem>>
+    /// <summary>Array Where cursors are countable.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    instance Countable_ArrayWhereCursor<TSource> : CCountable<ArrayWhereCursor<TSource>>
     {
-        int Count(this ArrayWhereCursor<TElem> aw)
+        int Count(this ArrayWhereCursor<TSource> c)
         {
             var count = 0;
-            foreach (var s in aw.source)
+            foreach (var s in c.source)
             {
-                if (aw.filter(s))
+                if (c.predicate(s))
                 {
                     count++;
                 }
@@ -402,16 +321,12 @@ namespace TinyLinq.SpecialisedInstances
         }
     }
 
-    /// <summary>
-    /// Specialised instance for executing Where queries on an array.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public instance Where_Array<TElem> : CWhere<TElem[], TElem, ArrayWhereCursor<TElem>>
+    /// <summary>Specialised instance for Where queries on arrays.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    public instance Where_Array<TSource> : CWhere<TSource[], TSource, ArrayWhereCursor<TSource>>
     {
-        ArrayWhereCursor<TElem> Where(TElem[] src, Func<TElem, bool> f) =>
-            new ArrayWhereCursor<TElem> { source = src, filter = f, lo = -1, hi = src.Length };
+        ArrayWhereCursor<TSource> Where(TSource[] source, Func<TSource, bool> predicate) =>
+            new ArrayWhereCursor<TSource>(source, predicate);
     }
 
     #endregion Where
@@ -419,119 +334,111 @@ namespace TinyLinq.SpecialisedInstances
     #region Select of Where
 
     /// <summary>
-    /// Specialised enumerator for executing Select queries on Where queries
+    /// Specialised cursor for executing Select queries on Where queries
     /// that originated from an array.
     /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public struct ArraySelectOfWhereCursor<TElem, TProj>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public struct ArraySelectOfWhereCursor<TSource, TResult>
     {
+        /// <summary>The predicate function.</summary>
+        public readonly Func<TSource, bool> predicate;
+        /// <summary>The selector function.</summary>
+        public readonly Func<TSource, TResult> selector;
+        /// <summary>The source array.</summary>
+        public readonly TSource[] source;
+        /// <summary>The cached length of the source.</summary>
+        public readonly int sourceLength;
+
+        /// <summary>The current source index,  May be +-1 bounds.</summary>
+        public int sourceIndex;
+        /// <summary>The cached current result.</summary>
+        public TResult result;
+
         /// <summary>
-        /// The source array.
+        /// Creates a new fused array Select of Where cursor.
         /// </summary>
-        public TElem[] source;
-        /// <summary>
-        /// The filtering predicate from the Where query.
-        /// </summary>
-        public Func<TElem, bool> filter;
-        /// <summary>
-        /// The projection function from the Select query.
-        /// </summary>
-        public Func<TElem, TProj> projection;
-        /// <summary>
-        /// The current array index.
-        /// </summary>
-        public int lo;
-        /// <summary>
-        /// The cached length of the array.
-        /// </summary>
-        public int hi;
-        /// <summary>
-        /// The cached current item.
-        /// </summary>
-        public TProj current;
+        /// <param name="source">The source array.</param>
+        /// <param name="predicate">The Where predicate function.</param>
+        /// <param name="selector">The Select selector function.</param>
+        public ArraySelectOfWhereCursor(TSource[] source, Func<TSource, bool> predicate, Func<TSource, TResult> selector)
+        {
+            this.predicate = predicate;
+            this.selector = selector;
+            this.source = source;
+            sourceLength = source.Length;
+
+            sourceIndex = -1;
+            result = default;
+        }
     }
 
-    /// <summary>
-    /// Enumerator instance for selections of filtered arrays.
-    /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public instance Enumerator_ArraySelectOfWhereCursor<TElem, TProj>
-        : CClonableEnumerator<ArraySelectOfWhereCursor<TElem, TProj>, TProj>
+    /// <summary>Array-Select-of-Wheres are cloneable enumerators.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Enumerator_ArraySelectOfWhereCursor<TSource, TResult>
+        : CCloneableEnumerator<ArraySelectOfWhereCursor<TSource, TResult>, TResult>
     {
-        ArraySelectOfWhereCursor<TElem, TProj> Clone(ref this ArraySelectOfWhereCursor<TElem, TProj> sw) =>
-            new ArraySelectOfWhereCursor<TElem, TProj>
-            {
-                source = sw.source,
-                filter = sw.filter,
-                projection = sw.projection,
-                lo = -1,
-                hi = sw.hi
-            };
+        ArraySelectOfWhereCursor<TSource, TResult> Clone(ref this ArraySelectOfWhereCursor<TSource, TResult> c) =>
+            new ArraySelectOfWhereCursor<TSource, TResult>(c.source, c.predicate, c.selector);
 
-        void Reset(ref ArraySelectOfWhereCursor<TElem, TProj> sw)
+        void Reset(ref ArraySelectOfWhereCursor<TSource, TResult> c)
         {
-            sw.lo = -1;
-            sw.current = default;
+            c.sourceIndex = -1;
+            c.result = default;
         }
 
-        bool MoveNext(ref ArraySelectOfWhereCursor<TElem, TProj> sw)
+        bool MoveNext(ref ArraySelectOfWhereCursor<TSource, TResult> c)
         {
-            if (sw.hi <= sw.lo)
+            while (c.sourceIndex != c.sourceLength - 1)
             {
-                return false;
-            }
-
-            sw.lo++;
-            while (sw.lo < sw.hi)
-            {
-                if (sw.filter(sw.source[sw.lo]))
+                c.sourceIndex++;
+                if (c.predicate(c.source[c.sourceIndex]))
                 {
-                    sw.current = sw.projection(sw.source[sw.lo]);
+                    c.result = c.selector(c.source[c.sourceIndex]);
                     return true;
                 }
-                sw.lo++;
             }
-
             return false;
         }
 
-        TProj Current(ref ArraySelectOfWhereCursor<TElem, TProj> sw) => sw.current;
+        TResult Current(ref ArraySelectOfWhereCursor<TSource, TResult> sw) => sw.result;
 
-        void Dispose(ref ArraySelectOfWhereCursor<TElem, TProj> enumerator) { }
+        void Dispose(ref ArraySelectOfWhereCursor<TSource, TResult> enumerator) { }
+    }
+
+    /// <summary>Array-Select-of-Wheres are countable.</summary>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    instance Countable_ArraySelectOfWhereCursor<TSource, TResult> : CCountable<ArraySelectOfWhereCursor<TSource, TResult>>
+    {
+        int Count(this ArraySelectOfWhereCursor<TSource, TResult> c)
+        {
+            var count = 0;
+            foreach (var s in c.source)
+            {
+                if (c.predicate(s))
+                {
+                    // Selector may be impure, so we must evaluate it
+                    c.selector(s);
+                    count++;
+                }
+            }
+            return count;
+        }
     }
 
     /// <summary>
     /// Instance reducing a Select on a filtered array cursor to a single
-    /// composed <see cref="ArraySelectOfWhereCursor{TElem, TProj}"/>.
+    /// composed <see cref="ArraySelectOfWhereCursor{TSource, TResult}"/>.
     /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    /// <typeparam name="TProj">
-    /// Type of elements exiting the select.
-    /// </typeparam>
-    public instance Select_Where_Array<TElem, TProj> : CSelect<TElem, TProj, ArrayWhereCursor<TElem>, ArraySelectOfWhereCursor<TElem, TProj>>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    /// <typeparam name="TResult">Type of query results.</typeparam>
+    public instance Select_Where_Array<TSource, TResult>
+        : CSelect<ArrayWhereCursor<TSource>, TSource, TResult, ArraySelectOfWhereCursor<TSource, TResult>>
     {
-        ArraySelectOfWhereCursor<TElem, TProj> Select(this ArrayWhereCursor<TElem> t, Func<TElem, TProj> projection) =>
-            new ArraySelectOfWhereCursor<TElem, TProj>
-            {
-                source = t.source,
-                filter = t.filter,
-                projection = projection,
-                lo = -1,
-                hi = t.hi,
-                current = default
-            };
+        ArraySelectOfWhereCursor<TSource, TResult> Select(this ArrayWhereCursor<TSource> source, Func<TSource, TResult> selector) =>
+            new ArraySelectOfWhereCursor<TSource, TResult>(source.source, source.predicate, selector);
     }
 
     #endregion Select of Where
@@ -542,12 +449,17 @@ namespace TinyLinq.SpecialisedInstances
     /// Instance for <see cref="CToArray{TFrom, TElem}"/> when the
     /// source is, itself, an array.
     /// </summary>
-    /// <typeparam name="TElem">
-    /// Type of elements in the array.
-    /// </typeparam>
-    public instance ToArray_SameArray<TElem> : CToArray<TElem[], TElem>
+    /// <typeparam name="TSource">Type of array elements.</typeparam>
+    public instance ToArray_SameArray<TSource> : CToArray<TSource[], TSource>
     {
-        TElem[] ToArray(TElem[] from) => from;
+        TSource[] ToArray(TSource[] source)
+        {
+            // We _could_ just return source, but the semantics of ToArray
+            // seems to suggest that would be unsound.
+            var dest = new TSource[source.Length];
+            source.CopyTo(dest, 0);
+            return dest;
+        }
     }
 
     #endregion ToArray

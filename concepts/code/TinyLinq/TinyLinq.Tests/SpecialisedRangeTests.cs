@@ -15,6 +15,13 @@ namespace TinyLinq.Tests
         public static int PythagoreanTinyLinq()
         {
             var max = 10;
+
+            var foo = (from a in System.Linq.Enumerable.Range(1, max + 1)
+                       from b in System.Linq.Enumerable.Range(a, max + 1 - a)
+                       from c in System.Linq.Enumerable.Range(b, max + 1 - b)
+                       select true);
+            var bar = foo.GetEnumerator();
+
             return (from a in System.Linq.Enumerable.Range(1, max + 1)
                     from b in System.Linq.Enumerable.Range(a, max + 1 - a)
                     from c in System.Linq.Enumerable.Range(b, max + 1 - b)

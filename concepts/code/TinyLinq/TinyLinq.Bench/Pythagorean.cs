@@ -178,7 +178,7 @@ namespace TinyLinq.Bench
         /// <summary>
         /// Various enumerator instances for flat ranges.
         /// </summary>
-        public instance CopyEnumerator_FlatRange : CClonableEnumerator<FlatRangeCursor, int>
+        public instance CopyEnumerator_FlatRange : CCloneableEnumerator<FlatRangeCursor, int>
         {
             // TODO: catch inverted ranges and overflows
             // TODO: better optimisation if range is empty
@@ -226,18 +226,27 @@ namespace TinyLinq.Bench
         /// <summary>
         /// Various enumerator instances for ranges.
         /// </summary>
-        public instance Enumerable_Range : CEnumerable<FlatRange, FlatRangeCursor>
+        public instance Enumerable_FlatRange : CEnumerable<FlatRange, FlatRangeCursor>
         {
             FlatRangeCursor GetEnumerator(this FlatRange range) =>
                 new FlatRangeCursor { range = range, end = range.start + range.count, reset = true, finished = false };
         }
 
+        /* Commented out until we can work out how to stop spurious AT inference.
         namespace Unspec
         {
             public static class Bench
             {
                 public static int Run(int max)
                 {
+                    var q =
+                        from a in new FlatRange { start = 1, count = max + 1 }
+                        from b in new FlatRange { start = a, count = max + 1 - a }
+                        from c in new FlatRange { start = b, count = max + 1 - b }
+                        select true;
+                    var r = q.GetEnumerator();
+
+
                     var query =
                         from a in new FlatRange { start = 1, count = max + 1 }
                         from b in new FlatRange { start = a, count = max + 1 - a }
@@ -286,7 +295,7 @@ namespace TinyLinq.Bench
                     return query.Count();
                 }
             }
-        }
+        } */
     }
 
     /// <summary>
@@ -341,6 +350,7 @@ namespace TinyLinq.Bench
         [Benchmark]
         public int StructRangeFused() => StructRange.Fused.Bench.Run(100);
 
+        /*
         [Benchmark]
         public int FlatStructRangeUnspec() => FlatStructRange.Unspec.Bench.Run(100);
 
@@ -351,6 +361,6 @@ namespace TinyLinq.Bench
         public int FlatStructRangeUnspecCtor() => FlatStructRange.Unspec.Bench.RunCtor(100);
 
         [Benchmark]
-        public int FlatStructRangeFusedCtor() => FlatStructRange.Fused.Bench.RunCtor(100);
+        public int FlatStructRangeFusedCtor() => FlatStructRange.Fused.Bench.RunCtor(100);*/
     }
 }

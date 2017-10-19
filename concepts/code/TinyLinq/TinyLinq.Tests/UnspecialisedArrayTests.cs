@@ -68,7 +68,8 @@ namespace TinyLinq
         /// <param name="toCount">The array to test against.</param>
         /// <returns>Whether LINQ and TinyLINQ agree.</returns>
         private static bool Prop_UnspecCountEqualIntArray(int[] toCount)
-            => Enumerable.Count(toCount) == toCount.Count();
+            => Enumerable.Count(toCount) == CCountable<int[]>.Count(toCount); //toCount.Count();
+        // TODO: work out why this has regressed?
 
         /// <summary>
         /// LINQ and TinyLINQ agree on the count of all squares of an array.
