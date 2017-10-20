@@ -5185,7 +5185,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(node != null);
             Debug.Assert(boundLeft != null);
 
-            // @t-mawind
+            // @MattWindsor91 (Concept-C# 2016 and 2017)
             //   If we have as our LHS a concept, then we assume the user is
             //   trying to access a concept witness method using it, without
             //   having the specific witness itself.
@@ -5206,10 +5206,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             //   This is the one place where we don't need to use
             //   IsConceptWithFailedPartInference.
             //
-            //   TODO: clean this up.
+            //   TODO(@MattWindsor91): clean this up.
             if ((object)boundLeft.Type != null && boundLeft.Type.IsConceptType())
             {
-                var requiredConcepts = ImmutableArray.Create(boundLeft.Type);
+                var requiredConcepts = ImmutableArray.Create((NamedTypeSymbol)boundLeft.Type);
 
                 var candidate = new ConceptWitnessInferrer(this).InferWitnessSatisfyingConcepts(requiredConcepts, new ImmutableTypeMap(), new ConceptWitnessInferrer.AbsentMethodInfo(), chainOpt: null);
                 if (!candidate.Viable)

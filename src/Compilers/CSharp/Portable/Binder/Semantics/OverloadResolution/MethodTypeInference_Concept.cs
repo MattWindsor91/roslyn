@@ -434,9 +434,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// <summary>
             /// Tries to fix the given type parameter using this result.
             /// </summary>
-            /// <param name="t">
-            /// The type parameter to fix.
-            /// </param>
+            /// <param name="t">The type parameter to fix.</param>
             /// <returns>
             /// The resulting type symbol, if this result fixed
             /// <paramref name="t"/>.
@@ -1490,6 +1488,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return default;
             }
 
+            // Stop if we might fix an associated type in an invalid place.
+            // TODO(@MattWindsor91): really, associated types should come with
+            //     information about the exact witness that defines them.
             if (MatchedAssociatedWithNonAssociated(requiredConcepts))
             {
                 return default;
@@ -1500,34 +1501,12 @@ namespace Microsoft.CodeAnalysis.CSharp
             // a chain.
             var chain = chainOpt ?? ImmutableHashSet<NamedTypeSymbol>.Empty;
 
-            // @t-mawind
             // An instance satisfies inference if:
-            //
             // 1) for all concepts required by the type parameter, at least
             //    one concept implemented by the instances unifies with that
-            //    concept without capturing bound type parameters;
-            // 2) all of the type parameters of that instance can be bound,
-            //    both by the substitutions from the unification above and also
-            //    by recursively trying to infer any missing concept witnesses.
-            //
-            // The first part is equivalent to establishing
-            //    witness :- instance.
-            //
-            // The second part is equivalent to resolving
-            //    instance :- dependency1; dependency2; ...
-            // by trying to establish the dependencies as separate queries.
-            //
-            // After the second part, if we have multiple possible instances,
-            // we try to see if one implements a subconcept of all of the other
-            // instances.  If so, we narrow to that specific instance.
-            //
-            // If we have multiple satisfying instances, or zero, we fail.
-
+            //    concept without capturing bound type parameters
+            //    (witness :- instance);
             var firstPassInstances = AllInstancesSatisfyingGoal(requiredConcepts);
-            // We can't infer if none of the instances implement our concept!
-            // However, if we have more than one candidate instance at this
-            // point, we shouldn't bail until we've made sure only one of them
-            // passes 2).
             if (firstPassInstances.IsDefaultOrEmpty)
             {
                 return Unsatisfiable(requiredConcepts);
@@ -1535,6 +1514,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(firstPassInstances.Length <= _allInstances.Length,
                 "First pass of concept witness inference should not grow the instance list");
 
+            // 2) all of the type parameters of that instance can be bound,
+            //    both by the substitutions from the unification above and also
+            //    by recursively trying to infer any missing concept witnesses.
+            //    (instance :- dependency1; dependency2; ...).
             var secondPassInstances = ToSatisfiableInstances(firstPassInstances, methodInfo, chain);
             if (secondPassInstances.IsDefaultOrEmpty)
             {
@@ -1543,9 +1526,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(secondPassInstances.Length <= firstPassInstances.Length,
                 "Second pass of concept witness inference should not grow the instance list");
 
-            // We only do tie breaking in the case of actual ties.
-            var thirdPassInstances = secondPassInstances;
-            if (1 < secondPassInstances.Length) thirdPassInstances = TieBreakInstances(secondPassInstances);
+            // If we had more than one candidate after 2), we tie-break.
+            if (secondPassInstances.Length == 1)
+            {
+                Debug.Assert(secondPassInstances[0].Instance != null,
+                    "Inference claims to have succeeded, but has returned a null instance");
+                return secondPassInstances[0];
+            }
+            var thirdPassInstances = TieBreakInstances(secondPassInstances);
             Debug.Assert(thirdPassInstances.Length <= secondPassInstances.Length,
                 "Third pass of concept witness inference should not grow the instance list");
             Debug.Assert(!thirdPassInstances.IsDefaultOrEmpty,
@@ -1559,7 +1547,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             return thirdPassInstances[0];
         }
 
-        private static bool MatchedAssociatedWithNonAssociated(ImmutableArray<NamedTypeSymbol> concepts)
+        /// <summary>
+        /// Checks whether a set of required concepts has an unfixed associated
+        /// type parameter in a non-associated position.
+        /// </summary>
+        /// <param name="concepts">The bundle of concepts to check.</param>
+        /// <returns>
+        /// True if any of the concepts in <paramref name="concepts"/> has an
+        /// associated type as the type argument of a non-associated type
+        /// parameter.
+        /// </returns>
+        private bool MatchedAssociatedWithNonAssociated(ImmutableArray<NamedTypeSymbol> concepts)
         {
             foreach (var concept in concepts)
             {
@@ -1571,15 +1569,33 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 for (var i = 0; i < arity; ++i)
                 {
-                    if (concept.TypeArguments[i].IsAssociatedType() &&
-                        !concept.TypeParameters[i].IsAssociatedType())
+                    var arg = concept.TypeArguments[i];
+                    var par = concept.TypeParameters[i];
+
+                    // We can put an associated type in non-associated position
+                    // if it's fixed.  Usually this happens if it's inside the
+                    // type parameters of the enclosing context.
+                    //
+                    // For example, the use of B in Concept2 is always valid in
+                    //
+                    // void Demo<A, [AssociatedType]B, implicit W>(A a)
+                    //     where W : Concept1<A, B>
+                    // {
+                    //     return Concept2<B>.Test1(W.Test2(a));
+                    // }
+                    if (TypeArgumentIsFixed(arg, _rigidParams))
                     {
-                        return false;
+                        continue;
+                    }
+
+                    if (arg.IsAssociatedType && !par.IsAssociatedType)
+                    {
+                        return true;
                     }
                 }
             }
 
-            return true;
+            return false;
         }
 
         /// <summary>
@@ -1710,7 +1726,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <returns>
         /// An array of candidate instances after the first pass.
         /// </returns>
-        private ImmutableArray<Candidate> AllInstancesSatisfyingGoal(ImmutableArray<TypeSymbol> requiredConcepts)
+        private ImmutableArray<Candidate> AllInstancesSatisfyingGoal(ImmutableArray<NamedTypeSymbol> requiredConcepts)
         {
             Debug.Assert(!requiredConcepts.IsEmpty,
                 "First pass of inference is pointless when there are no required concepts");
@@ -1762,7 +1778,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// True if, and only if, the given instance implements the given list
         /// of concepts.
         /// </returns>
-        private bool AllRequiredConceptsProvided(ImmutableArray<TypeSymbol> requiredConcepts, TypeSymbol instance, out ImmutableTypeMap unifyingSubstitutions, ImmutableHashSet<TypeParameterSymbol> boundAndUnfixedParams)
+        private bool AllRequiredConceptsProvided(ImmutableArray<NamedTypeSymbol> requiredConcepts, TypeSymbol instance, out ImmutableTypeMap unifyingSubstitutions, ImmutableHashSet<TypeParameterSymbol> boundAndUnfixedParams)
         {
             Debug.Assert(!requiredConcepts.IsEmpty,
                 "Checking that all required concepts are provided is pointless when there are none");
