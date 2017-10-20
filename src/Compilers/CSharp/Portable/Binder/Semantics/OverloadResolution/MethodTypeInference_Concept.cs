@@ -1490,6 +1490,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return default;
             }
 
+            if (MatchedAssociatedWithNonAssociated(requiredConcepts))
+            {
+                return default;
+            }
+
             // This lets us use InferOneWitnessFromRequiredConcepts from
             // outside the main concept inferrer, where we aren't going to have
             // a chain.
@@ -1552,6 +1557,29 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(thirdPassInstances[0].Instance != null,
                 "Inference claims to have succeeded, but has returned a null instance");
             return thirdPassInstances[0];
+        }
+
+        private static bool MatchedAssociatedWithNonAssociated(ImmutableArray<NamedTypeSymbol> concepts)
+        {
+            foreach (var concept in concepts)
+            {
+                var arity = concept.Arity;
+                if (arity == 0)
+                {
+                    continue;
+                }
+
+                for (var i = 0; i < arity; ++i)
+                {
+                    if (concept.TypeArguments[i].IsAssociatedType() &&
+                        !concept.TypeParameters[i].IsAssociatedType())
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
