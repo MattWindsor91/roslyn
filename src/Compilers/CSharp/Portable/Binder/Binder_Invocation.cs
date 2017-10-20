@@ -68,6 +68,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="queryClause">The syntax for the query clause generating this invocation expression, if any.</param>
         /// <param name="allowFieldsAndProperties">True to allow invocation of fields and properties of delegate type. Only methods are allowed otherwise.</param>
         /// <param name="allowUnexpandedForm">False to prevent selecting a params method in unexpanded form.</param>
+        /// <param name="argRefKinds">Optional set of refkinds for args.</param>
         /// <returns>Synthesized method invocation expression.</returns>
         internal BoundExpression MakeInvocationExpression(
             SyntaxNode node,
@@ -79,7 +80,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             ImmutableArray<TypeSymbol> typeArgs = default(ImmutableArray<TypeSymbol>),
             CSharpSyntaxNode queryClause = null,
             bool allowFieldsAndProperties = false,
-            bool allowUnexpandedForm = true)
+            bool allowUnexpandedForm = true,
+            // @MattWindsor91 (Concept-C# 2017)
+            // Allows us to synthesise methods with refs in them.
+            ImmutableArray<RefKind> argRefKinds = default)
         {
             Debug.Assert(receiver != null);
 
@@ -119,6 +123,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                                         e.Kind == BoundKind.OutDeconstructVarPendingInference ||
                                         e.Kind == BoundKind.DiscardExpression && !e.HasExpressionType()));
             analyzedArguments.Arguments.AddRange(args);
+            // @MattWindsor91 (Concept-C# 2017)
+            // So we can synthesise methods with unusual refkinds.
+            if (!argRefKinds.IsDefaultOrEmpty)
+            {
+                analyzedArguments.RefKinds.AddRange(argRefKinds);
+            }
             BoundExpression result = BindInvocationExpression(
                 node, node, methodName, boundExpression, analyzedArguments, diagnostics, queryClause,
                 allowUnexpandedForm: allowUnexpandedForm);

@@ -17,9 +17,9 @@ namespace System.Concepts.Enumerable
     /// </typeparam>
     public concept CEnumerator<TState, [AssociatedType] TElem>
     {
-        bool MoveNext(ref TState enumerator);
-        TElem Current(ref TState enumerator);
-        void Dispose(ref TState enumerator);
+        bool MoveNext(ref this TState enumerator);
+        TElem Current(ref this TState enumerator);
+        void Dispose(ref this TState enumerator);
     }
 
     /// <summary>
@@ -71,6 +71,8 @@ namespace System.Concepts.Enumerable
     public concept CEnumerable<TColl, [AssociatedType] TState>
     {
         TState GetEnumerator(this TColl container);
+
+        TState RefGetEnumerator(ref this TColl container) => GetEnumerator(container);
     }
 
     /// <summary>
@@ -106,6 +108,7 @@ namespace System.Concepts.Enumerable
             where C : CCloneableEnumerator<TEnum, TElem>
         {
             TEnum GetEnumerator(this TEnum e) => e.Clone();
+            TEnum RefGetEnumerator(ref this TEnum e) => e.Clone();
         }
 
         #region Enumerables from index and bound

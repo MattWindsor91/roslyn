@@ -40,14 +40,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return ImmutableArray.Create(((BoundLocal)receiver).LocalSymbol);
         }
 
-        protected override ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f)
+        protected override (ImmutableArray<BoundExpression> args, ImmutableArray<RefKind> refs) GenerateArguments(SyntheticBoundNodeFactory f)
         {
-            var argumentsB = ArrayBuilder<BoundExpression>.GetInstance();
+            var argsB = ArrayBuilder<BoundExpression>.GetInstance();
+            var refsB = ArrayBuilder<RefKind>.GetInstance();
             foreach (var p in ImplementingMethod.Parameters)
             {
-                argumentsB.Add(f.Parameter(p));
+                argsB.Add(f.Parameter(p));
+                refsB.Add(p.RefKind);
             }
-            return argumentsB.ToImmutableAndFree();
+            return (argsB.ToImmutableAndFree(), refsB.ToImmutableAndFree());
         }
     }
 }

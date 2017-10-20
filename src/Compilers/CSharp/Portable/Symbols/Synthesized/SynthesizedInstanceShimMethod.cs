@@ -53,8 +53,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             try
             {
                 var receiver = GenerateReceiver(F);
-                var arguments = GenerateInnerCallArguments(F);
-                var call = GenerateCall(F, receiver, arguments, ignore);
+                (var arguments, var argRefKinds) = GenerateArguments(F);
+                var call = GenerateCall(F, receiver, arguments, argRefKinds, ignore);
                 if (call.HasErrors)
                 {
                     return false;
@@ -83,8 +83,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 var receiver = GenerateReceiver(F);
                 var locals = GenerateLocals(F, receiver);
-                var arguments = GenerateInnerCallArguments(F);
-                var call = GenerateCall(F, receiver, arguments, diagnostics);
+                (var arguments, var argRefKinds) = GenerateArguments(F);
+                var call = GenerateCall(F, receiver, arguments, argRefKinds, diagnostics);
                 if (call.HasErrors)
                 {
                     F.CloseMethod(F.ThrowNull());
@@ -146,13 +146,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// The factory used to generate the arguments.
         /// </param>
         /// <returns>
-        /// A list of bound inner-call arguments.
+        /// A list of bound inner-call arguments, and a parallel list of
+        /// their refkinds.
         /// </returns>
-        protected abstract ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f);
+        protected abstract (ImmutableArray<BoundExpression> args, ImmutableArray<RefKind> refs) GenerateArguments(SyntheticBoundNodeFactory f);
 
-        protected virtual BoundExpression GenerateCall(SyntheticBoundNodeFactory f, BoundExpression receiver, ImmutableArray<BoundExpression> arguments, DiagnosticBag diagnostics)
+        protected virtual BoundExpression GenerateCall(SyntheticBoundNodeFactory f, BoundExpression receiver, ImmutableArray<BoundExpression> arguments, ImmutableArray<RefKind> argRefKinds, DiagnosticBag diagnostics)
         {
-            return f.MakeInvocationExpression(BinderFlags.InShim, f.Syntax, receiver, Name, arguments, diagnostics, TypeArguments);
+            return f.MakeInvocationExpression(BinderFlags.InShim, f.Syntax, receiver, Name, arguments, diagnostics, TypeArguments, argRefKinds: argRefKinds);
         }
+
     }
 }

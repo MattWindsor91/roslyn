@@ -36,17 +36,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return ImmutableArray<LocalSymbol>.Empty;
         }
 
-        protected override ImmutableArray<BoundExpression> GenerateInnerCallArguments(SyntheticBoundNodeFactory f)
+        protected override (ImmutableArray<BoundExpression> args, ImmutableArray<RefKind> refs) GenerateArguments(SyntheticBoundNodeFactory f)
         {
-            var argumentsB = ArrayBuilder<BoundExpression>.GetInstance();
+            var argsB = ArrayBuilder<BoundExpression>.GetInstance();
+            var refsB = ArrayBuilder<RefKind>.GetInstance();
             foreach (var p in ImplementingMethod.Parameters)
             {
-                argumentsB.Add(f.Parameter(p));
+                argsB.Add(f.Parameter(p));
+                refsB.Add(p.RefKind);
             }
-            return argumentsB.ToImmutableAndFree();
+            return (argsB.ToImmutableAndFree(), refsB.ToImmutableAndFree());
         }
 
-        protected override BoundExpression GenerateCall(SyntheticBoundNodeFactory f, BoundExpression receiver, ImmutableArray<BoundExpression> arguments, DiagnosticBag diagnostics)
+        protected override BoundExpression GenerateCall(SyntheticBoundNodeFactory f, BoundExpression receiver, ImmutableArray<BoundExpression> arguments, ImmutableArray<RefKind> refKinds, DiagnosticBag diagnostics)
         {
             // For user-defined operators, the normal shim call approach works
             // fine.  However, we also want to permit shim calls into types
@@ -56,6 +58,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // if we're actually in one of those types.
             //
             // This may be incomplete, but is probably(??) sound.
+            // TODO(@MattWindsor91): consider refkinds?
             if (ImplementingMethod.OriginalDefinition is SourceUserDefinedOperatorSymbol op)
             {
                 Debug.Assert(receiver.Kind == BoundKind.TypeExpression,
@@ -107,7 +110,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
             }
 
-            return base.GenerateCall(f, receiver, arguments, diagnostics);
+            return base.GenerateCall(f, receiver, arguments, refKinds, diagnostics);
         }
 
         private (bool success, UnaryOperatorKind kind) TryGetUnaryOperatorKind(SyntaxKind kind)

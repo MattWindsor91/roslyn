@@ -30,7 +30,7 @@ namespace TinyLinq
         /// <summary>The filtering predicate.</summary>
         public readonly Func<TSource, bool> predicate;
         /// <summary> The source collection.</summary>
-        public readonly TSourceColl source;
+        public TSourceColl source;
 
         /// <summary>The state of this cursor.</summary>
         public CursorState state;
@@ -78,7 +78,7 @@ namespace TinyLinq
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
                 c.sourceEnum = default;
                 c.result = default;
             }
@@ -92,20 +92,20 @@ namespace TinyLinq
                 case CursorState.Exhausted:
                     return false;
                 case CursorState.Uninitialised:
-                    c.sourceEnum = c.source.GetEnumerator();
+                    c.sourceEnum = c.source.RefGetEnumerator();
                     c.state = CursorState.Active;
                     goto case CursorState.Active;
                 case CursorState.Active:
-                    while (Et.MoveNext(ref c.sourceEnum))
+                    while (c.sourceEnum.MoveNext())
                     {
-                        c.result = Et.Current(ref c.sourceEnum);
+                        c.result = c.sourceEnum.Current();
                         if (c.predicate(c.result))
                         {
                             return true;
                         }
                     }
 
-                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum.Dispose();
                     c.sourceEnum = default;
                     c.result = default;
                     c.state = CursorState.Exhausted;
@@ -121,7 +121,7 @@ namespace TinyLinq
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
             }
         }
     }
@@ -147,18 +147,18 @@ namespace TinyLinq
     {
         int Count(this WhereCursor<TSourceColl, TSourceEnum, TSource> c)
         {
-            var e = c.source.GetEnumerator();
+            var e = c.source.RefGetEnumerator();
 
             var count = 0;
-            while (Et.MoveNext(ref e))
+            while (e.MoveNext())
             {
-                if (c.predicate(Et.Current(ref e)))
+                if (c.predicate(e.Current()))
                 {
                     count++;
                 }
             }
 
-            Et.Dispose(ref e);
+            e.Dispose();
             return count;
         }
     }

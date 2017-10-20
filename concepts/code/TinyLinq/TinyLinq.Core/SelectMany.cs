@@ -44,7 +44,7 @@ namespace TinyLinq
         /// <summary>The result selector.</summary>
         public readonly Func<TSource, TCollection, TResult> resultSelector;
         /// <summary> The source collection.</summary>
-        public readonly TSourceColl source;
+        public TSourceColl source;
 
         /// <summary>The state of this cursor.</summary>
         public CursorState state;
@@ -115,8 +115,8 @@ namespace TinyLinq
         {
             if (c.state == CursorState.Active)
             {
-                SEt.Dispose(ref c.sourceEnum);
-                CEt.Dispose(ref c.collectionEnum);
+                c.sourceEnum.Dispose();
+                c.collectionEnum.Dispose();
                 c.sourceEnum = default;
                 c.collectionEnum = default;
                 c.sourceElem = default;
@@ -133,12 +133,12 @@ namespace TinyLinq
                     return false;
                 case CursorState.Uninitialised:
                     // Need to put *both* enumerators into stable states.
-                    c.sourceEnum = c.source.GetEnumerator();
-                    if (!SEt.MoveNext(ref c.sourceEnum))
+                    c.sourceEnum = c.source.RefGetEnumerator();
+                    if (!c.sourceEnum.MoveNext())
                     {
                         goto sourceOut;
                     }
-                    c.sourceElem = SEt.Current(ref c.sourceEnum);
+                    c.sourceElem = c.sourceEnum.Current();
                     c.collectionEnum = c.collectionSelector(c.sourceElem).GetEnumerator();
                     c.state = CursorState.Active;
                     goto case CursorState.Active;
@@ -146,18 +146,18 @@ namespace TinyLinq
                     while (true)
                     {
                         // Stable state: we have a collection; it may be empty.
-                        if (CEt.MoveNext(ref c.collectionEnum))
+                        if (c.collectionEnum.MoveNext())
                         {
-                            c.result = c.resultSelector(c.sourceElem, CEt.Current(ref c.collectionEnum));
+                            c.result = c.resultSelector(c.sourceElem, c.collectionEnum.Current());
                             return true;
                         }
                         // Collection empty, try get a new one from the source.
-                        CEt.Dispose(ref c.collectionEnum);
-                        if (!SEt.MoveNext(ref c.sourceEnum))
+                        c.collectionEnum.Dispose();
+                        if (!c.sourceEnum.MoveNext())
                         {
                             goto sourceOut;
                         }
-                        c.sourceElem = SEt.Current(ref c.sourceEnum);
+                        c.sourceElem = c.sourceEnum.Current();
                         c.collectionEnum = c.collectionSelector(c.sourceElem).GetEnumerator();
                         // Now loop back to try this next collection.
                     }
@@ -166,7 +166,7 @@ namespace TinyLinq
             }
 
             sourceOut:
-            SEt.Dispose(ref c.sourceEnum);
+            c.sourceEnum.Dispose();
             c.sourceEnum = default;
             c.result = default;
             c.state = CursorState.Exhausted;
@@ -179,8 +179,8 @@ namespace TinyLinq
         {
             if (c.state == CursorState.Active)
             {
-                SEt.Dispose(ref c.sourceEnum);
-                CEt.Dispose(ref c.collectionEnum);
+                c.sourceEnum.Dispose();
+                c.collectionEnum.Dispose();
             }
         }
     }

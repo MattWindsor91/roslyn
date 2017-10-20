@@ -39,7 +39,7 @@ namespace TinyLinq.SpecialisedInstances
         /// <summary>The filtering predicate.</summary>
         public readonly Func<TResult, bool> predicate;
         /// <summary> The source collection.</summary>
-        public readonly TSourceColl source;
+        public TSourceColl source;
 
         /// <summary>The state of this cursor.</summary>
         public CursorState state;
@@ -89,7 +89,7 @@ namespace TinyLinq.SpecialisedInstances
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
                 c.sourceEnum = default;
                 c.result = default;
             }
@@ -103,20 +103,20 @@ namespace TinyLinq.SpecialisedInstances
                 case CursorState.Exhausted:
                     return false;
                 case CursorState.Uninitialised:
-                    c.sourceEnum = c.source.GetEnumerator();
+                    c.sourceEnum = c.source.RefGetEnumerator();
                     c.state = CursorState.Active;
                     goto case CursorState.Active;
                 case CursorState.Active:
-                    while (Et.MoveNext(ref c.sourceEnum))
+                    while (c.sourceEnum.MoveNext())
                     {
-                        c.result = c.selector(Et.Current(ref c.sourceEnum));
+                        c.result = c.selector(c.sourceEnum.Current());
                         if (c.predicate(c.result))
                         {
                             return true;
                         }
                     }
 
-                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum.Dispose();
                     c.sourceEnum = default;
                     c.result = default;
                     c.state = CursorState.Exhausted;
@@ -132,7 +132,7 @@ namespace TinyLinq.SpecialisedInstances
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
             }
         }
     }
@@ -157,18 +157,18 @@ namespace TinyLinq.SpecialisedInstances
     {
         int Count(this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
-            var e = c.source.GetEnumerator();
+            var e = c.source.RefGetEnumerator();
             var count = 0;
 
-            while (Et.MoveNext(ref e))
+            while (e.MoveNext())
             {
-                if (c.predicate(c.selector(Et.Current(ref e))))
+                if (c.predicate(c.selector(e.Current())))
                 {
                     count++;
                 }
             }
 
-            Et.Dispose(ref e);
+            e.Dispose();
             return count;
         }
     }
@@ -201,7 +201,7 @@ namespace TinyLinq.SpecialisedInstances
         /// <summary>The selector function.</summary>
         public readonly Func<TSource, TResult> selector;
         /// <summary> The source collection.</summary>
-        public readonly TSourceColl source;
+        public TSourceColl source;
 
         /// <summary>The state of this cursor.</summary>
         public CursorState state;
@@ -251,7 +251,7 @@ namespace TinyLinq.SpecialisedInstances
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
                 c.sourceEnum = default;
                 c.result = default;
             }
@@ -265,20 +265,20 @@ namespace TinyLinq.SpecialisedInstances
                 case CursorState.Exhausted:
                     return false;
                 case CursorState.Uninitialised:
-                    c.sourceEnum = c.source.GetEnumerator();
+                    c.sourceEnum = c.source.RefGetEnumerator();
                     c.state = CursorState.Active;
                     goto case CursorState.Active;
                 case CursorState.Active:
-                    while (Et.MoveNext(ref c.sourceEnum))
+                    while (c.sourceEnum.MoveNext())
                     {
-                        if (c.predicate(Et.Current(ref c.sourceEnum)))
+                        if (c.predicate(c.sourceEnum.Current()))
                         {
-                            c.result = c.selector(Et.Current(ref c.sourceEnum));
+                            c.result = c.selector(c.sourceEnum.Current());
                             return true;
                         }
                     }
 
-                    Et.Dispose(ref c.sourceEnum);
+                    c.sourceEnum.Dispose();
                     c.sourceEnum = default;
                     c.result = default;
                     c.state = CursorState.Exhausted;
@@ -294,7 +294,7 @@ namespace TinyLinq.SpecialisedInstances
         {
             if (c.state == CursorState.Active)
             {
-                Et.Dispose(ref c.sourceEnum);
+                c.sourceEnum.Dispose();
             }
         }
     }
@@ -319,12 +319,12 @@ namespace TinyLinq.SpecialisedInstances
     {
         int Count(this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
-            var e = c.source.GetEnumerator();
+            var e = c.source.RefGetEnumerator();
             var count = 0;
 
-            while (Et.MoveNext(ref e))
+            while (e.MoveNext())
             {
-                var current = Et.Current(ref e);
+                var current = e.Current();
                 if (c.predicate(current))
                 {
                     // Needed to ensure any exceptions or side-effects in the
@@ -334,7 +334,7 @@ namespace TinyLinq.SpecialisedInstances
                 }
             }
 
-            Et.Dispose(ref e);
+            e.Dispose();
             return count;
         }
     }
