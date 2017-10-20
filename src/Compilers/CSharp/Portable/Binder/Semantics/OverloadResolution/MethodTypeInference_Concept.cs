@@ -148,16 +148,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                     fixbuild.Add(_fixedResults[i]);
                     continue;
                 }
-                /* Heuristic:
-                 * 
-                 * If we couldn't fix a type parameter, but it corresponds to
-                 * a method group with only one viable method, fix it as the
-                 * corresponding Func<>.
-                 *
-                 * CONSIDER: check to make sure there aren't multiple conflicting
-                 *           formal parameters!
-                 * CONSIDER: doing this correctly!
-                 */
+                // Heuristic:
+                // 
+                // If we couldn't fix a type parameter, but it corresponds to
+                // a method group with only one viable method, fix it as the
+                // corresponding Func<>.
+                //
+                // TODO(@MattWindsor91): move this into round 1 witness
+                //     inference, and target the same delegate type as the
+                //     provided concept.
                 TypeSymbol fix = null;
                 bool fixedAlready = false;
                 for (int j = 0; j < _formalParameterTypes.Length; j++)
@@ -314,8 +313,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private readonly ConversionsBase _conversions;
 
         /// <summary>
-        /// Container of information about the results of a concept inference
-        /// round.
+        /// Information about the results of a concept inference round.
         /// </summary>
         public struct Result
         {
@@ -345,14 +343,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             /// </summary>
             private readonly ImmutableArray<TypeParameterSymbol> _unfixedMethodParams;
 
-            /// <summary>
-            /// The map of inferred fixings.
-            /// </summary>
+            /// <summary>The map of inferred fixings.</summary>
             private readonly ImmutableTypeMap _fixedMap;
 
-            /// <summary>
-            /// The map of inferred fixings.
-            /// </summary>
+            /// <summary>The map of inferred fixings.</summary>
             internal ImmutableTypeMap Map => _fixedMap;
 
             /// <summary>
@@ -951,13 +945,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             ref HashSet<TypeParameterSymbol> fixedParams)
         {
             // Only methods and named types have constrained witnesses.
-            if (container.Kind != SymbolKind.Method && container.Kind != SymbolKind.NamedType) return;
+            if (container.Kind != SymbolKind.Method && container.Kind != SymbolKind.NamedType)
+            {
+                return;
+            }
 
             ImmutableArray<TypeParameterSymbol> tps = GetTypeParametersOf(container);
-
             foreach (var tp in tps)
             {
-                if (tp.IsConceptWitness) instances.Add(tp);
+                if (tp.IsConceptWitness)
+                {
+                    instances.Add(tp);
+                }
                 fixedParams.Add(tp);
             }
         }
@@ -979,14 +978,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             var ignore = new HashSet<DiagnosticInfo>();
 
             // Only namespaces and named kinds can have named instances.
-            if (container.Kind != SymbolKind.Namespace && container.Kind != SymbolKind.NamedType) return;
+            if (container.Kind != SymbolKind.Namespace && container.Kind != SymbolKind.NamedType)
+            {
+                return;
+            }
 
             foreach (var member in ((NamespaceOrTypeSymbol)container).GetTypeMembers())
             {
-                if (!binder.IsAccessible(member, ref ignore, binder.ContainingType)) continue;
+                if (!binder.IsAccessible(member, ref ignore, binder.ContainingType))
+                {
+                    continue;
+                }
 
                 // Assuming that instances don't contain sub-instances.
-                if (member.IsInstance) instances.Add(member);
+                if (member.IsInstance)
+                {
+                    instances.Add(member);
+                }
             }
         }
 
@@ -1037,22 +1045,24 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             for (int i = 0; i < typeParameters.Length; i++)
             {
-                if (TypeArgumentIsFixed(typeArguments[i], _rigidParams))
+                var arg = typeArguments[i];
+                var par = typeParameters[i];
+
+                if (TypeArgumentIsFixed(arg, _rigidParams))
                 {
                     // TODO(@MattWindsor91): unfixed params?
-                    fixedMapB.Add(typeParameters[i], new TypeWithModifiers(typeArguments[i]));
+                    fixedMapB.Add(par, new TypeWithModifiers(arg));
                 }
-                // typeArguments[i] might not be null here---it might have
-                // been set, for example, to typeParameters[i].
-                else if (typeParameters[i].IsConceptWitness)
+                // arg might not be null, eg. it might have been set to par.
+                else if (par.IsConceptWitness)
                 {
-                    witnessB.Add(typeParameters[i]);
+                    witnessB.Add(par);
                 }
-                else if (typeParameters[i].IsAssociatedType)
+                else if (par.IsAssociatedType)
                 {
-                    assocB.Add(typeParameters[i]);
+                    assocB.Add(par);
                 }
-                else if (!methodInfoOpt.IsUnfixed(typeParameters[i]))
+                else if (!methodInfoOpt.IsUnfixed(par))
                 {
                     // If we got here, we have an unexpected unfixed type parameter.
                     return new FailedInferRound(typeParameters, existingFixedMap);
@@ -1081,7 +1091,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         internal static bool TypeArgumentIsFixed(TypeSymbol typeArgument, ImmutableHashSet<TypeParameterSymbol> rigidParams)
         {
-            // @t-mawind
+            // TODO(@MattWindsor91):
             //   This is slightly ad-hoc and needs checking.
             //   The intuition is that:
             //   1) In some places (eg. method inference), unfixed type
@@ -1109,20 +1119,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             return rigidParams.Contains(typeArgument as TypeParameterSymbol);
         }
 
-        /// <summary>
-        /// A collection of state relating to a single round of concept
-        /// inference.
-        /// </summary>
+        /// <summary>A single recursion through concept inference.</summary>
         internal abstract class InferRound
         {
-            /// <summary>
-            /// The current fixed map at this level.
-            /// </summary>
+            /// <summary>The current fixed map at this level.</summary>
             protected ImmutableTypeMap _fixedMap;
 
-            /// <summary>
-            /// Internal constructor for inference rounds.
-            /// </summary>
+            /// <summary>Internal constructor for inference rounds.</summary>
             /// <param name="existingFixedMap">
             /// The fixed map at the start of this inference round.
             /// </param>
@@ -1231,13 +1234,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             public override Result Infer(ref HashSet<DiagnosticInfo> useSiteDiagnostics)
             {
-                // Early out for when we have no concept parameters.
                 if (_conceptWitnesses.IsEmpty)
                 {
+                    // Can't do any inference without witnesses.
                     return AsResult();
                 }
 
-                // TODO:
+                // TODO(@MattWindsor91):
                 //   This round of MTI should not be necessary unless we're
                 //   coming from a recursive call, but currently MTI seems to
                 //   leave some things uninferred that can be inferred with a
@@ -1325,12 +1328,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return AsResult();
             }
 
-            /// <summary>
-            /// Converts this inference round to a result.
-            /// </summary>
-            /// <returns>
-            /// A <see cref="Result"/> representing this round.
-            /// </returns>
+            /// <summary>Converts this inference round to a result.</summary>
+            /// <returns>A <see cref="Result"/> for this round.</returns>
             private Result AsResult() =>
                 new Result(
                     unfixedAssocs: _associatedTypes,
@@ -1339,9 +1338,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     fixedMap: _fixedMap
                 );
 
-            /// <summary>
-            /// True if all type parameters have been fixed.
-            /// </summary>
+            /// <summary>True if all type parameters have been fixed.</summary>
             private bool FixedEverything
             {
                 get
@@ -1354,9 +1351,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            /// <summary>
-            /// The array of type parameters we still need to fix.
-            /// </summary>
+            /// <summary>The type parameters we still need to fix.</summary>
             private ImmutableArray<TypeParameterSymbol> ToFix
             {
                 get
@@ -1412,8 +1407,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (!candidate.Viable)
                 {
-                    // TODO: this diagnostics handling is almost certainly
-                    //       wrong.
+                    // TODO(@MattWindsor91): diag. handling is likely wrong.
                     var diags = candidate.Diagnostics.AsImmutableOrNull();
                     if (useSiteDiagnostics != null && !diags.IsDefaultOrEmpty)
                     {
@@ -1474,7 +1468,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// its unification.
         /// </returns>
         public Candidate InferWitnessSatisfyingConcepts(
-            ImmutableArray<TypeSymbol> requiredConcepts,
+            ImmutableArray<NamedTypeSymbol> requiredConcepts,
             ImmutableTypeMap fixedMap,
             MethodInfo methodInfo,
             ImmutableHashSet<NamedTypeSymbol> chainOpt)
@@ -1531,11 +1525,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // passes 2).
             if (firstPassInstances.IsDefaultOrEmpty)
             {
-                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
-                // CS8957: No instances in scope satisfy concept '0'.
-                var err = new CSDiagnosticInfo(ErrorCode.ERR_ConceptInstanceUnsatisfiable, conceptDisplay);
-                var errs = new HashSet<DiagnosticInfo> { err };
-                return new Candidate(errs);
+                return Unsatisfiable(requiredConcepts);
             }
             Debug.Assert(firstPassInstances.Length <= _allInstances.Length,
                 "First pass of concept witness inference should not grow the instance list");
@@ -1543,11 +1533,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             var secondPassInstances = ToSatisfiableInstances(firstPassInstances, methodInfo, chain);
             if (secondPassInstances.IsDefaultOrEmpty)
             {
-                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
-                // CS8957: No instances in scope satisfy concept '0'.
-                var err = new CSDiagnosticInfo(ErrorCode.ERR_ConceptInstanceUnsatisfiable, conceptDisplay);
-                var errs = new HashSet<DiagnosticInfo> { err };
-                return new Candidate(errs);
+                return Unsatisfiable(requiredConcepts);
             }
             Debug.Assert(secondPassInstances.Length <= firstPassInstances.Length,
                 "Second pass of concept witness inference should not grow the instance list");
@@ -1561,17 +1547,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 "Third pass of concept witness inference should only break ties");
             if (thirdPassInstances.Length != 1)
             {
-                var conceptDisplay = requiredConcepts.Length == 1 ? requiredConcepts[0].ToDisplayString() : "(multiple concepts)";
-
-                // CS8958: Cannot infer a unique instance for concept '{0}'. For example, both '{1}' and '{2}' are valid instances.
-                var err =
-                    new CSDiagnosticInfo(
-                        ErrorCode.ERR_ConceptInstanceAmbiguous,
-                        conceptDisplay,
-                        thirdPassInstances[0].Instance.ToDisplayString(),
-                        thirdPassInstances[1].Instance.ToDisplayString());
-                var errs = new HashSet<DiagnosticInfo> { err };
-                return new Candidate(errs);
+                return Ambiguous(requiredConcepts, thirdPassInstances);
             }
             Debug.Assert(thirdPassInstances[0].Instance != null,
                 "Inference claims to have succeeded, but has returned a null instance");
@@ -1579,29 +1555,65 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         /// <summary>
+        /// Creates a failing candidate with an unsatisfiability error.
+        /// </summary>
+        /// <param name="concepts">The concepts we tried to infer.</param>
+        /// <returns>
+        /// A non-viable <see cref="Candidate"/> representing unsatisfiability.
+        /// </returns>
+        private static Candidate Unsatisfiable(ImmutableArray<NamedTypeSymbol> concepts)
+        {
+            var conceptDisplay = concepts.Length == 1 ? concepts[0].ToDisplayString() : "(multiple concepts)";
+            // CS8957: No instances in scope satisfy concept '0'.
+            var err = new CSDiagnosticInfo(ErrorCode.ERR_ConceptInstanceUnsatisfiable, conceptDisplay);
+            var errs = new HashSet<DiagnosticInfo> { err };
+            return new Candidate(errs);
+        }
+
+        /// <summary>
+        /// Creates a failing candidate with an ambiguity error.
+        /// </summary>
+        /// <param name="concepts">The concepts we tried to infer.</param>
+        /// <param name="instances">The set of ambiguous instances.</param>
+        /// <returns>
+        /// A non-viable <see cref="Candidate"/> representing ambiguity.
+        /// </returns>
+        private static Candidate Ambiguous(ImmutableArray<NamedTypeSymbol> concepts, ImmutableArray<Candidate> instances)
+        {
+            var conceptDisplay = concepts.Length == 1 ? concepts[0].ToDisplayString() : "(multiple concepts)";
+            // CS8958: Cannot infer a unique instance for concept '{0}'. For example, both '{1}' and '{2}' are valid instances.
+            var err =
+                new CSDiagnosticInfo(
+                    ErrorCode.ERR_ConceptInstanceAmbiguous,
+                    conceptDisplay,
+                    instances[0].Instance.ToDisplayString(),
+                    instances[1].Instance.ToDisplayString());
+            var errs = new HashSet<DiagnosticInfo> { err };
+            return new Candidate(errs);
+        }
+
+        /// <summary>
         /// Deduces the set of concepts that must be implemented by any witness
         /// supplied to the given type parameter.
         /// </summary>
-        /// <param name="typeParam">
-        /// The type parameter being inferred.
-        /// </param>
+        /// <param name="typeParam">The type parameter being inferred.</param>
         /// <param name="fixedMap">
         /// A map mapping fixed type parameters to their type arguments.
         /// </param>
         /// <returns>
         /// An array of concepts required by <paramref name="typeParam"/>.
         /// </returns>
-        private static ImmutableArray<TypeSymbol> GetRequiredConceptsFor(TypeParameterSymbol typeParam, ImmutableTypeMap fixedMap)
+        private static ImmutableArray<NamedTypeSymbol> GetRequiredConceptsFor(TypeParameterSymbol typeParam, ImmutableTypeMap fixedMap)
         {
             var rawRequiredConcepts = typeParam.ProvidedConcepts;
 
             // The concepts from above are in terms of the method's type
             // parameters.  In order to be able to unify properly, we need to
             // substitute the inferences we've made so far.
-            var rc = new ArrayBuilder<TypeSymbol>();
+            var rc = new ArrayBuilder<NamedTypeSymbol>();
             foreach (var con in rawRequiredConcepts)
             {
-                rc.Add(fixedMap.SubstituteType(con).AsTypeSymbolOnly());
+                rc.Add(fixedMap.SubstituteNamedType(con));
             }
 
             var unused = new HashSet<DiagnosticInfo>();
@@ -1611,7 +1623,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // This is analogous to Haskell context reduction, but somewhat
             // simpler: because of the way our concepts are architected, much
             // of what Haskell does makes no sense.
-            var rc2 = new ArrayBuilder<TypeSymbol>();
+            var rc2 = new ArrayBuilder<NamedTypeSymbol>();
             foreach (var c1 in rc)
             {
                 var needed = true;
@@ -1691,11 +1703,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // recursively dispatched as in the second pass.
                 if (AllRequiredConceptsProvided(requiredConcepts, instance, out ImmutableTypeMap unifyingSubstitutions, _rigidParams))
                 {
-                    // The unification may have provided us with substitutions
-                    // that were needed to make the provided concepts fit the
-                    // required concepts.
-                    //
-                    // It may be that some of these substitutions also need to
+                    // The unification may provide us with substitutions we
+                    // need to make provided concepts match required concepts.
+                    // Some of these substitutions may also need to
                     // apply to the actual instance so it can satisfy #2.
                     var result = unifyingSubstitutions.SubstituteType(instance).AsTypeSymbolOnly();
                     firstPassInstanceBuilder.Add(new Candidate(result, unifyingSubstitutions));
@@ -1715,9 +1725,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="requiredConcepts">
         /// The list of required concepts to implement.  Must be non-empty.
         /// </param>
-        /// <param name="instance">
-        /// The candidate instance.
-        /// </param>
+        /// <param name="instance">The candidate instance.</param>
         /// <param name="unifyingSubstitutions">
         /// A map of type substitutions, populated by this method, which are
         /// required in order to make the instance implement the concepts.
@@ -1738,7 +1746,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                 ((instance as TypeParameterSymbol)?.AllEffectiveInterfacesNoUseSiteDiagnostics
                     ?? ((instance as NamedTypeSymbol)?.AllInterfacesNoUseSiteDiagnostics)
                     ?? ImmutableArray<NamedTypeSymbol>.Empty);
-            if (providedConcepts.IsEmpty) return false;
+            if (providedConcepts.IsEmpty)
+            {
+                return false;
+            }
 
             foreach (var requiredConcept in requiredConcepts)
             {
@@ -1789,7 +1800,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return true;
                 }
             }
-
             return false;
         }
 
@@ -1933,8 +1943,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         private static ImmutableArray<Candidate> TieBreakInstances(ImmutableArray<Candidate> candidateInstances)
         {
-            // TODO: better tie-breaking.
-            // TODO: formally specify this--it is quite ad-hoc at the moment.
+            // TODO(@MattWindsor91): better tie-breaking.
+            // TODO(@MattWindsor91): align with overload resolution rules.
+            // TODO(@MattWindsor91): formally specify this--it is quite ad-hoc.
 
             Debug.Assert(1 < candidateInstances.Length,
                 "Tie-breaking is pointless if we have zero or one instances");
@@ -1983,14 +1994,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
             var ar = arb.ToImmutableAndFree();
-            /* @MattWindsor91 (Concept-C# 2017)
-                *
-                * Sometimes, the above can eliminate _all_ instances.
-                * In this case, we want to return the original set, since
-                * no winners is the same as everyone winning.
-                *
-                * TODO: stop the elimination?
-                */
+            // Sometimes, the above can eliminate _all_ instances.
+            // In this case, we want to return the original set, since
+            // no winners is the same as everyone winning.
+            //
+            // TODO(@MattWindsor91): stop the elimination?
             return ar.IsDefaultOrEmpty ? candidateInstances : ar;
         }
 
@@ -2011,20 +2019,17 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// </returns>
         private static bool OverlapAllowed(Candidate overlapper, Candidate overlappee)
         {
-            /* Overlap is permitted if:
-                *
-                * 1) the overlapping type is marked [Overlapping]; or
-                * 2) the overlapped type is marked [Overlappable].
-                *
-                * TODO: type parameters?
-                */
+            // TODO(@MattWindsor91): type parameters?
+
+            // Overlap is permitted if:
+            //     1) the overlapping type is marked [Overlapping]; or
             var r = overlapper.Instance;
             var rOverlapping = r.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)r).IsOverlapping;
             if (rOverlapping)
             {
                 return true;
             }
-
+            //     2) the overlapped type is marked [Overlappable].
             var e = overlappee.Instance;
             var eOverlappable = e.Kind == SymbolKind.NamedType && ((NamedTypeSymbol)e).IsOverlappable;
             return eOverlappable;
@@ -2132,12 +2137,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Decides whether an instance is strictly less specific than another.
         /// </summary>
-        /// <param name="moreSpecific">
-        /// The instance to compare against.
-        /// </param>
-        /// <param name="lessSpecific">
-        /// The instance to compare.
-        /// </param>
+        /// <param name="moreSpecific">The instance to compare against.</param>
+        /// <param name="lessSpecific">The instance to compare.</param>
         /// <returns>
         /// True if, and only if, <paramref name="lessSpecific"/> is strictly less
         /// specific than <paramref name="moreSpecific"/>.
@@ -2421,9 +2422,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 unification = new ImmutableTypeMap();
             }
 
-            /* As in normal inference, it is not necessarily a bug for
-               the map to map typeParameters[i] to typeParameters[i].
-               This might be, eg., a recursive call. */
+            // As in normal inference, it is not necessarily a bug for
+            // the map to map typeParameters[i] to typeParameters[i].
+            // This might be, eg., a recursive call.
             for (int i = 0; i < typeParameters.Length; i++)
             {
                 if (allArguments[i] != null)
