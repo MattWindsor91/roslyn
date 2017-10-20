@@ -30,7 +30,7 @@ namespace SerialPBT
             where TestableR : CTestable<TR, RR> =>
             new Imp<TL, TR> { filter = filter, property = property };
 
-        public static void Check<T, [AssociatedType] R, implicit TestableT, implicit ShowableR>(T test, int depth)
+        public static void Check<T, [AssociatedType] R, implicit TestableT, implicit ShowableR>(T test, int depth, bool throwOnFailure = true)
             where TestableT : CTestable<T, R>
             where ShowableR : CShowable<R>
         {
@@ -38,7 +38,12 @@ namespace SerialPBT
             Console.WriteLine(name);
             Console.WriteLine(new string('=', name.Length));
             Console.WriteLine();
-            Console.WriteLine(Helpers.String(TestableT.Test(test, depth)));
+            var result = TestableT.Test(test, depth);
+            Console.WriteLine(Helpers.String(result));
+            if (throwOnFailure && result.Failed)
+            {
+                throw new TestFailedException();
+            }
         }
     }
 

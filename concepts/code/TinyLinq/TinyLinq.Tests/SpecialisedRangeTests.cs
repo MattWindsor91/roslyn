@@ -7,31 +7,29 @@ using System.Concepts.Indexable;
 using System.Concepts.Prelude;
 using System.Concepts.Showable;
 using SerialPBT;
+using TinyLinq.SpecialisedInstances;
 
 namespace TinyLinq.Tests
 {
     public class SpecialisedRangeTests
     {
-        public static int PythagoreanTinyLinq()
-        {
-            var max = 10;
-
-            var foo = (from a in System.Linq.Enumerable.Range(1, max + 1)
-                       from b in System.Linq.Enumerable.Range(a, max + 1 - a)
-                       from c in System.Linq.Enumerable.Range(b, max + 1 - b)
-                       select true);
-            var bar = foo.GetEnumerator();
-
-            return (from a in System.Linq.Enumerable.Range(1, max + 1)
-                    from b in System.Linq.Enumerable.Range(a, max + 1 - a)
-                    from c in System.Linq.Enumerable.Range(b, max + 1 - b)
-                    where a * a + b * b == c * c
-                    select true).Count();
-        }
+        public static Imp<bool, Func<bool>> PythagoreanTinyLinq(int max) =>
+            PBTHelpers.Implies(
+                0 < max,
+                (Func<bool>)(() => {
+                    var lcount = LinqOracles.PythagoreanTripleCount(max);
+                    var tcount =
+                        (from a in System.Linq.Enumerable.Range(1, max + 1)
+                         from b in System.Linq.Enumerable.Range(a, max + 1 - a)
+                         from c in System.Linq.Enumerable.Range(b, max + 1 - b)
+                         where a * a + b * b == c * c
+                         select true).Count();
+                    return lcount == tcount;
+                }));
 
         public static void Run()
         {
-            Console.WriteLine(PythagoreanTinyLinq());
+            PBTHelpers.Check(PythagoreanTinyLinq, 10);
             PBTHelpers.Check((Func<Range<int>, bool>)GenericTests.Prop_SelectIdentity, 7);
         }
     }

@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GenericTests.cs" />
+    <Compile Include="LinqOracles.cs" />
     <Compile Include="LinqSyntaxTests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

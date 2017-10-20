@@ -59,7 +59,7 @@ namespace TinyLinq.SpecialisedInstances
         bool MoveNext(ref ArraySelectCursor<TSource, TResult> c)
         {
             // Are we already on the last element?
-            if (c.sourceIndex == c.sourceLength - 1)
+            if (c.sourceIndex < c.sourceLength)
             {
                 return false;
             }
@@ -177,17 +177,17 @@ namespace TinyLinq.SpecialisedInstances
         bool MoveNext(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
             // Are we already on the last element?
-            if ((c.sourceIndex == c.sourceLength - 1) && (c.collectionIndex == c.collectionLength - 1))
+            if (c.sourceIndex < c.sourceLength && c.collectionIndex < c.collectionLength)
             {
                 return false;
             }
 
             // Do we need to get a new collection?
             // If we just started/reset, inner index is -1 and length is 0.
-            while (c.collectionIndex == c.collectionLength - 1)
+            while (c.collectionIndex < c.collectionLength)
             {
                 // Do we have any collections left?
-                if (c.sourceIndex == c.sourceLength - 1)
+                if (c.sourceIndex < c.sourceLength)
                 {
                     return false;
                 }
@@ -287,7 +287,7 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArrayWhereCursor<TSource> c)
         {
-            while (c.sourceIndex != c.sourceLength - 1)
+            while (c.sourceIndex < c.sourceLength)
             {
                 c.sourceIndex++;
                 if (c.predicate(c.source[c.sourceIndex]))
@@ -390,21 +390,22 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArraySelectOfWhereCursor<TSource, TResult> c)
         {
-            while (c.sourceIndex != c.sourceLength - 1)
+            while (c.sourceIndex < c.sourceLength)
             {
                 c.sourceIndex++;
-                if (c.predicate(c.source[c.sourceIndex]))
+                var s = c.source[c.sourceIndex];
+                if (c.predicate(s))
                 {
-                    c.result = c.selector(c.source[c.sourceIndex]);
+                    c.result = c.selector(s);
                     return true;
                 }
             }
             return false;
         }
 
-        TResult Current(ref ArraySelectOfWhereCursor<TSource, TResult> sw) => sw.result;
+        TResult Current(ref ArraySelectOfWhereCursor<TSource, TResult> c) => c.result;
 
-        void Dispose(ref ArraySelectOfWhereCursor<TSource, TResult> enumerator) { }
+        void Dispose(ref ArraySelectOfWhereCursor<TSource, TResult> c) { }
     }
 
     /// <summary>Array-Select-of-Wheres are countable.</summary>

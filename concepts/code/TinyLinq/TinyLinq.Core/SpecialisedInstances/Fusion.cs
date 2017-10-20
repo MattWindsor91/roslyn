@@ -162,8 +162,7 @@ namespace TinyLinq.SpecialisedInstances
 
             while (Et.MoveNext(ref e))
             {
-                var current = c.selector(Et.Current(ref e));
-                if (c.predicate(current))
+                if (c.predicate(c.selector(Et.Current(ref e))))
                 {
                     count++;
                 }
@@ -272,10 +271,9 @@ namespace TinyLinq.SpecialisedInstances
                 case CursorState.Active:
                     while (Et.MoveNext(ref c.sourceEnum))
                     {
-                        var tmp = Et.Current(ref c.sourceEnum);
-                        if (c.predicate(tmp))
+                        if (c.predicate(Et.Current(ref c.sourceEnum)))
                         {
-                            c.result = c.selector(tmp);
+                            c.result = c.selector(Et.Current(ref c.sourceEnum));
                             return true;
                         }
                     }

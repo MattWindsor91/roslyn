@@ -161,14 +161,22 @@ namespace TinyLinq.Bench
     {
         static void Main(string[] args)
         {
-            if (args.Length == 1 && args[0] == "pythagorean")
+            if (args.Length == 1)
             {
-                if (!PythagoreanBenchmarks.SanityCheck())
+                if (args[0] == "pythagorean")
                 {
+                    if (!PythagoreanBenchmarks.SanityCheck())
+                    {
+                        return;
+                    }
+                    BenchmarkRunner.Run<PythagoreanBenchmarks>();
                     return;
                 }
-                BenchmarkRunner.Run<PythagoreanBenchmarks>();
-                return;
+                else if (args[0] == "pprofile")
+                {
+                    new PythagoreanBenchmarks() { max = 200 }.EnumerableRangeFused();
+                    return;
+                }
             }
 
             BenchmarkRunner.Run<WarrenSumBenchmarks>();

@@ -4,10 +4,17 @@
     {
         static void Main(string[] args)
         {
-            SpecialisedRangeTests.Run();
-            UnspecialisedArrayTests.Run();
-            SpecialisedArrayTests.Run();
-            LinqSyntaxTests.Run();
+            try
+            {
+                SpecialisedRangeTests.Run();
+                UnspecialisedArrayTests.Run();
+                SpecialisedArrayTests.Run();
+                LinqSyntaxTests.Run();
+            }
+            catch (SerialPBT.TestFailedException)
+            {
+                return;
+            }
         }
     }
 }
