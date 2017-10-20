@@ -14,7 +14,7 @@ using TinyLinq.SpecialisedInstances;
 namespace TinyLinq.Bench
 {
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
-    [LegacyJitX86Job, RyuJitX64Job]
+    [/*LegacyJitX86Job, */RyuJitX64Job]
     public class WarrenSumBenchmarks
     {
         public Func<int, bool> pred = item => item % 10 == 0;
@@ -99,7 +99,7 @@ namespace TinyLinq.Bench
     }
 
     [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
-    [LegacyJitX86Job, RyuJitX64Job]
+    [/*LegacyJitX86Job, */RyuJitX64Job]
     public class WarrenCountBenchmarks
     {
         private static readonly int[] items = Enumerable.Range(0, 1000).ToArray();

@@ -34,11 +34,11 @@ namespace TinyLinq
             var sum = 0;
             var count = 0;
 
-            var e = source.GetEnumerator();
-            while (Et.MoveNext(ref e))
+            var e = source.RefGetEnumerator();
+            while (e.MoveNext())
             {
                 count++;
-                sum += Et.Current(ref e);
+                sum += e.Current();
             }
 
             return (double)sum / count;
@@ -59,11 +59,11 @@ namespace TinyLinq
             var sum = F.FromInteger(0);
             var count = 0;
 
-            var e = source.GetEnumerator();
-            while (Et.MoveNext(ref e))
+            var e = source.RefGetEnumerator();
+            while (e.MoveNext())
             {
                 count++;
-                sum += Et.Current(ref e);
+                sum += e.Current();
             }
 
             return sum / F.FromInteger(count);

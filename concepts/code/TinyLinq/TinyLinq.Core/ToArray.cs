@@ -84,11 +84,11 @@ namespace TinyLinq
     {
         TElem[] ToArray(this TColl from)
         {
-            var e = from.GetEnumerator();
+            var e = from.RefGetEnumerator();
             var q = new Queue<TElem>();
-            while (Et.MoveNext(ref e))
+            while (e.MoveNext())
             {
-                q.Enqueue(Et.Current(ref e));
+                q.Enqueue(e.Current());
             }
             return q.ToArray();
         }
@@ -105,11 +105,11 @@ namespace TinyLinq
         {
             var len = S.Count(from); // TODO: why doesn't e.Count work?
             var result = new TElem[len];
-            var e = from.GetEnumerator();
+            var e = from.RefGetEnumerator();
             for (var i = 0; i < len; i++)
             {
-                Et.MoveNext(ref e);
-                result[i] = Et.Current(ref e);
+                e.MoveNext();
+                result[i] = e.Current();
             }
             return result;
         }

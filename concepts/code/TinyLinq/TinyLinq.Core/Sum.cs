@@ -35,7 +35,7 @@ namespace TinyLinq
         {
             TSource Sum(this TSourceColl source)
             {
-                var e = source.GetEnumerator();
+                var e = source.RefGetEnumerator();
 
                 var sum = M.Empty;
                 while (Et.MoveNext(ref e))
@@ -59,7 +59,7 @@ namespace TinyLinq
     {
         TSource Sum(this TSourceColl source)
         {
-            var e = source.GetEnumerator();
+            var e = source.RefGetEnumerator();
 
             var sum = N.FromInteger(0);
             while (Et.MoveNext(ref e))
