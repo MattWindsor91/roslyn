@@ -232,7 +232,6 @@ namespace TinyLinq.Bench
                 new FlatRangeCursor { range = range, end = range.start + range.count, reset = true, finished = false };
         }
 
-        /* Commented out until we can work out how to stop spurious AT inference.
         namespace Unspec
         {
             public static class Bench
@@ -295,7 +294,7 @@ namespace TinyLinq.Bench
                     return query.Count();
                 }
             }
-        } */
+        }
     }
 
     /// <summary>
@@ -325,8 +324,10 @@ namespace TinyLinq.Bench
                     null);
             foreach (var m in members)
             {
-                System.Console.WriteLine($"Sanity checking {m.Name}");
-                if (!((m as System.Reflection.MethodInfo)?.Invoke(p, null) as int?)?.Equals(oracle) ?? false)
+                System.Console.Write($"Sanity checking {m.Name}");
+                var result = (m as System.Reflection.MethodInfo)?.Invoke(p, null) as int?;
+                System.Console.WriteLine($": {result}");
+                if (!(result?.Equals(oracle)) ?? false)
                 {
                     System.Console.WriteLine("Failed!");
                     return false;
@@ -335,32 +336,33 @@ namespace TinyLinq.Bench
             return true;
         }
 
+        public int max = 100;
+
         [Benchmark(Baseline = true)]
-        public int LinqBench() => Linq.Bench.Run(100);
+        public int LinqBench() => Linq.Bench.Run(max);
 
         [Benchmark]
-        public int EnumerableRangeUnspec() => EnumerableRange.Unspec.Bench.Run(100);
+        public int EnumerableRangeUnspec() => EnumerableRange.Unspec.Bench.Run(max);
 
         [Benchmark]
-        public int EnumerableRangeFused() => EnumerableRange.Fused.Bench.Run(100);
+        public int EnumerableRangeFused() => EnumerableRange.Fused.Bench.Run(max);
 
         [Benchmark]
-        public int StructRangeUnspec() => StructRange.Unspec.Bench.Run(100);
+        public int StructRangeUnspec() => StructRange.Unspec.Bench.Run(max);
 
         [Benchmark]
-        public int StructRangeFused() => StructRange.Fused.Bench.Run(100);
-
-        /*
-        [Benchmark]
-        public int FlatStructRangeUnspec() => FlatStructRange.Unspec.Bench.Run(100);
+        public int StructRangeFused() => StructRange.Fused.Bench.Run(max);
 
         [Benchmark]
-        public int FlatStructRangeFused() => FlatStructRange.Fused.Bench.Run(100);
+        public int FlatStructRangeUnspec() => FlatStructRange.Unspec.Bench.Run(max);
 
         [Benchmark]
-        public int FlatStructRangeUnspecCtor() => FlatStructRange.Unspec.Bench.RunCtor(100);
+        public int FlatStructRangeFused() => FlatStructRange.Fused.Bench.Run(max);
 
         [Benchmark]
-        public int FlatStructRangeFusedCtor() => FlatStructRange.Fused.Bench.RunCtor(100);*/
+        public int FlatStructRangeUnspecCtor() => FlatStructRange.Unspec.Bench.RunCtor(max);
+
+        [Benchmark]
+        public int FlatStructRangeFusedCtor() => FlatStructRange.Fused.Bench.RunCtor(max);
     }
 }
