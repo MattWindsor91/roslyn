@@ -1,6 +1,6 @@
 .SUFFIXES: .md .pdf
 
-all: linq-slides-2017-10-16.html tour.pdf compare.pdf
+all: linq-slides-2017-10-16.html tour.pdf compare.pdf issues.pdf
 
 .md.pdf:
 	pandoc -f markdown -t latex -s $< -o $@
