@@ -38,9 +38,9 @@ namespace TinyLinq
                 var e = source.RefGetEnumerator();
 
                 var sum = M.Empty;
-                while (Et.MoveNext(ref e))
+                while (e.MoveNext())
                 {
-                    sum = M.Append(sum, Et.Current(ref e));
+                    sum = sum.Append(e.Current());
                 }
 
                 return sum;
@@ -62,9 +62,9 @@ namespace TinyLinq
             var e = source.RefGetEnumerator();
 
             var sum = N.FromInteger(0);
-            while (Et.MoveNext(ref e))
+            while (e.MoveNext())
             {
-                sum += Et.Current(ref e);
+                sum += e.Current();
             }
 
             return sum;
