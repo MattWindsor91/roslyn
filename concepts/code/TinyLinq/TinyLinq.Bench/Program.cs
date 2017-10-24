@@ -13,9 +13,49 @@ using TinyLinq.SpecialisedInstances;
 
 namespace TinyLinq.Bench
 {
-    [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
-    [/*LegacyJitX86Job, */RyuJitX64Job]
-    public class WarrenSumBenchmarks
+    [MemoryDiagnoser]
+    [CsvExporter, HtmlExporter, MarkdownExporter]
+    public abstract class BenchmarksBase
+    { }
+
+    public abstract class WarrenBenchmarksBase : BenchmarksBase
+    {
+        public abstract int Iterative();
+
+        /// <summary>
+        /// Sanity-check the various benchmark methods.
+        /// </summary>
+        /// <returns>
+        /// True if, and only if, each benchmark method returns the same as
+        /// the LINQ version.
+        /// </returns>
+        public virtual bool SanityCheck()
+        {
+            var oracle = Iterative();
+            var members =
+                GetType().FindMembers(
+                    System.Reflection.MemberTypes.Method,
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly,
+                    new System.Reflection.MemberFilter(
+                        (mi, _) => mi.Name != nameof(Iterative)
+                    ),
+                    null);
+            foreach (var m in members)
+            {
+                System.Console.Write($"Sanity checking {m.Name}");
+                var result = (m as System.Reflection.MethodInfo)?.Invoke(this, null) as int?;
+                System.Console.WriteLine($": {result}");
+                if (!(result?.Equals(oracle)) ?? false)
+                {
+                    System.Console.WriteLine("Failed!");
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public class WarrenSumBenchmarks : WarrenBenchmarksBase
     {
         public Func<int, bool> pred = item => item % 10 == 0;
         public Func<int, int> proj = item => item + 5;
@@ -26,7 +66,7 @@ namespace TinyLinq.Bench
         private static readonly int[] items = Enumerable.Range(0, 1000).ToArray();
 
         [Benchmark(Baseline = true, Description = "Iterative")]
-        public int Iterative()
+        public override int Iterative()
         {
             var counter = 0;
             foreach (var item in items)
@@ -97,16 +137,13 @@ namespace TinyLinq.Bench
         public int TinyLinq_Sum() =>
             items.Where(i => i % 10 == 0).Select(i => i + 5).Sum();
     }
-
-    [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
-    [/*LegacyJitX86Job, */RyuJitX64Job]
-    public class WarrenCountBenchmarks
+    public class WarrenCountBenchmarks : WarrenBenchmarksBase
     {
         private static readonly int[] items = Enumerable.Range(0, 1000).ToArray();
         public Func<int, bool> pred = item => item % 10 == 0;
 
         [Benchmark(Baseline = true, Description = "Iterative")]
-        public int Iterative()
+        public override int Iterative()
         {
             var i = 0;
             foreach (var item in items)
@@ -125,7 +162,7 @@ namespace TinyLinq.Bench
             var i = 0;
             foreach (var item in items)
             {
-                if (pred(i))
+                if (pred(item))
                 {
                     i++;
                 }
@@ -165,7 +202,7 @@ namespace TinyLinq.Bench
             {
                 if (args[0] == "pythagorean")
                 {
-                    if (!PythagoreanBenchmarks.SanityCheck())
+                    if (!(new PythagoreanBenchmarks()).SanityCheck())
                     {
                         return;
                     }
@@ -177,6 +214,15 @@ namespace TinyLinq.Bench
                     new PythagoreanBenchmarks() { max = 200 }.EnumerableRangeFused();
                     return;
                 }
+            }
+
+            if (!new WarrenSumBenchmarks().SanityCheck())
+            {
+                return;
+            }
+            if (!new WarrenCountBenchmarks().SanityCheck())
+            {
+                return;
             }
 
             BenchmarkRunner.Run<WarrenSumBenchmarks>();
