@@ -238,14 +238,6 @@ namespace TinyLinq.Bench
             {
                 public static int Run(int max)
                 {
-                    var q =
-                        from a in new FlatRange { start = 1, count = max + 1 }
-                        from b in new FlatRange { start = a, count = max + 1 - a }
-                        from c in new FlatRange { start = b, count = max + 1 - b }
-                        select true;
-                    var r = q.GetEnumerator();
-
-
                     var query =
                         from a in new FlatRange { start = 1, count = max + 1 }
                         from b in new FlatRange { start = a, count = max + 1 - a }
@@ -300,8 +292,8 @@ namespace TinyLinq.Bench
     /// <summary>
     /// Benchmark playpen for Pythagorean triples.
     /// </summary>
-    [CsvExporter, HtmlExporter, MarkdownExporter, RPlotExporter]
-    public class PythagoreanBenchmarks
+
+    public class PythagoreanBenchmarks : BenchmarksBase
     {
         /// <summary>
         /// Sanity-check the various benchmark methods.
@@ -310,22 +302,21 @@ namespace TinyLinq.Bench
         /// True if, and only if, each benchmark method returns the same as
         /// the LINQ version.
         /// </returns>
-        public static bool SanityCheck()
+        public bool SanityCheck()
         {
-            var p = new PythagoreanBenchmarks();
-            var oracle = p.LinqBench();
+            var oracle = LinqBench();
             var members =
                 typeof(PythagoreanBenchmarks).FindMembers(
                     System.Reflection.MemberTypes.Method,
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly,
                     new System.Reflection.MemberFilter(
-                        (mi, _) => mi.Name != "LinqBench"
+                        (mi, _) => mi.Name != nameof(LinqBench)
                     ),
                     null);
             foreach (var m in members)
             {
                 System.Console.Write($"Sanity checking {m.Name}");
-                var result = (m as System.Reflection.MethodInfo)?.Invoke(p, null) as int?;
+                var result = (m as System.Reflection.MethodInfo)?.Invoke(this, null) as int?;
                 System.Console.WriteLine($": {result}");
                 if (!(result?.Equals(oracle)) ?? false)
                 {
