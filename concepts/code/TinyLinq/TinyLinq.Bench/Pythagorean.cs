@@ -286,13 +286,12 @@ namespace TinyLinq.Bench
                     return query.Count();
                 }
             }
-        }
+        } 
     }
 
     /// <summary>
     /// Benchmark playpen for Pythagorean triples.
     /// </summary>
-
     public class PythagoreanBenchmarks : BenchmarksBase
     {
         /// <summary>
@@ -310,15 +309,13 @@ namespace TinyLinq.Bench
                     System.Reflection.MemberTypes.Method,
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly,
                     new System.Reflection.MemberFilter(
-                        (mi, _) => mi.Name != nameof(LinqBench)
+                        (mi, _) => mi.Name != nameof(LinqBench) && mi.Name != nameof(SanityCheck)
                     ),
                     null);
             foreach (var m in members)
             {
-                System.Console.Write($"Sanity checking {m.Name}");
-                var result = (m as System.Reflection.MethodInfo)?.Invoke(this, null) as int?;
-                System.Console.WriteLine($": {result}");
-                if (!(result?.Equals(oracle)) ?? false)
+                System.Console.WriteLine($"Sanity checking {m.Name}");
+                if (!((m as System.Reflection.MethodInfo)?.Invoke(this, null) as int?)?.Equals(oracle) ?? false)
                 {
                     System.Console.WriteLine("Failed!");
                     return false;

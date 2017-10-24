@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Concepts.Enumerable;
 using System.Concepts.Prelude;
 using System.Text;
 
@@ -65,4 +66,108 @@ namespace System.Concepts
             sb.Append("]");
         }
     }
+
+    #region Enumeration
+    public struct RangeCursor<TNum>
+    {
+        public enum State
+        {
+            OneBefore,
+            Okay,
+            OneAfter
+        }
+
+        // NOTE(@MattWindsor91): range is deliberately inlined, to avoid
+        //     having to do indirect field reaches on it.
+
+
+        /// <summary>The start of the range.</summary>
+        public readonly TNum start;
+        /// <summary>The end of the range.</summary>
+        public readonly TNum end;
+        /// <summary>The initial state of the cursor.</summary>
+        public readonly State initialState;
+
+
+        /// <summary>
+        /// The current item in the range.
+        /// </summary>
+        public TNum current;
+        /// <summary>
+        /// The state of the cursor.
+        /// </summary>
+        public State state;
+
+        public RangeCursor(TNum start, TNum end, State initialState)
+        {
+            this.start = start;
+            this.end = end;
+            state = this.initialState = initialState;
+            current = default;
+        }
+    }
+
+    /// <summary>
+    /// Range cursors are cloneable enumerators.
+    /// </summary>
+    public instance CloneableEnumerator_Range<TNum, implicit N, implicit E> : CCloneableEnumerator<RangeCursor<TNum>, TNum>
+        where N : Num<TNum>
+        where E : Eq<TNum>
+    {
+        // TODO: catch inverted ranges and overflows
+        // TODO: better optimisation if range is empty
+        RangeCursor<TNum> Clone(ref this RangeCursor<TNum> e) =>
+            new RangeCursor<TNum>(e.start, e.end, e.initialState);
+
+        void Reset(ref this RangeCursor<TNum> e)
+        {
+            // No need to rewind current.
+            // We do that lazily in MoveNext when we're AtStart.
+            e.state = e.initialState;
+        }
+
+        bool MoveNext(ref RangeCursor<TNum> e)
+        {
+            switch (e.state)
+            {
+                case RangeCursor<TNum>.State.Okay:
+                    e.current += FromInteger(1);
+                    if (e.end != e.current)
+                    {
+                        return true;
+                    }
+                    e.state = RangeCursor<TNum>.State.OneAfter;
+                    return false;
+                case RangeCursor<TNum>.State.OneAfter:
+                    return false;
+                case RangeCursor<TNum>.State.OneBefore:
+                    e.current = e.start;
+                    e.state = RangeCursor<TNum>.State.Okay;
+                    // Assume we can't have a 0-length range.
+                    return true;
+            }
+            return false;
+        }
+
+        TNum Current(ref RangeCursor<TNum> e) => e.current;
+        void Dispose(ref RangeCursor<TNum> e) { }
+    }
+
+    /// <summary>
+    /// Various enumerator instances for ranges.
+    /// </summary>
+    public instance Enumerable_Range<TNum, implicit N, implicit E> : CEnumerable<Range<TNum>, RangeCursor<TNum>>
+        where N : Num<TNum>
+        where E : Eq<TNum>
+    {
+        RangeCursor<TNum> GetEnumerator(this Range<TNum> range) =>
+            new RangeCursor<TNum>(
+                start: range.start,
+                end: range.start + FromInteger(range.count),
+                initialState: range.count == 0
+                    ? RangeCursor<TNum>.State.OneAfter
+                    : RangeCursor<TNum>.State.OneBefore);
+    }
+
+#endregion Enumeration
 }
