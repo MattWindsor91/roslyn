@@ -252,12 +252,11 @@ namespace TinyLinq.SpecialisedInstances
         public readonly Func<TSource, bool> predicate;
         /// <summary>The source array.</summary>
         public readonly TSource[] source;
-        /// <summary>The cached length of the source array.</summary>
-        public readonly int sourceLength;
 
         /// <summary>The current source index, may be +-1 bounds.</summary>
         public int sourceIndex;
-        // No point caching the current item, we can get it by index.
+        /// <summary>The cached current result.</summary>
+        public TSource result;
 
         /// <summary>Creates a new array Where cursor.</summary>
         /// <param name="source">The source array.</param>
@@ -266,8 +265,7 @@ namespace TinyLinq.SpecialisedInstances
         {
             this.predicate = predicate;
             this.source = source;
-            sourceLength = source.Length;
-
+            result = default;
             sourceIndex = -1;
         }
     }
@@ -287,18 +285,20 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArrayWhereCursor<TSource> c)
         {
-            while (c.sourceIndex != c.sourceLength - 1)
+            for (var i = c.sourceIndex + 1; i < c.source.Length; ++i)
             {
-                c.sourceIndex++;
-                if (c.predicate(c.source[c.sourceIndex]))
+                var item = c.source[i];
+                if (c.predicate(item))
                 {
+                    c.sourceIndex = i;
+                    c.result = item;
                     return true;
                 }
             }
             return false;
         }
 
-        TSource Current(ref ArrayWhereCursor<TSource> c) => c.source[c.sourceIndex];
+        TSource Current(ref ArrayWhereCursor<TSource> c) => c.result;
 
         void Dispose(ref ArrayWhereCursor<TSource> c) { }
     }
@@ -347,8 +347,6 @@ namespace TinyLinq.SpecialisedInstances
         public readonly Func<TSource, TResult> selector;
         /// <summary>The source array.</summary>
         public readonly TSource[] source;
-        /// <summary>The cached length of the source.</summary>
-        public readonly int sourceLength;
 
         /// <summary>The current source index,  May be +-1 bounds.</summary>
         public int sourceIndex;
@@ -366,7 +364,6 @@ namespace TinyLinq.SpecialisedInstances
             this.predicate = predicate;
             this.selector = selector;
             this.source = source;
-            sourceLength = source.Length;
 
             sourceIndex = -1;
             result = default;
@@ -390,13 +387,13 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArraySelectOfWhereCursor<TSource, TResult> c)
         {
-            while (c.sourceIndex != c.sourceLength - 1)
+            for (var i = c.sourceIndex + 1; i < c.source.Length; ++i)
             {
-                c.sourceIndex++;
-                var s = c.source[c.sourceIndex];
+                var s = c.source[i];
                 if (c.predicate(s))
                 {
                     c.result = c.selector(s);
+                    c.sourceIndex = i;
                     return true;
                 }
             }
