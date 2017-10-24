@@ -59,7 +59,7 @@ namespace TinyLinq.SpecialisedInstances
         bool MoveNext(ref ArraySelectCursor<TSource, TResult> c)
         {
             // Are we already on the last element?
-            if (c.sourceIndex < c.sourceLength)
+            if (c.sourceIndex == c.sourceLength - 1)
             {
                 return false;
             }
@@ -177,17 +177,17 @@ namespace TinyLinq.SpecialisedInstances
         bool MoveNext(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
             // Are we already on the last element?
-            if (c.sourceIndex < c.sourceLength && c.collectionIndex < c.collectionLength)
+            if (c.sourceIndex == c.sourceLength - 1 && c.collectionIndex == c.collectionLength - 1)
             {
                 return false;
             }
 
             // Do we need to get a new collection?
             // If we just started/reset, inner index is -1 and length is 0.
-            while (c.collectionIndex < c.collectionLength)
+            while (c.collectionIndex == c.collectionLength - 1)
             {
                 // Do we have any collections left?
-                if (c.sourceIndex < c.sourceLength)
+                if (c.sourceIndex == c.sourceLength - 1)
                 {
                     return false;
                 }
@@ -287,7 +287,7 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArrayWhereCursor<TSource> c)
         {
-            while (c.sourceIndex < c.sourceLength)
+            while (c.sourceIndex != c.sourceLength - 1)
             {
                 c.sourceIndex++;
                 if (c.predicate(c.source[c.sourceIndex]))
@@ -305,7 +305,7 @@ namespace TinyLinq.SpecialisedInstances
 
     /// <summary>Array Where cursors are countable.</summary>
     /// <typeparam name="TSource">Type of array elements.</typeparam>
-    instance Countable_ArrayWhereCursor<TSource> : CCountable<ArrayWhereCursor<TSource>>
+    public instance Countable_ArrayWhereCursor<TSource> : CCountable<ArrayWhereCursor<TSource>>
     {
         int Count(this ArrayWhereCursor<TSource> c)
         {
@@ -390,7 +390,7 @@ namespace TinyLinq.SpecialisedInstances
 
         bool MoveNext(ref ArraySelectOfWhereCursor<TSource, TResult> c)
         {
-            while (c.sourceIndex < c.sourceLength)
+            while (c.sourceIndex != c.sourceLength - 1)
             {
                 c.sourceIndex++;
                 var s = c.source[c.sourceIndex];
