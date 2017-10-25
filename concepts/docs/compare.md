@@ -6,7 +6,7 @@ author:
 institute:
   - Microsoft Research Cambridge
   - Microsoft Research Cambridge
-date: Sunday 15 November 2017
+date: Wednesday 25 October 2017
 abstract: |
   This document compares the Concept-C# system of concept (typeclass)
   based bounded polymorphism with that of other languages.  It also compares
@@ -23,7 +23,7 @@ header-includes:
 
 In this document, we compare Concept-C# to several different concept systems:
 
-- The _Shapes proposal_ for C#;
+- The C# _Shapes proposal_;
 - Ordinary C# with hand-encoding[^r] of the concepts system used in
   Concept-C# and Shapes;
 - Haskell _type classes_, as implemented by the Glasgow Haskell Compiler;
@@ -58,14 +58,14 @@ Different implementations use different terms from those used in Concept-C#:
 We compare concept systems by the type of methods we can attach to
 concepts and instances.  The categories are as follows:
 
-- _Static_: concepts can have methods that don’t have or need object
-  receivers. This is useful for abstracting over constructors and type-level
+- _Static_: methods that don’t have or need object
+  receivers---useful for abstracting over constructors and type-level
   properties.
-- _Instance_: concepts can have methods that take an object receiver by
-  value. This is useful for simulating interfaces with concepts.
-- _By-ref_: concepts can have methods that take an object receiver by
- reference.  This is useful for when the object is a value type: by-value
- semantics would make a copy and prevent direct mutation.
+- _Instance_: methods that take an object receiver by
+  value---useful for simulating interfaces with concepts.
+- _By-ref_: methods that take an object receiver by
+ reference---useful for when the object is a value type, and by-value
+ semantics would make a copy and thwart direct mutation.
 - _Operator_: concepts can overload operators.
 
 ## Static Methods ##
@@ -155,7 +155,7 @@ resembles the translation down to normal C#.  Shapes defines
 instance methods just as they would be defined for classes, and uses an implicit
 type parameter to represent the 'this' object.
 
-It is unclear how, in Shapes, we get hold of the implicit 'this' type
+It is unclear how, in Shapes, we get hold of the 'this' type
 parameter.  We discuss this later.
 
 ### Examples ###
@@ -210,9 +210,8 @@ protocol Comparable {
 
 ## By-ref Instance ##
 
-Only Rust implements by-ref instance methods. While it'd be nice for
-Concept-C# to support them, we run into the issue of extension method syntax
-not supporting by-ref ‘this’ parameters.
+Only Rust, and Concept-C# (through C# 7.2 `ref this`), implement by-ref instance
+methods.
 
 ### Example ###
 
@@ -224,6 +223,13 @@ pub trait Clone {
     fn clone(&self) -> Self;
 }
 ```
+
+The Concept-C# equivalent would be as follows:
+
+    public concept Clone<T>
+    {
+        T clone(ref this T self);
+    }
 
 ## Operator Overloads ##
 
@@ -253,8 +259,8 @@ for example---and defines the operators in terms of methods on those traits
 
 #### C# with manual encoding ####
 
-C# doesn't let us use actual `operator` declarations here, so we would need to
-desugar to a special method.
+C# doesn't let us use actual `operator` declarations here, so we must desugar to
+a special method.
 
 ```csharp
 interface ISemigroup<A>
@@ -288,7 +294,7 @@ Like Haskell, Swift lets us define new operators.
 |----------:|---------------|---------------|-------------|--------------|-----------------|-----------|
 | Static    | Default       | Yes: `static` | Default     | Default      | Yes: `static`   | Default   |
 | Instance  | Yes: CEMs     | Default       | N/A         | Yes: `self`  | Default         | No        |
-| By-ref    | No            | ?             | N/A         | Yes: `&self` | N/A?            | N/A?      |
+| By-ref    | Yes: CEMs     | ?             | N/A         | Yes: `&self` | N/A?            | N/A?      |
 | Operators | Yes           | Yes           | Yes         | Fixed traits | Yes             | ?         |
 
 # Implicit vs Explicit #
@@ -377,4 +383,64 @@ are instance methods in the concept.
 
 # Other Features #
 
-TBC
+## Inline instances in types ##
+
+Swift and Shapes both support the inline declaration of an instance inside a
+class.
+
+### Examples ###
+
+## Generic (multi-parameter) concepts ##
+
+### Examples ###
+
+## Generic (derived) instances ##
+
+### Examples ###
+
+## Associated types ##
+
+### Examples ###
+
+## Associated values ##
+
+**TBC:** implicits, traits, protocols
+
+### Examples ###
+
+## Concept objects ##
+
+Interfaces are types: when used directly as a type, they box over the
+actual implementation, using virtual dispatch to resolve members.  Since this
+is a useful abstraction, languages where concepts completely replace interfaces
+tend to support using certain, well-behaved concepts as boxes.
+
+Both Rust and Swift support this, with certain rules as to which concepts can
+be boxes (eg. no uses of the implicit type parameter except as the receiver of
+methods).  Haskell does not support this, and neither does Concept-C#.
+Shapes seems to allow it in the case of using shapes to extend one specific
+type.
+
+**TBC:** implicits
+
+### Examples ###
+
+## Summary ##
+
+|                   | Concept-C#    | Shapes        | Typeclasses | Traits   | Protocols | Implicits |
+|------------------:|---------------|---------------|-------------|----------|-----------|-----------|
+| Inline instances  | No            | Yes           | N/A[^iih]   | N/A[^iir]| Yes       | No?       |
+| Multi-TP concepts | Yes           | Yes           | Yes         | Yes      | No[^tpp]  | Explicit  |
+| Generic instances | Yes           | No?           | Yes         | Yes      | TBC       | Yes?      |
+| Associated types  | Partial[^atc] | No            | Yes         | Yes      | Yes       | Yes       |
+| Associated values | Partial[^avc] | No            | N/A[^avh]   | Yes?     | No?       | TBC       |
+| Concept objects   | No            | Partial[^cos] | No          | Yes      | Yes       | TBC       |
+
+[^atc]: As decorations on types; no support for implicit propagation.
+[^avc]: Properties cover some of the same use cases.
+[^cos]: Seemingly only when extending a specific type.
+[^iih]: Haskell has no classes, so this feature would make no sense.
+[^avh]: Haskell has no distinction between values and functions, so ordinary
+        typeclass functions are 'associated values'.
+[^tpp]: Any extra type parameters must be associated types.
+[^iir]: All Rust methods use `impl` syntax, so this feature wouldn't help.

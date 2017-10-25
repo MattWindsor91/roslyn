@@ -7,7 +7,7 @@ author:
 institute:
   - Microsoft Research Cambridge
   - Microsoft Research Cambridge
-date: Friday 13 November 2017
+date: Wednesday 25 October 2017
 abstract: |
   Concepts are a proposed way to structure polymorphic C# code. Like
   interfaces, they constrain generic type arguments based on the presence of
@@ -21,6 +21,7 @@ fontfamily: mathpazo
 papersize: a4
 header-includes:
   - \usepackage{bussproofs}
+  - \usepackage{fullpage}
 ---
 # Introduction #
 
@@ -29,14 +30,14 @@ header-includes:
 When writing generic code, we often rely on a handful of facts about the
 types used with that code. Most modern languages include _bounded parametric
 polymorphism_, or the ability to do this ahead of time in a type-safe
-manner[^1].  There are two main approaches:
+manner[^ego].  There are two main approaches:
 
-- _subtype polymorphism_: a bound on type `T` tells us that `T` is
-  a subtype of some other type `U`, giving generic code access to all of
-  the methods of, or able to accept a, `U`[^2];
-- _typeclasses_: a bound on type `T` tells us that `T` is a member of some
-  group (a 'class') `C`, giving generic code access to any methods that
-  are part of the definition of, or able to accept members of, `C`.
+- _subtype polymorphism_: a bound on type `T` says that `T` is
+  a subtype of some other type `U`, giving code access to all
+  the methods of, or able to accept a, `U`[^var];
+- _typeclasses_: a bound on type `T` says that `T` is a member of some
+  group ('class') `C`, giving code access to all methods that
+  are in the definition of, or able to accept members of, `C`.
 
 Both have the same idea---they assign functionality to types---but
 different strengths and weaknesses.  Subtype polymorphism is a natural fit for
@@ -45,12 +46,12 @@ bounds indelibly into that type's definition.  Typeclasses are more
 flexible, and scale easily to bounds relating multiple types in complex ways,
 but are more difficult to weave into an object-oriented system.
 
-.NET, Microsoft's ecosystem for managed code, is object-oriented at its core.
+.NET, Microsoft's managed code ecosystem, is object-oriented at its core.
 Since .NET 2.0, it has had a high-quality generic type system with subtype
 polymorphism based on classes---bundles of data and methods to operate on
 them---and _interfaces_---packs of method signatures that can be treated as
 subtypes for polymorphism. Interfaces deal with many of the same problems in
-bounded polymorphism as typeclasses, but inherit[^3] many limitations from
+bounded polymorphism as typeclasses, but inherit[^pun] many limitations from
 subtype polymorphism:
 
 - They can only constrain the members of one type---their subtype.
@@ -74,13 +75,13 @@ _extension methods_ system. Not only do concepts help us gain the
 expressiveness of powerful typeclass based bounded polymorphism, but they
 also let us tap into the specialisation power of modern .NET just-in-time
 compilers to give performance rivalling hand-specialised code.
-To assess the impact of concepts, we have a fork of the _Roslyn_ C# compiler,
-which we call _Concept-C#_.
+To assess the impact of concepts, we use _Concept-C#_, a fork of the
+_Roslyn_ C# compiler,
 
-[^1]: Except _Go_.
-[^2]: If the polymorphism system supports variance, sometimes the bound is
-      flipped: `T` is a _supertype of `U`.
-[^3]: Pun intended.
+[^ego]: Except _Go_.
+[^var]: If the polymorphism system supports variance, sometimes the bound is
+        flipped: `T` is a _supertype of `U`.
+[^pun]: Pun intended.
 
 ## This document ##
 
@@ -94,7 +95,7 @@ In this document, we:
   Runtime and its subtype-based generics system;
 - Conclude by discussing related and future work.
 
-# The C# 7.1 type system #
+# The C# 7.2 type system #
 
 As one of the key languages of the .NET ecosystem, C#'s type system is heavily
 based on the underlying .NET Common Language Runtime (CLR).  The CLR supports
@@ -115,24 +116,24 @@ as follows:
     {
         // Data (fields)
         private int _length;
-        private int _breadth;
+        private int _height;
 
         // Constructor
-        Rectangle(int length, int breadth)
+        Rectangle(int length, int height)
         {
             _length = length;
-            _breadth = breadth;
+            _height = height;
         }
 
         // Instance method
         public int Area()
         {
-            return _length * _breadth;
+            return _length * _height;
         }
 
         // Properties
         public int Length => _length;
-        public int Breadth => _breadth;
+        public int height => _height;
 
         // Static method
         public static Rectangle Square(int length)
@@ -161,7 +162,7 @@ then we can call upon C#'s interface-based subtyping system as follows:
         // ...
         public int Area()
         {
-            return _length * _breadth;
+            return _length * _Height;
         }
     }
 
@@ -266,12 +267,12 @@ invoked as if they were native methods on some target type:
     {
         public static Rectangle Rotate(this Rectangle me)
         {
-            return new Rectangle(length: me.Breadth, breadth: me.Length)
+            return new Rectangle(length: me.Height, height: me.Length)
         }
     }
 
-    var rec = new Rectangle(27, 53); // length 27, breadth 53
-    var rot = rec.Rotate();          // breadth 27, length 53
+    var rec = new Rectangle(27, 53); // length 27, height 53
+    var rot = rec.Rotate();          // height 27, length 53
 
 Extension methods are a powerful way to extend existing classes, but do have
 limitations.  We can't constrain type parameters based on whether they have
@@ -319,7 +320,7 @@ through a C# constraint.  We can use `CNum` as follows:
 
     public A SomePoly<A, implicit NumA>(A x, A c)
         where NumA : CNum<A> =>
-        NumT.Add(NumT.Add(NumT.Mul(x, x), x), c);
+        NumA.Add(NumA.Add(NumA.Mul(x, x), x), c);
 
 Formally, when we introduce the `implicit NumA` type parameter, we create
 a proof obligation that `CNum<T>` holds before we get to use `SomePoly`
@@ -436,22 +437,22 @@ We can also, finally, make our shapes library generic over numeric types[^5]:
     public class Rectangle<T, implicit NT> where NT : CNum<T>
     {
         private T _length;
-        private T _breadth;
+        private T _height;
 
         // Constructor
-        Rectangle(T length, T breadth)
+        Rectangle(T length, T height)
         {
             _length = length;
-            _breadth = breadth;
+            _height = height;
         }
 
         public T Area()
         {
-            return _length * _breadth;
+            return _length * _height;
         }
 
         public T Length => _length;
-        public T Breadth => _breadth;
+        public T height => _height;
 
         // Static method
         public static Rectangle Square(T length)
@@ -526,7 +527,7 @@ to write:[^7]
 
 [^6]: Future versions of Concept-C# will probably prevent the programmer from
       overloading builtin operators anyway, to prevent surprises.
-[^7]: We don't currently forward static methods, but maybe we should.
+[^7]: We don't forward static methods, but maybe we should.
 
 ## Defaults ##
 
@@ -542,6 +543,14 @@ Concept-C# allows concepts to provide bodies for methods they specify.
 These bodies are then used as the _default implementation_ of the method
 in any instance that doesn't either directly implement the method, or implicitly
 forward it based on the rules above.
+
+The syntax for this is straightforward:
+
+    public concept CNum<T>
+    {
+        // ...
+        T operator -(int x) => FromInteger(0) - x;
+    }
 
 ## Multi-parameter concepts ##
 
@@ -592,26 +601,24 @@ idea of concepts than previously seen.  C# already has
 multi-parameter interfaces and structs, so our implementation of
 multi-parameter concepts is simple.
 
-We can implement enumerators and enumerables in Concept-C# as follows:
+Using C#7.2's support for by-reference extension methods, we implement
+enumerators and enumerables in Concept-C# as follows:
 
-    public concept CEnumerator<TEnum, TElem>
+    public concept CEnumerator<TEnum, [AssociatedType]TElem>
     {
-        TElem Current(ref TEnum e);
-        void Dispose(ref TEnum e);
-        bool MoveNext(ref TEnum e);
-        void Reset(ref TEnum e);
+        TElem Current(ref this TEnum e);
+        void Dispose(ref this TEnum e);
+        bool MoveNext(ref this TEnum e);
+        void Reset(ref this TEnum e);
     }
-    public concept CEnumerable<TColl, TEnum, TElem>
-    : CEnumerator<TEnum, TElem>
+    public concept CEnumerable<TColl, [AssociatedType]TEnum>
     {
         TEnum GetEnumerator(TColl c);
     }
 
-When we ask for the enumerator of a `CEnumerable`, we
-know _at compile-time_ not only that it satisfies `CEnumerator`,
-but also its concrete type.  We sacrifice some of the abstraction of
-the interface version, but get possibilities to optimise
-performance.
+When we ask for the enumerator of a `CEnumerable`, we know its concrete type
+_at compile-time_. We sacrifice some of the abstraction of the interface
+version, but get possibilities to optimise performance.
 
 ## Lightening the load ##
 
@@ -620,20 +627,20 @@ For example, collections that contain a bounded, ordered number of elements
 with `O(1)` lookup given a position in the collection have trivial
 enumerators, which must be wired up separately for each instance.
 
-Thankfully, derived instances mean we can break down the implementation of
-a large concept by using smaller concepts.  So, if we have the following
+Derived instances mean we can break down the implementation of
+a large concept by using smaller concepts.  Suppose we have the following
 concept for looking up items in a collection by their index:
 
     public concept CIndexable<TColl, TElem>
     {
-        TElem At(TColl c, int i);
+        TElem At(this TColl c, int i);
     }
 
-And the following concept for looking up the length of a collection:
+Suppose we also have the following concept for taking length of a collection:
 
     public concept CCountable<TColl>
     {
-        int Count(TColl c);
+        int Count(this TColl c);
     }
 
 We can create a generalised `CEnumerable` instance capturing the standard
@@ -646,26 +653,26 @@ looks as follows:
         public int pos;
         public int len;
     }
-    public instance Enumerable_IC<TColl, TElem, implicit I, implicit C>
+    public instance Enumerable_IC<TColl, [AssociatedType]TElem, implicit I, implicit C>
         : CEnumerable<TColl, ICEnumerator<TColl, TElem>, TElem>
         where I : CIndexable<TColl> where C : CCountable<TColl>
     {
-        ICEnumerator<TColl, TElem> GetEnumerator(TColl c) =>
+        ICEnumerator<TColl, TElem> GetEnumerator(this TColl c) =>
             new ICEnumerator<TColl, TElem>
                 { src = c, pos = 0, len = C.Count(c) };
 
-        TElem Current(ref ICEnumerator<TColl, TElem> e) => e.src[e.pos];
+        TElem Current(ref this ICEnumerator<TColl, TElem> e) => e.src[e.pos];
 
-        void Dispose(ref ICEnumerator<TColl, TElem> e) => {};
+        void Dispose(ref this ICEnumerator<TColl, TElem> e) => {};
 
-        bool MoveNext(ref ICEnumerator<TColl, TElem> e)
+        bool MoveNext(ref this ICEnumerator<TColl, TElem> e)
         {
             if (e.len <= e.pos) return false;
             e.pos++;
             return (e.pos < e.len);
         };
 
-        void Reset(ref ICEnumerator<TColl, TElem> e) => e.pos = -1;
+        void Reset(ref this ICEnumerator<TColl, TElem> e) => e.pos = -1;
     }
 
 Now, type creators can write instances for the much simpler `CCountable`
@@ -675,11 +682,11 @@ For example, we can define list enumeration as possible:
 
     public instance Indexable_List<TElem> : CIndexable<List<TElem>>
     {
-        TElem At(List<TElem> c, int i) => c[i];
+        TElem At(this List<TElem> c, int i) => c[i];
     }
     public instance Countable_List<TElem> : CCountable<List<TElem>>
     {
-        int Count(List<TElem> c) => c.Count;
+        int Count(this List<TElem> c) => c.Count;
     }
 
 ## Specialisation ##
@@ -695,13 +702,13 @@ We can write a working instance over `List<T>.Enumerator` as follows:
     public instance Enumerable_List<TElem>
         : CEnumerable<List<TElem>, List<TElem>.Enumerator, TElem>
     {
-        List<TElem>.Enumerator GetEnumerator(List<TElem> c) =>
+        List<TElem>.Enumerator GetEnumerator(this List<TElem> c) =>
             c.GetEnumerator(c);
 
-        TElem Current(ref List<TElem>.Enumerator e) => e.Current;
-        void Dispose(ref List<TElem>.Enumerator e) => e.Dispose();
-        bool MoveNext(ref List<TElem>.Enumerator e) => e.MoveNext();
-        void Reset(ref List<TElem>.Enumerator e) => e.Reset();
+        TElem Current(ref this List<TElem>.Enumerator e) => e.Current;
+        void Dispose(ref this List<TElem>.Enumerator e) => e.Dispose();
+        bool MoveNext(ref this List<TElem>.Enumerator e) => e.MoveNext();
+        void Reset(ref this List<TElem>.Enumerator e) => e.Reset();
     }
 
 This poses a problem: there are now two suitable instances for the concept
@@ -728,10 +735,10 @@ instance over the general one, and don't want to write out the entire
 instance.  Concept-C# has heuristics for _tie-breaking_ when multiple
 instances are available.  To use them, we must tell it that the less
 suitable instance can be _overlapped_ by any more suitable instance, or the
-more suitable instance can be _overlapping_ less suitable instances[^8].
+more suitable instance can be _overlapping_ less suitable instances[^ovl].
 
-[^8]: This system is based on the Glasgow Haskell Compiler's
-      _overlapping instances_ extension.
+[^ovl]: This system is based on the Glasgow Haskell Compiler's
+        _overlapping instances_ extension.
 
 We can turn tie-breaking on by making the following change to our general
 instance:
@@ -755,15 +762,16 @@ interface constraints.  We can port `IEnumerable` code to `CEnumerable` as
 follows:
 
     [Overlappable]
-    public instance Enumerable_IEnumerable<TColl, TElem>
-        : CEnumerable<TColl, TElem, IEnumerator<TElem>>
-        where TColl : IEnumerable<TElem>
+    public instance Enumerable_IEnumerable<TElem>
+        : CEnumerable<IEnumerable<TElem>, IEnumerator<TElem>, IEnumerator<TElem>>
+    {}
+    [Overlappable]
+    public instance Enumerator_IEnumerator<TElem>
+        : CEnumerator<IEnumerator<TElem>>
     {
-        IEnumerator<TElem> GetEnumerator(TColl c) => c.GetEnumerator();
-        void Reset(ref IEnumerator<TElem> e) => e.Reset();
-        bool MoveNext(ref IEnumerator<TElem> e) => e.MoveNext();
-        TElem Current(ref IEnumerator<TElem> e) => e.Current;
-        void Dispose(ref IEnumerator<TElem> e) => e.Dispose();
+        bool MoveNext(ref this IEnumerator<TElem> e) => e.MoveNext();
+        TElem Current(ref this IEnumerator<TElem> e) => e.Current;
+        void Dispose(ref this IEnumerator<TElem> e) => e.Dispose();
     }
 
 This pattern generalises to other concepts.  We can port `IComparable` code
@@ -777,10 +785,17 @@ to `CComparable` as follows:
         int Compare(TLhs l, TRhs r) => l.CompareTo(r);
     }
 
+* * *
+
+**TODO**: this example is probably wrong, we need to check what refkinds do to
+CEM lookup.
+
+* * *
+
 Going the other way---creating an `IEnumerable` from `CEnumerable`---is
-harder, as concepts have no tangible type representation like interfaces do.
+harder.  Unlike interfaces, concepts have no tangible type representation.
 Interfaces implicitly 'box' their actual implementation, so we must do a
-similar job with the concept implementation.  This works as follows:
+similar job with the concept witness.  This works as follows:
 
     class EnumeratorShim<TElem, TState, implicit N> : IEnumerator<TElem>
         where N : CEnumerator<TElem, TState>
@@ -814,7 +829,7 @@ tricky to work out if we enter the concept through a call to
 
 Languages that implement multi-parameter concepts have various solutions
 to this, such as Haskell's type families and functional dependencies, and
-Rust's associated types.  In Concept-C#, we currently have a simple
+Rust's associated types.  Concept-C# has a simple
 system approximating associated types.  Type parameters marked
 `[AssociatedType]` will be filled in by the concept witness inferrer as
 soon as it fixes an instance for a concept constraint that mentions that
@@ -836,13 +851,12 @@ we will pick up the `TElem` and `TEnum` of the inferred instance.
 
 ## Standalone instances ##
 
-Concepts have access to a large amount of features normal extension methods
-don't have.  However, it is possible to use instances as a more powerful
-alternative to standard extension classes.
-
-By creating a _standalone instance_---an instance that inherits from no
-concepts---one can attach concept extension methods and operator overloads[^9]
-to a type without creating a concept to hold them.
+Concepts can access a large amount of features normal extension methods
+don't have.  However, we can also use instances as a powerful direct
+alternative to standard extension classes.  If we make a _standalone
+instance_---one that inherits from no concepts---we can attach
+concept extension methods and operator overloads[^9] to a type without
+creating a concept to hold them.
 
 For example,
 
@@ -863,33 +877,239 @@ will add an overload for `+` to all `Goo` as long as `GooPlus` is in scope.
 
 # Implementation #
 
-Our proposal needs no changes to the Common Language Runtime.
+We require no changes to the Common Language Runtime (CLR).
 We need only modest changes to the compiler and an extension to the core
-library.
+library.  Still, native CLR support for concepts would be useful: it
+would enable more flexibility in implementing, optimising, and using them.
+
+## Attributes ##
+
+To let us access concepts and instances from compiled assemblies, while not
+changing the CLR, most of the new types of declaration in Concept-C# map to
+custom attributes. Concept-C# knows, when reading in metadata from compiled
+assemblies, to treat this attribute encoding in the same way as the new
+concept syntax.
+
+This means that other CLR languages can interoperate with our concepts, either
+by mapping it to new syntax or just exposing the attributes directly.
+
+## Concepts are interfaces ##
+
+Our prototype compiles `concept`s directly to interfaces, with the following
+rules:
+
+- We apply the `System.Concepts.ConceptAttribute` attribute to the interface;
+- Each method gains a `public` modifier;
+- Operators are translated to methods through their usual special naming
+  convention---unlike actual C# operators, they remain instance methods;
+- Extension methods gain the `System.Concepts.ConceptExtensionAttribute`
+  attribute, and then translate as if they were _normal_ methods.
+
+Our `CNum` example from earlier becomes:
+
+```csharp
+using System.Concepts;
+
+[Concept]
+public interface CNum<T>
+{
+    public T op_Addition(T x, T y);
+    public T op_Subtraction(T x, T y);
+    public T op_Multiply(T x, T y);
+    [ConceptExtension] public T Abs(T x);
+    [ConceptExtension] public T Signum(T x);
+    public T FromInteger(T x);
+}
+```
+
+## Instances are structs ##
+
+Similarly, we translate each `instance` to a `struct`, with the following
+rules:
+
+- We apply the `System.Concepts.InstanceAttribute` attribute to the struct;
+- Autofilled methods are expanded by the compiler into calls into whichever
+  method or operator they are autofilled by;
+- As above, each method becomes `public` and each concept extension method
+  gains `ConceptExtension`.
+
+Our autofilled instance of `CNum<int>` becomes:
+
+```csharp
+using System.Concepts;
+
+[Instance]
+public struct Num_Int : CNum<int>
+{
+    [ConceptExtension] public int Abs(int x)    => Math.Abs(x);
+    [ConceptExtension] public int Signum(int x) => Math.Sign(x);
+    public int FromInteger(int x)               => x;
+
+    [CompilerGenerated] public int op_Addition(int x, int y)    => x + y;
+    [CompilerGenerated] public int op_Subtraction(int x, int y) => x - y;
+    [CompilerGenerated] public int op_Multiply(int x, int y)    => x * y;
+}
+```
+
+## `implicit` type parameters ##
+
+To make concept inference work properly across the separate compilation
+boundary, the `implicit` keyword becomes the
+`System.Concepts.ConceptWitnessAttribute` attribute in the translation.
+Also, any `implicit` type parameter gains a `struct` constraint, since
+concept instances are always value types.
+
+The signature of `SomePoly` translates as follows:
+
+```csharp
+using System.Concepts;
+
+public T SomePoly<T, [ConceptWitness]NT>(T x, T c) where NT : struct, CNum<T>;
+```
+
+## Concept instance calls ##
+
+Any attempt to access a member on a concept instance of type `T` is translated
+in one of two ways:
+
+- If the call is inside a block, we generate an uninitialised local variable
+  for `T` at the outermost block, and turn the call into an instance call on
+  that variable[^cic];
+- Otherwise (for example, in field initialisers), we call into `default(T)`.
+
+[^cic]: We re-use the same variable for subsequent calls into `T`, too.
+
+To demonstrate, let's translate `SomePoly`:
+
+```csharp
+public T SomePoly<T, [ConceptWitness]NT>(T x, T c) where NT : struct, CNum<T>
+{
+    NT nt;
+    return
+        nt.op_Addition(
+            nt.op_Addition(
+                nt.op_Multiply(x, x),
+                x
+            ),
+            c
+        );
+}
+```
+
+If this body were inside an initialiser, it would instead become:
+
+```csharp
+    default(NT).op_Addition(
+        default(NT).op_Addition(
+            default(NT).op_Multiply(x, x),
+            x
+        ),
+        c
+    ) ;
+```
+
+## Defaults are also structs ##
+
+Whenever a concept has default implementations, we generate a nested struct
+inside the concept to hold them.  This struct is generic on one type parameter:
+the instance that is calling into the default implementation.  This makes sure
+the default can call back into the original instance.
+
+If we added negation to `CNum` as suggested earlier, this would
+give us:
+
+```csharp
+public interface CNum<T>
+{
+    // ...
+    public T op_UnaryNegation(T x);
+
+    [CompilerGenerated]
+    public struct _default<W> where W : CNum<T>
+    {
+        public T op_UnaryNegation(T x)
+        {
+            W w;
+            return w.op_Subtraction(w.FromInteger(0), x);
+        }
+    }
+}
+```
 
 ## Inference ##
 
-Our key change is to extend C#'s type inference algorithm in two ways:
+We extend C#'s type inference algorithm in two ways:
 
 - Infer missing concept-witness and associated-type parameters with a
   new, Haskell-style inference strategy;
 - Allow partially specified type arguments when the missing arguments are
   concept witnesses or associated types, and _part-infer_ the rest;
 
-** TODO **
+**TODO**
 
-## Related Work ##
+# Related Work #
+
+## Other languages ##
+
+The rise of typeclass-based polymorphism in other languages motivates us
+greatly.  While languages such as Haskell have always had it, recently there has
+been an explosion of use in languages closer to C#:
+
+- Rust has *traits*: concepts with defaults, unnamed witnesses (*trait
+  bounds*) and instances (*impl*s), and C#-style syntax.  Rust uses traits for
+  zero-cost abstraction, generating specialised code for trait-bound methods
+  where possible.  When it needs to, it can use boxed ‘*trait objects*’,
+  containing type-erased data and vtable pointers.
+- Swift has *protocols*: C#-style interfaces, but with support for writing
+  extensions to add existing classes to new interfaces.  These behave very
+  much like Concept-C# instances.  Swift has optional requirements, which are
+  similar to defaults (but put the onus of specifying the default behaviour on
+  the caller).
+- Scala has *implicit parameters*: concepts whose instances are
+  singleton objects passed as implicit formal parameters (not type
+  parameters). This is very close in design, expressivity, and feature
+  set to our implementation.  However, we pass
+  witnesses as types rather than singleton objects, and use a special
+  type declaration for concepts (which are just abstract classes in
+  Scala).  This gives stronger performance guarantees through JIT specialising.
+- C++ has theoretical (documentation-level) concepts with no
+  language support beyond the much more general template system.
+  However, this does not give use-site typechecking or separate
+  compilation.  Language support for concepts is slowly progressing.
+
+## _Shapes_ proposal ##
 
 **TODO**
 
-### _Shapes_ proposal ###
+## F# ##
+
+As a quick experiment, a team at Microsoft Research Cambridge
+(ourselves, as well as Don Syme, James Clarke, and Rupert Horlick) built a
+prototype fork of Visual F# adding a subset of concepts to F#.
+
+# Conclusions #
 
 **TODO**
 
-## Conclusions ##
+## Future work ##
 
-**TODO**
+There are many unanswered questions that we must answer before making C#
+concepts a reality.  These are not just syntactic---'is `concept`
+the best keyword?', 'should witnesses be explicit or implicit?'---, but also
+semantic---'what should the tie-breaking rules be?', 'when should concept
+extension methods appear in scope?'---and even relating to usability and
+discoverability---'are concepts too much of a cognitive burden on developers?'.
+We do not have answers to many of these questions, but look forward to the
+challenge of finding them.
 
-### Future work ###
+### Support for other languages ###
 
-**TODO**
+While we have tried to keep concepts as portable as possible---the only C#
+specifics are how inference and binding works, to our knowledge---extending this
+proposal to other languages in a user-friendly manner would require a nontrivial
+amount of porting.
+
+The Roslyn compiler project targets both C# and Visual Basic.  If we implement
+concepts for C#, it would be natural to also implement them for Visual Basic.
+This would need extra work on creating idiomatic syntax for Visual
+Basic concepts, and also extending the language compiler.
