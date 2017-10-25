@@ -425,8 +425,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 case SyntaxKind.DelegateKeyword:
                 case SyntaxKind.ClassKeyword:
                 case SyntaxKind.InterfaceKeyword:
-                case SyntaxKind.ConceptKeyword: //@t-mawind
-                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.StructKeyword:
                 case SyntaxKind.AbstractKeyword:
                 case SyntaxKind.InternalKeyword:
@@ -438,6 +436,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 case SyntaxKind.StaticKeyword:
                 case SyntaxKind.UnsafeKeyword:
                 case SyntaxKind.OpenBracketToken:
+                // MattWindsor91 (Concept-C# 2016)
+                case SyntaxKind.ConceptKeyword:
+                case SyntaxKind.InstanceKeyword:
                     return true;
                 default:
                     return false;
@@ -1462,8 +1463,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                     CheckForVersionSpecificModifiers(modifiers, SyntaxKind.StaticKeyword, MessageID.IDS_FeatureStaticClasses);
                     return this.ParseClassOrStructOrInterfaceDeclaration(attributes, modifiers);
 
-                case SyntaxKind.ConceptKeyword: //@t-mawind
-                case SyntaxKind.InstanceKeyword: //@t-mawind
                 case SyntaxKind.StructKeyword:
                     // report use of "readonly struct" if feature is unsupported
                     CheckForVersionSpecificModifiers(modifiers, SyntaxKind.ReadOnlyKeyword, MessageID.IDS_FeatureReadOnlyStructs);
@@ -1471,6 +1470,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
                 case SyntaxKind.InterfaceKeyword:
                     return this.ParseClassOrStructOrInterfaceDeclaration(attributes, modifiers);
+
+                // @MattWindsor91 (Concept-C# 2016)
+                case SyntaxKind.ConceptKeyword:
+                case SyntaxKind.InstanceKeyword:
+                    return ParseClassOrStructOrInterfaceDeclaration(attributes, modifiers);
 
                 case SyntaxKind.DelegateKeyword:
                     return this.ParseDelegateDeclaration(attributes, modifiers);
@@ -1509,6 +1513,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             Debug.Assert(!IsInAsync);
 
             var classOrStructOrInterface = this.EatToken();
+            // @MattWindsor91 (Concept-C# 2017)
+            // Only allow concepts and instances with the feature turned on.
+            if (classOrStructOrInterface.Kind == SyntaxKind.ConceptKeyword
+                || classOrStructOrInterface.Kind == SyntaxKind.InterfaceKeyword)
+            {
+                classOrStructOrInterface = CheckFeatureAvailability(classOrStructOrInterface, MessageID.IDS_FeatureConcepts);
+            }
+
             var saveTerm = _termState;
             _termState |= TerminatorState.IsPossibleAggregateClauseStartOrStop;
             var name = this.ParseIdentifierToken();

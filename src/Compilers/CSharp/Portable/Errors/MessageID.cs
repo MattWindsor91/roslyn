@@ -145,6 +145,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         IDS_FeatureRefExtensionMethods = MessageBase + 12728,
         IDS_StackAllocExpression = MessageBase + 12729,
         IDS_FeaturePrivateProtected = MessageBase + 12730,
+
+        // @MattWindsor91 (Concept-C# 2017)
+        IDS_FeatureConcepts = MessageBase + 12731
     }
 
     // Message IDs may refer to strings that need to be localized.
@@ -188,6 +191,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             switch (feature)
             {
+                // @MattWindsor91 (Concept-C# 2017)
+                case MessageID.IDS_FeatureConcepts:
+                    return "concepts";
                 case MessageID.IDS_FeatureIOperation:
                     return "IOperation";
                 default:

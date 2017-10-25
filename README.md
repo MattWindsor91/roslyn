@@ -66,8 +66,14 @@ instance.
 
 ### Warning
 
-To use concepts, you must build and reference `ConceptAttributes.dll`. The
-project for this is located in `concepts\code\ConceptAttributes`.
+To use concepts, you must:
+
+- use the `concepts` feature flag;
+  - For `csc`, use `/features:concepts`.
+  - For `msbuild`, add `<Features>concepts</Features>` to the first
+    `PropertyGroup`.
+- build and reference `ConceptAttributes.dll`.
+  - The project for this is located in `concepts\code\ConceptAttributes`.
 
 ## Examples
 
