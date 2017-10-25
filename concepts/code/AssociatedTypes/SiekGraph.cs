@@ -227,19 +227,19 @@ namespace AssociatedTypes
     }
     instance CEnumeratorAdjacencyListOutEdge : CResettableEnumerator<(int, List<int>[], int, Edge), Edge>
     {
-        void Reset(ref (int, List<int>[], int, Edge) enumerator)
+        void Reset(ref this (int, List<int>[], int, Edge) enumerator)
         {
             enumerator.Item3 = -1;
             enumerator.Item4 = default(Edge);
         }
-        bool MoveNext(ref (int, List<int>[], int, Edge) enumerator)
+        bool MoveNext(ref this (int, List<int>[], int, Edge) enumerator)
         {
             if (++enumerator.Item3 >= (enumerator.Item2[enumerator.Item1].Count)) return false;
             enumerator.Item4 = new Edge { source = enumerator.Item1, target = enumerator.Item2[enumerator.Item1][enumerator.Item3] };
             return true;
         }
-        Edge Current(ref (int, List<int>[], int, Edge) enumerator) => enumerator.Item4;
-        void Dispose(ref (int, List<int>[], int, Edge) enumerator) { }
+        Edge Current(ref this (int, List<int>[], int, Edge) enumerator) => enumerator.Item4;
+        void Dispose(ref this (int, List<int>[], int, Edge) enumerator) { }
     }
 
     instance CVertexListGraphAdjacencyList : CVertexListGraph<AdjacencyList, Vertex>
@@ -252,23 +252,23 @@ namespace AssociatedTypes
     }
     instance CEnumerableAdjacencyListVertex : CEnumerable<AdjacencyList, (int, int, Vertex)>
     {
-        (int, int, Vertex) GetEnumerator(AdjacencyList graph) => (graph.list.Length, -1, default(Vertex));
+        (int, int, Vertex) GetEnumerator(this AdjacencyList graph) => (graph.list.Length, -1, default(Vertex));
     }
     instance CEnumeratorAdjacencyListVertex : CResettableEnumerator<(int, int, Vertex), Vertex>
     {
-        void Reset(ref (int, int, Vertex) enumerator)
+        void Reset(ref this (int, int, Vertex) enumerator)
         {
             enumerator.Item2 = -1;
             enumerator.Item3 = default(Vertex);
         }
-        bool MoveNext(ref (int, int, Vertex) enumerator)
+        bool MoveNext(ref this (int, int, Vertex) enumerator)
         {
             if (++enumerator.Item2 >= enumerator.Item1) return false;
             enumerator.Item3 = new Vertex { id = enumerator.Item2 };
             return true;
         }
-        Vertex Current(ref (int, int, Vertex) enumerator) => enumerator.Item3;
-        void Dispose(ref (int, int, Vertex) enumerator) { }
+        Vertex Current(ref this (int, int, Vertex) enumerator) => enumerator.Item3;
+        void Dispose(ref this (int, int, Vertex) enumerator) { }
     }
 
     class TestVisitor : BFSVisitor<AdjacencyList, Edge, Vertex, Queue<Vertex>, CIncidenceGraphAdjacencyList, CEdgeEdge>

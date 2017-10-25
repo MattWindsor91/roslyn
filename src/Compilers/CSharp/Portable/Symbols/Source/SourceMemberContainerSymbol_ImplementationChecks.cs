@@ -62,6 +62,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     cancellationToken.ThrowIfCancellationRequested();
                     CheckInterfaceUnification(diagnostics);
 
+                    // @MattWindsor91 (Concept-C# 2017)
+                    if (IsInstance)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        CheckConceptInstanceMembers(diagnostics);
+                    }
+
                     if (this.IsInterface)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -73,10 +80,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             ComputeInterfaceImplementations(diagnostics, cancellationToken),
                             default(ImmutableArray<SynthesizedImplementationForwardingMethod>)).IsDefault)
                     {
-                        // @MattWindsor91 (Concept-C# 2017)
-                        // As usual, this is in the wrong place.
-                        CheckExcessInstanceMembers(diagnostics);
-
                         // Do not cancel from this point on.  We've assigned the member, so we must add
                         // the diagnostics.
                         AddDeclarationDiagnostics(diagnostics);
@@ -91,99 +94,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             return _lazySynthesizedImplementations;
-        }
-
-        /// <summary>
-        /// If this is a concept instance, checks that all of its members come
-        /// from concepts.
-        /// </summary>
-        /// <param name="diagnostics">
-        /// The diagnostics bag to extend with errors coming from excess
-        /// members.
-        /// </param>
-        private void CheckExcessInstanceMembers(DiagnosticBag diagnostics)
-        {
-            // @MattWindsor91 (Concept-C# 2017)
-            // This is extremely inefficient: it does a forall-exists pairwise
-            // equality check across all concepts in the instance.
-
-            if (!IsInstance || IsStandaloneInstance)
-            {
-                // Standalone instances would normally report _every_ member as
-                // excess.
-                return;
-            }
-
-            var interfaces = AllInterfacesNoUseSiteDiagnostics;
-
-            var excessMembers = PooledHashSet<Symbol>.GetInstance();
-
-            foreach (var member in GetMembersUnordered())
-            {
-                if (member.Kind == SymbolKind.Method)
-                {
-                    var method = (MethodSymbol)member;
-                    if (method.IsDefaultValueTypeConstructor())
-                    {
-                        // Ignore the implicit struct constructor:
-                        // we can't get rid of it, and it's harmless anyway.
-                        continue;
-                    }
-
-                    var assoc = method.AssociatedSymbol;
-                    if (assoc != null && excessMembers.Contains(assoc))
-                    {
-                        // If we reported, for example, a property, don't
-                        // re-report its accessors.
-                        continue;
-                    }
-                }
-
-                if (IsExcessConceptMember(member, interfaces))
-                {
-                    excessMembers.Add(member);
-                    // TODO: suppress duplicate errors on excess properties:
-                    // currently, the property AND its accessors are flagged.
-                    diagnostics.Add(ErrorCode.ERR_ExcessConceptInstanceMembers, member.Locations.ElementAtOrDefault(0), member);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Is the given member an excess concept member according to
-        /// the concepts in the given interface set?
-        /// </summary>
-        /// <param name="member">
-        /// The member to check.
-        /// </param>
-        /// <param name="interfaces">
-        /// The set of interfaces containing all concepts that
-        /// <paramref name="member"/> should belong to if it is not excess.
-        /// </param>
-        /// <returns>
-        /// True if <paramref name="member"/> is not an implementation of
-        /// a method from one of the concepts in <paramref name="interfaces"/>.
-        /// False otherwise.
-        /// </returns>
-        private bool IsExcessConceptMember(Symbol member, ImmutableArray<NamedTypeSymbol> interfaces)
-        {
-            foreach (var @interface in interfaces)
-            {
-                if (!@interface.IsConcept)
-                {
-                    continue;
-                }
-
-                foreach (var imember in @interface.GetMembersUnordered())
-                {
-                    if (FindImplementationForInterfaceMember(imember) == member)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
         }
 
         private void CheckAbstractClassImplementations(DiagnosticBag diagnostics)

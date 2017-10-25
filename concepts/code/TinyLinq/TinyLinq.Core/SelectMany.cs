@@ -108,10 +108,10 @@ namespace TinyLinq
         where CEb : CEnumerable<TCollectionColl, TCollectionEnum>
         where CEt : CEnumerator<TCollectionEnum, TCollection>
     {
-        SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> Clone(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) =>
+        SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> Clone(ref this SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) =>
             new SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult>(c.source, c.collectionSelector, c.resultSelector);
 
-        void Reset(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
+        void Reset(ref this SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
         {
             if (c.state == CursorState.Active)
             {
@@ -125,7 +125,7 @@ namespace TinyLinq
             c.state = CursorState.Uninitialised;
         }
 
-        bool MoveNext(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
+        bool MoveNext(ref this SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
         {
             switch (c.state)
             {
@@ -173,9 +173,9 @@ namespace TinyLinq
             return false;
         }
 
-        TResult Current(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) => c.result;
+        TResult Current(ref this SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c) => c.result;
 
-        void Dispose(ref SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
+        void Dispose(ref this SelectManyCursor<TSourceColl, TSourceEnum, TSource, TCollectionColl, TCollectionEnum, TCollection, TResult> c)
         {
             if (c.state == CursorState.Active)
             {

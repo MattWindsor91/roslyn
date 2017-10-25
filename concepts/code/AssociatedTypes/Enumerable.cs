@@ -381,19 +381,19 @@ namespace AssociatedTypes
         }
         public instance CEnumeratorString : CResettableEnumerator<(char[], int, char), char>
         {
-            void Reset(ref (char[], int, char) enumerator)
+            void Reset(ref this (char[], int, char) enumerator)
             {
                 enumerator.Item2 = -1;
                 enumerator.Item3 = default(char);
             }
-            bool MoveNext(ref (char[], int, char) enumerator)
+            bool MoveNext(ref this (char[], int, char) enumerator)
             {
                 if (++enumerator.Item2 >= (enumerator.Item1.Length)) return false;
                 enumerator.Item3 = enumerator.Item1[enumerator.Item2];
                 return true;
             }
-            char Current(ref (char[], int, char) enumerator) => enumerator.Item3;
-            void Dispose(ref (char[], int, char) enumerator) {}
+            char Current(ref this (char[], int, char) enumerator) => enumerator.Item3;
+            void Dispose(ref this (char[], int, char) enumerator) {}
         }
 
         // use ArrayCursor for the specialised array enumerator.
@@ -427,17 +427,16 @@ namespace AssociatedTypes
             where EA : CEnumerator<AS, AE>
             where EB : CEnumerator<BS, BE>
         {
-            bool MoveNext(ref (AS, BS) tup)
+            bool MoveNext(ref this (AS, BS) tup)
             {
-                if (!EA.MoveNext(ref tup.Item1)) return false;
-                return EB.MoveNext(ref tup.Item2);
+                return tup.Item1.MoveNext() && tup.Item2.MoveNext();
             }
-            (AE, BE) Current(ref (AS, BS) tup) =>
-                (EA.Current(ref tup.Item1), EB.Current(ref tup.Item2));
-            void Dispose(ref (AS, BS) tup)
+            (AE, BE) Current(ref this (AS, BS) tup) =>
+                (tup.Item1.Current(), tup.Item2.Current());
+            void Dispose(ref this (AS, BS) tup)
             {
-                EA.Dispose(ref tup.Item1);
-                EB.Dispose(ref tup.Item2);
+                tup.Item1.Dispose();
+                tup.Item2.Dispose();
             }
         }
 
@@ -470,7 +469,7 @@ namespace AssociatedTypes
             where EA : CEnumerable<A, AS>
             where EB : CEnumerable<B, BS>
         {
-            (AS, BS) GetEnumerator((A, B) tup) =>
+            (AS, BS) GetEnumerator(this (A, B) tup) =>
                 (EA.GetEnumerator(tup.Item1), EB.GetEnumerator(tup.Item2));
         }
 

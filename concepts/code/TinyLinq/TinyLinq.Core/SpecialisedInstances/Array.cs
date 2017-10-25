@@ -51,12 +51,12 @@ namespace TinyLinq.SpecialisedInstances
         ArraySelectCursor<TSource, TResult> Clone(ref this ArraySelectCursor<TSource, TResult> c) =>
             new ArraySelectCursor<TSource, TResult>(c.source, c.selector);
 
-        void Reset(ref ArraySelectCursor<TSource, TResult> c)
+        void Reset(ref this ArraySelectCursor<TSource, TResult> c)
         {
             c.sourceIndex = -1;
         }
 
-        bool MoveNext(ref ArraySelectCursor<TSource, TResult> c)
+        bool MoveNext(ref this ArraySelectCursor<TSource, TResult> c)
         {
             // Are we already on the last element?
             if (c.sourceIndex == c.sourceLength - 1)
@@ -69,9 +69,9 @@ namespace TinyLinq.SpecialisedInstances
             return true;
         }
 
-        TResult Current(ref ArraySelectCursor<TSource, TResult> c) => c.result;
+        TResult Current(ref this ArraySelectCursor<TSource, TResult> c) => c.result;
 
-        void Dispose(ref ArraySelectCursor<TSource, TResult> c) { }
+        void Dispose(ref this ArraySelectCursor<TSource, TResult> c) { }
     }
 
 
@@ -168,13 +168,13 @@ namespace TinyLinq.SpecialisedInstances
         ArrayToArraySelectManyCursor<TSource, TCollection, TResult> Clone(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) =>
             new ArrayToArraySelectManyCursor<TSource, TCollection, TResult>(c.source, c.collectionSelector, c.resultSelector);     
 
-        void Reset(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
+        void Reset(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
             c.sourceIndex = c.collectionIndex = -1;
             c.collectionLength = 0;
         }
 
-        bool MoveNext(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
+        bool MoveNext(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c)
         {
             // Are we already on the last element?
             if (c.sourceIndex == c.sourceLength - 1 && c.collectionIndex == c.collectionLength - 1)
@@ -206,9 +206,9 @@ namespace TinyLinq.SpecialisedInstances
             return true;
         }
 
-        TResult Current(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) => c.result;
+        TResult Current(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) => c.result;
 
-        void Dispose(ref ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) {}
+        void Dispose(ref this ArrayToArraySelectManyCursor<TSource, TCollection, TResult> c) {}
     }
 
     /// <summary>
@@ -278,12 +278,12 @@ namespace TinyLinq.SpecialisedInstances
         ArrayWhereCursor<TSource> Clone(ref this ArrayWhereCursor<TSource> e) =>
             new ArrayWhereCursor<TSource>(e.source, e.predicate);
 
-        void Reset(ref ArrayWhereCursor<TSource> c)
+        void Reset(ref this ArrayWhereCursor<TSource> c)
         {
             c.sourceIndex = -1;
         }
 
-        bool MoveNext(ref ArrayWhereCursor<TSource> c)
+        bool MoveNext(ref this ArrayWhereCursor<TSource> c)
         {
             for (var i = c.sourceIndex + 1; i < c.source.Length; ++i)
             {
@@ -298,9 +298,9 @@ namespace TinyLinq.SpecialisedInstances
             return false;
         }
 
-        TSource Current(ref ArrayWhereCursor<TSource> c) => c.result;
+        TSource Current(ref this ArrayWhereCursor<TSource> c) => c.result;
 
-        void Dispose(ref ArrayWhereCursor<TSource> c) { }
+        void Dispose(ref this ArrayWhereCursor<TSource> c) { }
     }
 
     /// <summary>Array Where cursors are countable.</summary>
@@ -325,7 +325,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TSource">Type of array elements.</typeparam>
     public instance Where_Array<TSource> : CWhere<TSource[], TSource, ArrayWhereCursor<TSource>>
     {
-        ArrayWhereCursor<TSource> Where(TSource[] source, Func<TSource, bool> predicate) =>
+        ArrayWhereCursor<TSource> Where(this TSource[] source, Func<TSource, bool> predicate) =>
             new ArrayWhereCursor<TSource>(source, predicate);
     }
 
@@ -379,13 +379,13 @@ namespace TinyLinq.SpecialisedInstances
         ArraySelectOfWhereCursor<TSource, TResult> Clone(ref this ArraySelectOfWhereCursor<TSource, TResult> c) =>
             new ArraySelectOfWhereCursor<TSource, TResult>(c.source, c.predicate, c.selector);
 
-        void Reset(ref ArraySelectOfWhereCursor<TSource, TResult> c)
+        void Reset(ref this ArraySelectOfWhereCursor<TSource, TResult> c)
         {
             c.sourceIndex = -1;
             c.result = default;
         }
 
-        bool MoveNext(ref ArraySelectOfWhereCursor<TSource, TResult> c)
+        bool MoveNext(ref this ArraySelectOfWhereCursor<TSource, TResult> c)
         {
             for (var i = c.sourceIndex + 1; i < c.source.Length; ++i)
             {
@@ -400,9 +400,9 @@ namespace TinyLinq.SpecialisedInstances
             return false;
         }
 
-        TResult Current(ref ArraySelectOfWhereCursor<TSource, TResult> c) => c.result;
+        TResult Current(ref this ArraySelectOfWhereCursor<TSource, TResult> c) => c.result;
 
-        void Dispose(ref ArraySelectOfWhereCursor<TSource, TResult> c) { }
+        void Dispose(ref this ArraySelectOfWhereCursor<TSource, TResult> c) { }
     }
 
     /// <summary>Array-Select-of-Wheres are countable.</summary>
@@ -450,7 +450,7 @@ namespace TinyLinq.SpecialisedInstances
     /// <typeparam name="TSource">Type of array elements.</typeparam>
     public instance ToArray_SameArray<TSource> : CToArray<TSource[], TSource>
     {
-        TSource[] ToArray(TSource[] source)
+        TSource[] ToArray(this TSource[] source)
         {
             // We _could_ just return source, but the semantics of ToArray
             // seems to suggest that would be unsound.

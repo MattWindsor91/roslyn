@@ -126,7 +126,7 @@ namespace System.Concepts
             e.state = e.initialState;
         }
 
-        bool MoveNext(ref RangeCursor<TNum> e)
+        bool MoveNext(ref this RangeCursor<TNum> e)
         {
             switch (e.state)
             {
@@ -149,8 +149,8 @@ namespace System.Concepts
             return false;
         }
 
-        TNum Current(ref RangeCursor<TNum> e) => e.current;
-        void Dispose(ref RangeCursor<TNum> e) { }
+        TNum Current(ref this RangeCursor<TNum> e) => e.current;
+        void Dispose(ref this RangeCursor<TNum> e) { }
     }
 
     /// <summary>

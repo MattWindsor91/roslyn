@@ -85,7 +85,7 @@ namespace TinyLinq
             c.state = CursorState.Uninitialised;
         }
 
-        bool MoveNext(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        bool MoveNext(ref this WhereCursor<TSourceColl, TSourceEnum, TSource> c)
         {
             switch (c.state)
             {
@@ -115,9 +115,9 @@ namespace TinyLinq
             }
         }
 
-        TSource Current(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c) => c.result;
+        TSource Current(ref this WhereCursor<TSourceColl, TSourceEnum, TSource> c) => c.result;
 
-        void Dispose(ref WhereCursor<TSourceColl, TSourceEnum, TSource> c)
+        void Dispose(ref this WhereCursor<TSourceColl, TSourceEnum, TSource> c)
         {
             if (c.state == CursorState.Active)
             {

@@ -193,12 +193,12 @@ namespace TinyLinq.Bench
                     finished = false
                 };
 
-            void Reset(ref FlatRangeCursor e)
+            void Reset(ref this FlatRangeCursor e)
             {
                 e.reset = true;
                 e.finished = false;
             }
-            bool MoveNext(ref FlatRangeCursor e)
+            bool MoveNext(ref this FlatRangeCursor e)
             {
                 if (e.finished)
                 {
@@ -219,8 +219,8 @@ namespace TinyLinq.Bench
                 return !e.finished;
             }
 
-            int Current(ref FlatRangeCursor e) => e.current;
-            void Dispose(ref FlatRangeCursor e) { }
+            int Current(ref this FlatRangeCursor e) => e.current;
+            void Dispose(ref this FlatRangeCursor e) { }
         }
 
         /// <summary>

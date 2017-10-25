@@ -1456,7 +1456,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ExpressionTreeContainsOutVariable = 8198,
         #endregion diagnostics for out var
 
-        // @t-mawind
+        // @MattWindsor91
         #region diagnostics for concepts
 
         ERR_ConceptOperatorsMustBeNonStatic = 8947,
@@ -1473,6 +1473,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ConceptInstanceAmbiguous = 8958,
         ERR_ConceptInstanceUnsatisfiable = 8959,
         ERR_ExcessConceptInstanceMembers = 8960,
+        ERR_CEMImplementsNonCEM = 8961,
+        ERR_NonCEMImplementsCEM = 8962,
 
         #endregion diagnostics for concepts
 
