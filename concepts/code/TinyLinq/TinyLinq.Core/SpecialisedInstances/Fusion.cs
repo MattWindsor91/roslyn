@@ -85,7 +85,7 @@ namespace TinyLinq.SpecialisedInstances
         WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
             new WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.selector, c.predicate);
 
-        void Reset(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        void Reset(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             if (c.state == CursorState.Active)
             {
@@ -96,7 +96,7 @@ namespace TinyLinq.SpecialisedInstances
             c.state = CursorState.Uninitialised;
         }
 
-        bool MoveNext(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        bool MoveNext(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             switch (c.state)
             {
@@ -126,9 +126,9 @@ namespace TinyLinq.SpecialisedInstances
             }
         }
 
-        TResult Current(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+        TResult Current(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
 
-        void Dispose(ref WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        void Dispose(ref this WhereOfSelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             if (c.state == CursorState.Active)
             {
@@ -247,7 +247,7 @@ namespace TinyLinq.SpecialisedInstances
         SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
             new SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.predicate, c.selector);
 
-        void Reset(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        void Reset(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             if (c.state == CursorState.Active)
             {
@@ -258,7 +258,7 @@ namespace TinyLinq.SpecialisedInstances
             c.state = CursorState.Uninitialised;
         }
 
-        bool MoveNext(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        bool MoveNext(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             switch (c.state)
             {
@@ -288,9 +288,9 @@ namespace TinyLinq.SpecialisedInstances
             }
         }
 
-        TResult Current(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+        TResult Current(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
 
-        void Dispose(ref SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        void Dispose(ref this SelectOfWhereCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             if (c.state == CursorState.Active)
             {

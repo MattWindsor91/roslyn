@@ -5034,7 +5034,7 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
     <value>No instances in scope satisfy concept '{0}'.</value>
   </data>
   <data name="ERR_ExcessConceptInstanceMembers" xml:space="preserve">
-    <value>Concept instance member '{0}' does not match any member of any implemented concept.</value>
+    <value>Concept instance member '{0}' does not match a member of any implemented concept.</value>
   </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
@@ -5254,5 +5254,11 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   </data>
   <data name="IDS_FeatureConcepts" xml:space="preserve">
     <value>concepts</value>
+  </data>
+  <data name="ERR_CEMImplementsNonCEM" xml:space="preserve">
+    <value>The method '{0}' is a concept extension method, but the concept '{1}' does not declare it as one.</value>
+  </data>
+  <data name="ERR_NonCEMImplementsCEM" xml:space="preserve">
+    <value>The method '{0}' is not a concept extension method, but the concept '{1}' declares it as one.</value>
   </data>
 </root>

@@ -85,9 +85,9 @@ namespace System.Concepts.Enumerable
         {
             // Not all IEnumerators actually support resetting, so
             // we don't expose Reset by default.
-            bool MoveNext(ref IEnumerator<TElem> e) => e.MoveNext();
-            TElem Current(ref IEnumerator<TElem> e) => e.Current;
-            void Dispose(ref IEnumerator<TElem> e) => e.Dispose();
+            bool MoveNext(ref this IEnumerator<TElem> e) => e.MoveNext();
+            TElem Current(ref this IEnumerator<TElem> e) => e.Current;
+            void Dispose(ref this IEnumerator<TElem> e) => e.Dispose();
         }
 
         // TODO: this should be TColl where TColl : IEnumerable<TElem>
@@ -141,12 +141,12 @@ namespace System.Concepts.Enumerable
                     len = e.len
                 };
 
-            void Reset(ref IndexBoundCursor<TColl, TIdx, TElem> e)
+            void Reset(ref this IndexBoundCursor<TColl, TIdx, TElem> e)
             {
                 e.pos = N.FromInteger(-1);
                 e.current = default;
             }
-            bool MoveNext(ref IndexBoundCursor<TColl, TIdx, TElem> e)
+            bool MoveNext(ref this IndexBoundCursor<TColl, TIdx, TElem> e)
             {
                 if (e.pos == e.len)
                 {
@@ -161,8 +161,8 @@ namespace System.Concepts.Enumerable
                 e.current = e.container.At(e.pos);
                 return true;
             }
-            TElem Current(ref IndexBoundCursor<TColl, TIdx, TElem> e) => e.current;
-            void Dispose(ref IndexBoundCursor<TColl, TIdx, TElem> e) { }
+            TElem Current(ref this IndexBoundCursor<TColl, TIdx, TElem> e) => e.current;
+            void Dispose(ref this IndexBoundCursor<TColl, TIdx, TElem> e) { }
         }
 
         [Overlappable]
@@ -173,7 +173,7 @@ namespace System.Concepts.Enumerable
             where E : Eq<TIdx>
             where L : CStaticCountable<TColl>
         {
-            IndexBoundCursor<TColl, TIdx, TElem> GetEnumerator(TColl container) =>
+            IndexBoundCursor<TColl, TIdx, TElem> GetEnumerator(this TColl container) =>
                 new IndexBoundCursor<TColl, TIdx, TElem> { container = container, len = N.FromInteger(L.Count(container)), pos = N.FromInteger(-1) };
         }
 
@@ -207,12 +207,12 @@ namespace System.Concepts.Enumerable
                     hi = e.hi
                 };
 
-            void Reset(ref ArrayCursor<TElem> enumerator)
+            void Reset(ref this ArrayCursor<TElem> enumerator)
             {
                 enumerator.lo = -1;
             }
 
-            bool MoveNext(ref ArrayCursor<TElem> enumerator)
+            bool MoveNext(ref this ArrayCursor<TElem> enumerator)
             {
                 // hi always points to one index beyond the end of the array slice
                 if (enumerator.hi <= enumerator.lo)
@@ -224,7 +224,7 @@ namespace System.Concepts.Enumerable
                 return (enumerator.lo < enumerator.hi);
             }
 
-            TElem Current(ref ArrayCursor<TElem> enumerator)
+            TElem Current(ref this ArrayCursor<TElem> enumerator)
             {
                 if (enumerator.lo == -1)
                 {
@@ -233,7 +233,7 @@ namespace System.Concepts.Enumerable
                 return enumerator.source[enumerator.lo];
             }
 
-            void Dispose(ref ArrayCursor<TElem> enumerator) { }
+            void Dispose(ref this ArrayCursor<TElem> enumerator) { }
         }
 
         /// <summary>
@@ -254,10 +254,10 @@ namespace System.Concepts.Enumerable
         /// </summary>
         public instance Enumerator_List<TElem> : CResettableEnumerator<List<TElem>.Enumerator, TElem>
         {
-            void Reset(ref List<TElem>.Enumerator enumerator) => ((IEnumerator<TElem>)enumerator).Reset();
-            bool MoveNext(ref List<TElem>.Enumerator enumerator) => enumerator.MoveNext();
-            TElem Current(ref List<TElem>.Enumerator enumerator) => enumerator.Current;
-            void Dispose(ref List<TElem>.Enumerator enumerator) => enumerator.Dispose();
+            void Reset(ref this List<TElem>.Enumerator enumerator) => ((IEnumerator<TElem>)enumerator).Reset();
+            bool MoveNext(ref this List<TElem>.Enumerator enumerator) => enumerator.MoveNext();
+            TElem Current(ref this List<TElem>.Enumerator enumerator) => enumerator.Current;
+            void Dispose(ref this List<TElem>.Enumerator enumerator) => enumerator.Dispose();
         }
 
         /// <summary>
@@ -266,7 +266,7 @@ namespace System.Concepts.Enumerable
         /// </summary>
         public instance Enumerable_List<TElem> : CEnumerable<List<TElem>, List<TElem>.Enumerator>
         {
-            List<TElem>.Enumerator GetEnumerator(List<TElem> list) => list.GetEnumerator();
+            List<TElem>.Enumerator GetEnumerator(this List<TElem> list) => list.GetEnumerator();
         }
 
         #endregion Generic collections

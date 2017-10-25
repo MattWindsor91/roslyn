@@ -74,7 +74,7 @@ namespace TinyLinq
         where Eb : CEnumerable<TSourceColl, TSourceEnum>
         where Et : CEnumerator<TSourceEnum, TSource>
     {
-        SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
+        SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> Clone(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) =>
             new SelectCursor<TSourceColl, TSourceEnum, TSource, TResult>(c.source, c.selector);
 
         void Reset(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
@@ -88,7 +88,7 @@ namespace TinyLinq
             c.state = CursorState.Uninitialised;
         }
 
-        bool MoveNext(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        bool MoveNext(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             switch (c.state)
             {
@@ -115,9 +115,9 @@ namespace TinyLinq
             }
         }
 
-        TResult Current(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
+        TResult Current(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c) => c.result;
 
-        void Dispose(ref SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
+        void Dispose(ref this SelectCursor<TSourceColl, TSourceEnum, TSource, TResult> c)
         {
             if (c.state == CursorState.Active)
             {

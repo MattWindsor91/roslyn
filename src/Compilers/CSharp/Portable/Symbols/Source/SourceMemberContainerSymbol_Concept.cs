@@ -260,5 +260,152 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         #endregion Shim synthesis
+        #region Implementation checks
+
+
+        /// <summary>
+        /// If this is a concept instance, checks that all of its members come
+        /// from concepts and agree with their original definitions.
+        /// </summary>
+        /// <param name="diagnostics">
+        /// The diagnostics bag to extend with errors coming from excess
+        /// members.
+        /// </param>
+        private void CheckConceptInstanceMembers(DiagnosticBag diagnostics)
+        {
+            // @MattWindsor91 (Concept-C# 2017)
+            // This is extremely inefficient: it does a forall-exists pairwise
+            // equality check across all concepts in the instance.
+
+            if (!IsInstance || IsStandaloneInstance)
+            {
+                // Standalone instances would normally report _every_ member as
+                // excess.
+                return;
+            }
+
+            var nonExcessMembers = PooledHashSet<Symbol>.GetInstance();
+            foreach (var iface in AllInterfacesNoUseSiteDiagnostics)
+            {
+                foreach (var ifaceMember in iface.GetMembersUnordered())
+                {
+                    var implMember = FindImplementationForInterfaceMember(ifaceMember);
+                    if (implMember == null)
+                    {
+                        // Don't throw an error: for one, 'imember' might be
+                        // getting shimmed; for two, we already throw the
+                        // error elsewhere.
+                        continue;
+                    }
+                    nonExcessMembers.Add(implMember);
+
+                    if (implMember.Kind == SymbolKind.Method)
+                    {
+                        Debug.Assert(ifaceMember.Kind == SymbolKind.Method,
+                            "implementation should have same symbol kind as interface version");
+                        var implMethod = (MethodSymbol)implMember;
+                        var ifaceMethod = (MethodSymbol)ifaceMember;
+
+                        // If a method is a CEM at its concept, it should be
+                        // one at its implementation, and vice versa.
+                        if (implMethod.IsConceptExtensionMethod && !ifaceMethod.IsConceptExtensionMethod)
+                        {
+                            // CS8961: The method '{0}' is a concept extension method, but the concept '{1}' does not declare it as one.
+                            diagnostics.Add(ErrorCode.ERR_CEMImplementsNonCEM, implMethod.Locations.ElementAtOrDefault(0), implMethod, iface);
+                        }
+                        if (!implMethod.IsConceptExtensionMethod && ifaceMethod.IsConceptExtensionMethod)
+                        {
+                            // CS8962: The method '{0}' is not a concept extension method, but the concept '{1}' declares it as one.                        
+                            diagnostics.Add(ErrorCode.ERR_NonCEMImplementsCEM, implMethod.Locations.ElementAtOrDefault(0), implMethod, iface);
+                        }
+                    }
+                }
+            }
+
+            CheckExcessMembers(diagnostics, nonExcessMembers);
+        }
+
+        /// <summary>
+        /// Check that all of this symbol's members come from concepts.
+        /// </summary>
+        /// <param name="diagnostics">
+        /// The diagnostics bag to extend with errors from excess members.
+        /// </param>
+        /// <param name="nonExcessMembers">
+        /// The set of members that have already been matched to a concept.
+        /// </param>
+        private void CheckExcessMembers(DiagnosticBag diagnostics, PooledHashSet<Symbol> nonExcessMembers)
+        {
+            // If a member wasn't found during our sweep through interfaces,
+            // it's an excess member.
+            var excessMembers = PooledHashSet<Symbol>.GetInstance();
+            foreach (var member in GetMembersUnordered())
+            {
+                if (member.Kind == SymbolKind.Method)
+                {
+                    var method = (MethodSymbol)member;
+                    if (method.IsDefaultValueTypeConstructor())
+                    {
+                        // Ignore the implicit struct constructor:
+                        // we can't get rid of it, and it's harmless anyway.
+                        continue;
+                    }
+
+                    var assoc = method.AssociatedSymbol;
+                    if (assoc != null && excessMembers.Contains(assoc))
+                    {
+                        // If we reported, for example, a property, don't
+                        // re-report its accessors.
+                        continue;
+                    }
+                }
+
+                if (!nonExcessMembers.Contains(member))
+                {
+                    excessMembers.Add(member);
+                    // CS8960: Concept instance member '{0}' does not match a member of any implemented concept.
+                    diagnostics.Add(ErrorCode.ERR_ExcessConceptInstanceMembers, member.Locations.ElementAtOrDefault(0), member);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Is the given member an excess concept member according to
+        /// the concepts in the given interface set?
+        /// </summary>
+        /// <param name="member">
+        /// The member to check.
+        /// </param>
+        /// <param name="interfaces">
+        /// The set of interfaces containing all concepts that
+        /// <paramref name="member"/> should belong to if it is not excess.
+        /// </param>
+        /// <returns>
+        /// True if <paramref name="member"/> is not an implementation of
+        /// a method from one of the concepts in <paramref name="interfaces"/>.
+        /// False otherwise.
+        /// </returns>
+        private bool IsExcessConceptMember(Symbol member, ImmutableArray<NamedTypeSymbol> interfaces)
+        {
+            foreach (var @interface in interfaces)
+            {
+                if (!@interface.IsConcept)
+                {
+                    continue;
+                }
+
+                foreach (var imember in @interface.GetMembersUnordered())
+                {
+                    if (FindImplementationForInterfaceMember(imember) == member)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        #endregion Implementation checks
     }
 }

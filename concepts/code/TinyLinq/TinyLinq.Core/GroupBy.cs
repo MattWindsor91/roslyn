@@ -47,11 +47,11 @@ namespace TinyLinq.Core
                 length = gc.length
             };
 
-        void Reset(ref GroupCursor<TKey, TVal> gc) => gc.index = -1;
-        void Dispose(ref GroupCursor<TKey, TVal> gc) { }
-        Group<TKey, TVal> Current(ref GroupCursor<TKey, TVal> gc) => gc.current;
+        void Reset(ref this GroupCursor<TKey, TVal> gc) => gc.index = -1;
+        void Dispose(ref this GroupCursor<TKey, TVal> gc) { }
+        Group<TKey, TVal> Current(ref this GroupCursor<TKey, TVal> gc) => gc.current;
 
-        bool MoveNext(ref GroupCursor<TKey, TVal> gc)
+        bool MoveNext(ref this GroupCursor<TKey, TVal> gc)
         {
             if (gc.length <= gc.index)
             {
@@ -68,7 +68,7 @@ namespace TinyLinq.Core
         : CEnumerable<GroupByResult<TSrc, TElem, TKey, TVal>, GroupCursor<TKey, TVal>>
         where E : CResettableEnumerator<TSrc, TElem>
     {
-        GroupCursor<TKey, TVal> GetEnumerator(GroupByResult<TSrc, TElem, TKey, TVal> groupBy)
+        GroupCursor<TKey, TVal> GetEnumerator(this GroupByResult<TSrc, TElem, TKey, TVal> groupBy)
         {
             var groupKeys = new Dictionary<TKey, int>();
             var gc = new GroupCursor<TKey, TVal> { groups = new List<(TKey, List<TVal>)>(), index = -1, length = 0 };
