@@ -290,6 +290,7 @@ namespace Microsoft.CodeAnalysis
         //
         System_Concepts_ConceptExtensionAttribute,
         // End concept extension attributes
+        System_Concepts_ConceptInlineInstanceAttribute,
 
         NextAvailable,
     }
@@ -574,7 +575,9 @@ namespace Microsoft.CodeAnalysis
             // @MattWindsor91 (Concept-C# 2017)
             // Concept extension attributes
             //
-            "System.Concepts.ConceptExtensionAttribute"
+            "System.Concepts.ConceptExtensionAttribute",
+
+            "System.Concepts.ConceptInlineInstanceAttribute"
         };
 
         private readonly static Dictionary<string, WellKnownType> s_nameToTypeIdMap = new Dictionary<string, WellKnownType>((int)Count);
@@ -615,7 +618,7 @@ namespace Microsoft.CodeAnalysis
                         typeIdName = "";
                         continue;
                     case (WellKnownType.NextAvailable - 1):
-                        typeIdName = "System.Concepts.ConceptExtensionAttribute";
+                        typeIdName = "System.Concepts.ConceptInlineInstanceAttribute";
                         continue;
                     default:
                         typeIdName = typeId.ToString().Replace("__", "+").Replace('_', '.');

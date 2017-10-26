@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         // @MattWindsor91 (Concept-C# 2017)
         // Added for concepts
         WitnessTypeParameter = 'w',
-        DefaultStruct = 'v',
+        ConceptHelperStruct = 'v',
 
         // Deprecated - emitted by Dev12, but not by Roslyn.
         // Don't reuse the values because the debugger might encounter them when consuming old binaries.
@@ -69,7 +69,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 case GeneratedNameKind.LambdaDisplayClass:
                 case GeneratedNameKind.StateMachineType:
                 case GeneratedNameKind.DynamicCallSiteContainerType:
-                case GeneratedNameKind.DefaultStruct:
+                case GeneratedNameKind.ConceptHelperStruct:
                     return true;
 
                 default:

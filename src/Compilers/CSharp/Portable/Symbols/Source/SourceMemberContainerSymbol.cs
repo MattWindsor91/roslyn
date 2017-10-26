@@ -1148,12 +1148,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
 
                 // @MattWindsor91 (Concept-C# 2016)
-                //
-                // If this type is a concept, it includes an inner struct
+                // If this type is a concept, it can have an inner struct
                 // that holds its default implementations.
-                //
-                // TODO: Can we skip creating a default struct if there are no
-                //       default implementations?
                 if (IsConcept)
                 {
                     // @MattWindsor91 (Concept-C# 2017)
@@ -1169,6 +1165,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         symbols.Add(defaultStructOpt);
                     }
+                }
+
+                // @MattWindsor91 (Concept-C# 2017)
+                // If this type has an inline instance, we add that too,
+                var inlineInstanceStructOpt = MaybeMakeInlineInstanceStruct();
+                if (inlineInstanceStructOpt != null)
+                {
+                    symbols.Add(inlineInstanceStructOpt);
                 }
 
                 Debug.Assert(s_emptyTypeMembers.Count == 0);

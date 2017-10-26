@@ -3056,7 +3056,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor) != null &&
             (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_OverlappableAttribute__ctor) != null &&
             (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_OverlappingAttribute__ctor) != null &&
-            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor) != null;
+            (object)GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor) != null &&
+            (object) GetWellKnownTypeMember(WellKnownMember.System_Concepts_ConceptInlineInstanceAttribute__ctor) != null;
+
 
         /// <summary>
         /// Returns whether the compilation has the Boolean type and if it's good.

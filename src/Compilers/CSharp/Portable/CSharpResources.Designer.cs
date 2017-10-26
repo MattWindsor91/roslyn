@@ -2753,6 +2753,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The method &apos;{0}&apos; is a concept extension method, but the concept &apos;{1}&apos; does not declare it as one..
+        /// </summary>
+        internal static string ERR_CEMImplementsNonCEM {
+            get {
+                return ResourceManager.GetString("ERR_CEMImplementsNonCEM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The operation overflows at compile time in checked mode.
         /// </summary>
         internal static string ERR_CheckedOverflow {
@@ -4139,7 +4148,7 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Concept instance member &apos;{0}&apos; does not match any member of any implemented concept..
+        ///   Looks up a localized string similar to Concept instance member &apos;{0}&apos; does not match a member of any implemented concept..
         /// </summary>
         internal static string ERR_ExcessConceptInstanceMembers {
             get {
@@ -5584,6 +5593,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_InitializerOnNonAutoProperty {
             get {
                 return ResourceManager.GetString("ERR_InitializerOnNonAutoProperty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; claims to implement &apos;{1}&apos;, but member &apos;{2}&apos; could not be found..
+        /// </summary>
+        internal static string ERR_InlineInstanceMissingMember {
+            get {
+                return ResourceManager.GetString("ERR_InlineInstanceMissingMember", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to (FIXME) Inline instances currently do not support non-method members such as &apos;{0}&apos;..
+        /// </summary>
+        internal static string ERR_InlineInstanceNonMethodMember {
+            get {
+                return ResourceManager.GetString("ERR_InlineInstanceNonMethodMember", resourceCulture);
             }
         }
         
@@ -7159,6 +7186,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_NoNamespacePrivate {
             get {
                 return ResourceManager.GetString("ERR_NoNamespacePrivate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The method &apos;{0}&apos; is not a concept extension method, but the concept &apos;{1}&apos; declares it as one..
+        /// </summary>
+        internal static string ERR_NonCEMImplementsCEM {
+            get {
+                return ResourceManager.GetString("ERR_NonCEMImplementsCEM", resourceCulture);
             }
         }
         
@@ -10400,6 +10436,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string IDS_FeatureCollectionInitializer {
             get {
                 return ResourceManager.GetString("IDS_FeatureCollectionInitializer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to concepts.
+        /// </summary>
+        internal static string IDS_FeatureConcepts {
+            get {
+                return ResourceManager.GetString("IDS_FeatureConcepts", resourceCulture);
             }
         }
         

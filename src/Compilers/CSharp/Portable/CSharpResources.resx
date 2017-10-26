@@ -5267,4 +5267,11 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_NonCEMImplementsCEM" xml:space="preserve">
     <value>The method '{0}' is not a concept extension method, but the concept '{1}' declares it as one.</value>
   </data>
+  <data name="ERR_InlineInstanceMissingMember" xml:space="preserve">
+    <value>'{0}' claims to implement '{1}', but member '{2}' could not be found.</value>
+  </data>
+  <data name="ERR_InlineInstanceNonMethodMember" xml:space="preserve">
+    <value>(FIXME) Inline instances currently do not support non-method members such as '{0}'.</value>
+    <comment>Temporary</comment>
+  </data>
 </root>

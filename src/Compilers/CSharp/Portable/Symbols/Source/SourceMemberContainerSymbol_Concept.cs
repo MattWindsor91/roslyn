@@ -72,7 +72,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         #endregion Default structs
-
+        #region Inline instance structs
+        /// <summary>
+        /// If this type needs one, generate an inline instance struct.
+        /// </summary>
+        /// <returns>
+        /// Null if this type is not a named type, or it doesn't need an
+        /// inline instance struct.
+        /// Otherwise, the synthesised inline instance struct.
+        /// </returns>
+        protected virtual NamedTypeSymbol MaybeMakeInlineInstanceStruct()
+        {
+            // The actual implementation is in SourceNamedTypeSymbol, but we
+            // have a null implementation for other member containers here.
+            return null;
+        }
+        #endregion Inline instance structs
         #region Shim synthesis
 
         // Instance shims are methods that fill in a gap in a concept instance
@@ -127,141 +142,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             return _lazySynthesizedInstanceShims;
         }
-
-        /// <summary>
-        /// Tries to synthesize a shim to fill in a given concept method for
-        /// this instance.
-        /// </summary>
-        /// <param name="concept">
-        /// The concept containing the method to be shimmed.
-        /// </param>
-        /// <param name="conceptMethod">
-        /// The concept method we're implementing on an instance with a shim.
-        /// </param>
-        /// <param name="diagnostics">
-        /// A diagnostics set, to which we report default struct failures.
-        /// </param>
-        /// <returns>
-        /// Null if we couldn't synthesize a shim;
-        /// otherwise, the created shim.
-        /// </returns>
-        private SynthesizedInstanceShimMethod TrySynthesizeInstanceShim(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
-        {
-            Debug.Assert(concept.IsConcept, "concept for default implementation synthesis must be an actual concept");
-            Debug.Assert(IsInstance, "target for default implementation synthesis must be an instance");
-
-            var ometh = TrySynthesizeOperatorShim(conceptMethod);
-            if (ometh != null && ometh.IsValid())
-            {
-                return ometh;
-            }
-            var emeth = TrySynthesizeConceptExtensionShim(conceptMethod);
-            if (emeth != null && emeth.IsValid())
-            {
-                return emeth;
-            }
-
-            // Intentionally synthesize defaults as a last resort.
-            var dmeth = TrySynthesizeDefaultShim(concept, conceptMethod, diagnostics);
-            if (dmeth != null && dmeth.IsValid())
-            {
-                return dmeth;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Tries to generate an instance shim mapping a concept operator
-        /// to a static operator on the operator's first parameter type.
-        /// </summary>
-        /// <param name="conceptMethod">
-        /// The concept method we're implementing on an instance with a shim.
-        /// </param>
-        /// <returns>
-        /// Null if we couldn't synthesize a shim; otherwise, the created shim.
-        /// The shim might not be valid: this must be checked before acceptance.
-        /// </returns>
-        private SynthesizedOperatorShimMethod TrySynthesizeOperatorShim(MethodSymbol conceptMethod)
-        {
-            // TODO(MattWindsor91): consider opening this up, with
-            //     restrictions, to any static method.
-            if (!conceptMethod.IsOperator())
-            {
-                return null;
-            }
-            Debug.Assert(0 < conceptMethod.ParameterCount,
-                "concept operator should have at least one parameter");
-            return new SynthesizedOperatorShimMethod(conceptMethod, this);
-        }
-
-        /// <summary>
-        /// Tries to generate an instance shim mapping a concept extension method
-        /// to an actual method on its 'this' parameter's type.
-        /// </summary>
-        /// <param name="conceptMethod">
-        /// The concept method we're implementing on an instance with a shim.
-        /// </param>
-        /// <returns>
-        /// Null if we couldn't synthesize a shim; otherwise, the created shim.
-        /// The shim might not be valid: this must be checked before acceptance.
-        /// </returns>
-        private SynthesizedConceptExtensionShimMethod TrySynthesizeConceptExtensionShim(MethodSymbol conceptMethod)
-        {
-            if (!conceptMethod.IsConceptExtensionMethod)
-            {
-                return null;
-            }
-            Debug.Assert(0 < conceptMethod.ParameterCount,
-                "concept extension method should have a 'this' parameter");
-            return new SynthesizedConceptExtensionShimMethod(conceptMethod, this);
-        }
-
-        /// <summary>
-        /// Tries to generate an instance shim mapping a concept method to
-        /// one on the given default struct.
-        /// </summary>
-        /// <param name="concept">
-        /// The concept containing the default struct.
-        /// </param>
-        /// <param name="conceptMethod">
-        /// The concept method we're implementing on an instance with a shim.
-        /// </param>
-        /// <param name="diagnostics">
-        /// A diagnostics set, to which we report default struct failures.
-        /// </param>
-        /// <returns>
-        /// Null if we couldn't synthesize a shim; otherwise, the created shim.
-        /// The shim might not be valid: this must be checked before acceptance.
-        /// </returns>
-        private SynthesizedDefaultShimMethod TrySynthesizeDefaultShim(NamedTypeSymbol concept, MethodSymbol conceptMethod, DiagnosticBag diagnostics)
-        {
-            var dstr = concept.GetDefaultStruct();
-            if (dstr == null)
-            {
-                return null;
-            }
-
-            // Default-struct sanity checking
-            var conceptLoc = concept.Locations.IsEmpty ? Location.None : Locations[0];
-            var instanceLoc = Locations.IsEmpty ? Location.None : Locations[0];
-            if (dstr.Arity != 1)
-            {
-                // Don't use the default struct's location: it is an
-                // implementation detail and may not actually exist.
-                diagnostics.Add(ErrorCode.ERR_DefaultStructBadArity, conceptLoc, concept.Name, dstr.Arity, concept.Arity + 1);
-                return null;
-            }
-            var witnessPar = dstr.TypeParameters[0];
-            if (!witnessPar.IsConceptWitness)
-            {
-                diagnostics.Add(ErrorCode.ERR_DefaultStructNoWitnessParam, conceptLoc, concept.Name);
-                return null;
-            }
-
-            return new SynthesizedDefaultShimMethod(conceptMethod, dstr, this);
-        }
-
         #endregion Shim synthesis
         #region Implementation checks
 

@@ -424,26 +424,16 @@ namespace Microsoft.CodeAnalysis
         System_ObsoleteAttribute__ctor,
         System_Span_T__ctor,
 
-        //@t-mawind
+        // @MattWindsor91 (Concept-C# 2016 and 2017)
+        // Concept attributes
         System_Concepts_ConceptAttribute__ctor,
         System_Concepts_ConceptInstanceAttribute__ctor,
         System_Concepts_AssociatedTypeAttribute__ctor,
         System_Concepts_ConceptDefaultAttribute__ctor,
-
-        //
-        // @MattWindsor91 (Concept-C# 2017)
-        // Instance overlap attributes
-        //
         System_Concepts_OverlappingAttribute__ctor,
         System_Concepts_OverlappableAttribute__ctor,
-        // End instance overlap attributes
-
-        //
-        // @MattWindsor91 (Concept-C# 2017)
-        // Concept extension method attributes
-        //
         System_Concepts_ConceptExtensionAttribute__ctor,
-        // End concept extension method attributes
+        System_Concepts_ConceptInlineInstanceAttribute__ctor,
 
         Count
     }

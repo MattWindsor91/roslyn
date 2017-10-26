@@ -54,3 +54,10 @@ glue logic to make this instance appear in the binder for the default methods.
 ## Synthesising shim methods ## 
 
 # Future Work #
+
+## Properties ##
+
+The implementation of shim method synthesis currently only works for methods,
+and not properties.  Making this work with properties would require untangling
+the synthesis from the explicit implementation forwarding logic, which is
+inherently method-specific.

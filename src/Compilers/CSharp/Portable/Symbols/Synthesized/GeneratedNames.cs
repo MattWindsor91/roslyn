@@ -572,8 +572,22 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </returns>
         internal static string DefaultStructName()
         {
-            Debug.Assert((char)GeneratedNameKind.DefaultStruct == 'v');
+            Debug.Assert((char)GeneratedNameKind.ConceptHelperStruct == 'v');
             return "<>v_defaults";
+        }
+
+        /// <summary>
+        /// Generates a synthesised name for an inline instance struct.
+        /// </summary>
+        /// <returns>
+        /// A generated name that will not clash with any other type member
+        /// (assuming there is at most one inline instance struct nested into
+        /// a type).
+        /// </returns>
+        internal static string InlineInstanceStructName()
+        {
+            Debug.Assert((char)GeneratedNameKind.ConceptHelperStruct == 'v');
+            return "<>v_inline_instance";
         }
     }
 }
