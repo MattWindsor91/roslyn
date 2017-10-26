@@ -41,7 +41,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         #endregion Concept and instance selectors
 
-        #region Default method detection
+        #region Default structs
 
         /// <summary>
         /// Syntax references for default methods.
@@ -61,14 +61,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             //     populated.
             if (_conceptDefaultMethods.IsDefault)
             {
-                GetMembers();
+                GetMembersAndInitializers();
                 Debug.Assert(!_conceptDefaultMethods.IsDefault,
                     "concept default methods should be populated at this stage.");
             }
             return _conceptDefaultMethods;
         }
 
-        #endregion Default method detection
+        /// <summary>
+        /// If this type is a named concept, and it needs one, generate a
+        /// default struct.
+        /// </summary>
+        /// <returns>
+        /// Null if this type is not a named type, or it doesn't need a
+        /// default struct.
+        /// Otherwise, the synthesised default struct.
+        /// </returns>
+        protected virtual NamedTypeSymbol MaybeMakeDefaultStruct()
+        {
+            // The actual implementation is in SourceNamedTypeSymbol, but we
+            // have a null implementation for other member containers here.
+            return null;
+        }
+
+        #endregion Default structs
 
         #region Shim synthesis
 

@@ -160,6 +160,26 @@ namespace Microsoft.CodeAnalysis.CSharp
                         {
                             resultBinder = new WithWitnessesBinder(method, resultBinder);
                         }
+
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // Concept methods are syntactically inside their
+                        // concept, but any bodies are actually inside the
+                        // concept's default struct.
+                        //
+                        // This makes sure that not only is the witness
+                        // parameter of the default body in scope for concept
+                        // methods, but it binds _tighter_ than the method
+                        // scope---this makes sure we call into it instead of
+                        // back into the defaults.
+                        if (method.ContainingType.IsConcept)
+                        {
+                            var dstr = method.ContainingType.GetDefaultStruct();
+                            Debug.Assert(dstr != null,
+                                "if we're binding a concept body, the concept should have a default struct");
+
+                            resultBinder = new WithWitnessesBinder(dstr, resultBinder);
+                            resultBinder = new WithClassTypeParametersBinder(dstr, resultBinder);
+                        }
                     }
 
                     resultBinder = resultBinder.WithUnsafeRegionIfNecessary(methodDecl.Modifiers);
@@ -316,6 +336,26 @@ namespace Microsoft.CodeAnalysis.CSharp
                     if ((object)method != null && inBody)
                     {
                         resultBinder = new InMethodBinder(method, resultBinder);
+
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // Concept operators are syntactically inside their
+                        // concept, but any bodies are actually inside the
+                        // concept's default struct.
+                        //
+                        // This makes sure that not only is the witness
+                        // parameter of the default body in scope for concept
+                        // operators, but it binds _tighter_ than the method
+                        // scope---this makes sure we call into it instead of
+                        // back into the defaults.
+                        if (method.ContainingType.IsConcept)
+                        {
+                            var dstr = method.ContainingType.GetDefaultStruct();
+                            Debug.Assert(dstr != null,
+                                "if we're binding a concept body, the concept should have a default struct");
+
+                            resultBinder = new WithWitnessesBinder(dstr, resultBinder);
+                            resultBinder = new WithClassTypeParametersBinder(dstr, resultBinder);
+                        }
                     }
 
                     resultBinder = resultBinder.WithUnsafeRegionIfNecessary(parent.Modifiers);
