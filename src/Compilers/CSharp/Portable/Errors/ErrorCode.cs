@@ -1475,6 +1475,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_ExcessConceptInstanceMembers = 8960,
         ERR_CEMImplementsNonCEM = 8961,
         ERR_NonCEMImplementsCEM = 8962,
+        ERR_InstanceInterfaceImpl = 8963,
+        ERR_ConceptInterfaceImpl = 8964,
 
         #endregion diagnostics for concepts
 

@@ -5036,6 +5036,12 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_ExcessConceptInstanceMembers" xml:space="preserve">
     <value>Concept instance member '{0}' does not match a member of any implemented concept.</value>
   </data>
+  <data name="ERR_InstanceInterfaceImpl" xml:space="preserve">
+    <value>'{0}': instances cannot implement interfaces</value>
+  </data>
+  <data name="ERR_ConceptInterfaceImpl" xml:space="preserve">
+    <value>'{0}': concepts cannot implement interfaces</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>

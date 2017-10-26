@@ -17,7 +17,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     internal partial class SourceNamedTypeSymbol
     {
-        private Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>> _lazyDeclaredBases;
+        private Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>, ImmutableArray<NamedTypeSymbol>> _lazyDeclaredBases;
 
         private NamedTypeSymbol _lazyBaseType = ErrorTypeSymbol.UnknownResultType;
         private ImmutableArray<NamedTypeSymbol> _lazyInterfaces;
@@ -204,7 +204,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return null;
         }
 
-        internal Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>> GetDeclaredBases(ConsList<Symbol> basesBeingResolved)
+        internal Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>, ImmutableArray<NamedTypeSymbol>> GetDeclaredBases(ConsList<Symbol> basesBeingResolved)
         {
             if (ReferenceEquals(_lazyDeclaredBases, null))
             {
@@ -230,30 +230,37 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return GetDeclaredBases(basesBeingResolved).Item2;
         }
 
-        private Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>> MakeDeclaredBases(ConsList<Symbol> basesBeingResolved, DiagnosticBag diagnostics)
+        internal ImmutableArray<NamedTypeSymbol> GetConceptsForInlineInstances(ConsList<Symbol> basesBeingResolved)
+        {
+            return GetDeclaredBases(basesBeingResolved).Item3;
+        }
+
+        private Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>, ImmutableArray<NamedTypeSymbol>> MakeDeclaredBases(ConsList<Symbol> basesBeingResolved, DiagnosticBag diagnostics)
         {
             if (this.TypeKind == TypeKind.Enum)
             {
                 // Handled by GetEnumUnderlyingType().
-                return new Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>>(null, ImmutableArray<NamedTypeSymbol>.Empty);
+                return Tuple.Create((NamedTypeSymbol) null, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty);
             }
 
             var reportedPartialConflict = false;
             Debug.Assert(basesBeingResolved == null || !basesBeingResolved.ContainsReference(this.OriginalDefinition));
             var newBasesBeingResolved = basesBeingResolved.Prepend(this.OriginalDefinition);
             var baseInterfaces = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            var interfaceLocations = PooledDictionary<NamedTypeSymbol, SourceLocation>.GetInstance();
+            var baseConcepts = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            var conceptLocations = PooledDictionary<NamedTypeSymbol, SourceLocation>.GetInstance();
 
             NamedTypeSymbol baseType = null;
             SourceLocation baseTypeLocation = null;
-            var interfaceLocations = PooledDictionary<NamedTypeSymbol, SourceLocation>.GetInstance();
+
 
             foreach (var decl in this.declaration.Declarations)
             {
-                Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>> one = MakeOneDeclaredBases(newBasesBeingResolved, decl, diagnostics);
-                if ((object)one == null) continue;
+                var one = MakeOneDeclaredBases(newBasesBeingResolved, decl, diagnostics);
+                if (!one.HasValue) continue;
 
-                var partBase = one.Item1;
-                var partInterfaces = one.Item2;
+                (var partBase, var partInterfaces, var partConcepts) = one.Value;
                 if (!reportedPartialConflict)
                 {
                     if ((object)baseType == null)
@@ -284,6 +291,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         baseInterfaces.Add(t);
                         interfaceLocations.Add(t, decl.NameLocation);
+                    }
+                }
+
+                foreach (var t in partConcepts)
+                {
+                    if (!conceptLocations.ContainsKey(t))
+                    {
+                        baseConcepts.Add(t);
+                        conceptLocations.Add(t, decl.NameLocation);
                     }
                 }
             }
@@ -320,10 +336,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             interfaceLocations.Free();
+            conceptLocations.Free();
 
             diagnostics.Add(Locations[0], useSiteDiagnostics);
 
-            return new Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>>(baseType, baseInterfacesRO);
+            return Tuple.Create(baseType, baseInterfacesRO, baseConcepts.ToImmutableAndFree());
         }
 
         private static BaseListSyntax GetBaseListOpt(SingleTypeDeclaration decl)
@@ -338,7 +355,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         // process the base list for one part of a partial class, or for the only part of any other type declaration.
-        private Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>> MakeOneDeclaredBases(ConsList<Symbol> newBasesBeingResolved, SingleTypeDeclaration decl, DiagnosticBag diagnostics)
+        private (NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>, ImmutableArray<NamedTypeSymbol>)? MakeOneDeclaredBases(ConsList<Symbol> newBasesBeingResolved, SingleTypeDeclaration decl, DiagnosticBag diagnostics)
         {
             BaseListSyntax bases = GetBaseListOpt(decl);
             if (bases == null)
@@ -348,6 +365,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             NamedTypeSymbol localBase = null;
             var localInterfaces = ArrayBuilder<NamedTypeSymbol>.GetInstance();
+            var localConcepts = ArrayBuilder<NamedTypeSymbol>.GetInstance();
             var baseBinder = this.DeclaringCompilation.GetBinder(bases);
 
             // Wrap base binder in a location-specific binder that will avoid generic constraint checks
@@ -454,6 +472,46 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             }
                         }
 
+
+                        // @MattWindsor91 (Concept-C# 2017)
+                        // In the prototype, concepts also have the 'interface'
+                        // typekind.  They behave differently from interfaces
+                        // in base resolution
+                        //
+                        // - only instances and concepts can implement them
+                        //   directly;
+                        // - instances and concepts can't inherit from
+                        //   normal interfaces;
+                        // - any attempt to implement a concept on a
+                        //   non-instance instead generates an inline instance.
+                        if (baseType.Kind == SymbolKind.NamedType)
+                        {
+                            var baseInterface = (NamedTypeSymbol)baseType;
+                            var baseIsConcept = baseInterface.IsConcept;
+
+                            var thisIsInstance = IsInstance;
+                            var thisIsConcept = IsConcept;
+
+
+                            if (thisIsInstance && !baseIsConcept)
+                            {
+                                // CS8963: '{0}': instances cannot implement interfaces
+                                diagnostics.Add(ErrorCode.ERR_InstanceInterfaceImpl, location, this);
+                            }
+                            else if (thisIsConcept && !baseIsConcept)
+                            {
+                                // CS8964: '{0}': concepts cannot implement interfaces
+                                diagnostics.Add(ErrorCode.ERR_ConceptInterfaceImpl, location, this);
+                            }
+                            else if (!thisIsInstance && !thisIsConcept && baseIsConcept)
+                            {
+                                // This is going to result in an inline
+                                // instance.
+                                localConcepts.Add(baseInterface);
+                                continue;
+                            }
+                        }
+
                         if (this.IsStatic)
                         {
                             // '{0}': static classes cannot implement interfaces
@@ -519,7 +577,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 diagnostics.Add(ErrorCode.ERR_ObjectCantHaveBases, new SourceLocation(name));
             }
 
-            return new Tuple<NamedTypeSymbol, ImmutableArray<NamedTypeSymbol>>(localBase, localInterfaces.ToImmutableAndFree());
+            return (localBase, localInterfaces.ToImmutableAndFree(), localConcepts.ToImmutableAndFree());
         }
 
         /// <summary>
