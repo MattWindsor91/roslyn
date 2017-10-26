@@ -43,7 +43,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                               // @t-mawind
                               //   need to make this not clash with any typar in
                               //   the parent scopes, hence generated name.
-                              GeneratedNames.MakeAnonymousTypeParameterName("witness"),
+                              GeneratedNames.WitnessTypeParameterName(),
                               Location.None,
                               0,
                               that,

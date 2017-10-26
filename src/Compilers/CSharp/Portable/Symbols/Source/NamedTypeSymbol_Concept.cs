@@ -76,19 +76,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         /// <summary>
-        /// Gets the name of this type's associated default struct.
-        /// </summary>
-        internal string DefaultStructName
-        {
-            get
-            {
-                Debug.Assert(IsConcept, "Should never get the default struct name of a non-concept");
-                // @t-mawind TODO: use a non-referenceable name
-                return $"{Name}_default";
-            }
-        }
-
-        /// <summary>
         /// Attempts to find this concept's associated default struct.
         /// </summary>
         /// <returns>

@@ -1229,12 +1229,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             if (IsConcept)
             {
                 var defaultSyntax = GetConceptDefaultMethods();
-                if (defaultSyntax.IsEmpty)
+                if (!defaultSyntax.IsEmpty)
                 {
-                    return null;
+                    return new SynthesizedDefaultStructSymbol(GeneratedNames.DefaultStructName(), this);
                 }
-
-                return new SynthesizedDefaultStructSymbol(DefaultStructName, this);
             }
             return null;
         }

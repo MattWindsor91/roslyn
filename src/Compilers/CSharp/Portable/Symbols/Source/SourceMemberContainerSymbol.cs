@@ -1354,12 +1354,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             AddDeclarationDiagnostics(diagnostics);
             diagnostics.Free();
 
-            // @t-mawind this is almost certainly wrong
-            if (IsConcept)
-            {
-                ImmutableInterlocked.InterlockedInitialize(ref _conceptDefaultMethods, membersAndInitializers.ConceptDefaultBodies);
-            }
-
             return membersAndInitializers;
         }
 

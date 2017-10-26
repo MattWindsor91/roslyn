@@ -44,11 +44,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         #region Default structs
 
         /// <summary>
-        /// Syntax references for default methods.
-        /// </summary>
-        private ImmutableArray<SyntaxReference> _conceptDefaultMethods;
-
-        /// <summary>
         /// Get syntax references for all of the default method implementations
         /// on this symbol, if it is a concept.
         /// </summary>
@@ -57,15 +52,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// </returns>
         internal ImmutableArray<SyntaxReference> GetConceptDefaultMethods()
         {
-            // TODO(@MattWindsor91): Find a better way to make sure this is
-            //     populated.
-            if (_conceptDefaultMethods.IsDefault)
-            {
-                GetMembersAndInitializers();
-                Debug.Assert(!_conceptDefaultMethods.IsDefault,
-                    "concept default methods should be populated at this stage.");
-            }
-            return _conceptDefaultMethods;
+            return GetMembersAndInitializers().ConceptDefaultBodies;
         }
 
         /// <summary>

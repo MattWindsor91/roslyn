@@ -78,7 +78,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 var witnessOrdinal = _method.Arity + _originalReceiver.Arity;
                 var witness =
                     new SynthesizedWitnessParameterSymbol(
-                        GeneratedNames.MakeAnonymousTypeParameterName("witness"),
+                        GeneratedNames.WitnessTypeParameterName(),
                         Location.None,
                         witnessOrdinal,
                         _method,
