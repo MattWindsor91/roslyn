@@ -6,7 +6,7 @@ author:
 institute:
   - Microsoft Research Cambridge
   - Microsoft Research Cambridge
-date: Sunday 22 October 2017
+date: Friday 27 October 2017
 abstract: |
   This document collects all of the known open design issues for Concept-C#.
 documentclass: scrartcl
@@ -395,3 +395,111 @@ horrible to hand-encode.
 
 - Is there a way to encode these propagations without type parameters?
 - If not right now, is there a way a CLR change could help us do this?
+
+
+# Language Interactions #
+
+This section notes issues where combinations of concepts and other C# features
+don't work well together, or fight for developer mindshare, and so on.
+
+**Note:** Most of this section comes from the 2016 internship writeup, and
+may be out of date.
+
+## Concepts vs. interfaces ##
+
+Concepts are, semantically, just interfaces with access to defaults,
+operator overloading, and ability to become an implicit parameter. It is
+unclear as to whether this warrants a new syntactic form when we could
+just use interfaces. Conversely, there has been much discussion about
+whether concepts completely subsume interfaces (making them obsolete),
+which would pose tensions with regards to existing code using
+interfaces.
+
+### Solution ###
+
+We could unify concepts with interfaces, but this would require some
+design to ensure the result is not unduly confusing (and the semantics
+of concept witnesses would need to change). Removing interfaces entirely
+is impossible due to backwards compatibility and interop, and phasing
+them out of the BCL is unlikely, so if concepts do subsume interfaces
+the way forwards is unclear.
+
+## Concept witnesses vs. constraints on non-concepts ##
+
+Concept witnesses cannot be constrained both by a concept and a
+non-concept syntactically, but there is nothing preventing this in
+separate compilation, and it is unknown whether this should be permitted
+or forbidden.
+
+### Solution ###
+
+Decide whether to forbid these as present or accommodate them somehow.
+
+## Defaults vs. member access on a direct instance ##
+
+Calling into an instance directly which is missing an implementation
+method doesn't work: it should call into the default instead.
+
+### Solution ###
+
+We should change name resolution to do a better job of this.
+
+## Defaults vs. interfaces ##
+
+There are plans to implement default members on interfaces soon, with a CLR
+change.  This might subsume our defaults implementation completely, and will
+almost certainly have violently different semantics.
+
+### Solution ###
+
+If this happens, we should switch to using the new approach where possible.
+
+## Type inference vs. variance ##
+
+There is no support for variance in the type inferrer: it will only
+substitute for direct matches of a type. This would be useful for
+allowing, for example, concept enumerables to be cast to a more general
+element type.
+
+### Solution ##
+
+We could overhaul the type inferrer to do variance-sensitive
+substitutions (see the discussions on removing unification).
+
+## Type inference vs. coercions ##
+
+Similarly, the type inferrer can't try instances whose types are an
+implicit cast from the types given, even if the witness type is an
+interface or superclass of the parameter type.
+
+### Solution ###
+
+This would need a weaker unification system that allows coercions, and a
+'weighting system' (or tie breaker) whereby the least coerced instance
+wins.
+
+## Operator overloads vs. existing operator overloads ##
+
+Operator overloads in Concept-C# are so different from C# operator
+overloads (instance vs static, different type rules) that this poses a
+poor interaction with existing C# features.
+
+### Solution ###
+
+Unknown at this stage; this would need careful design.
+
+ 
+
+## Scoping rules vs. existing scoping rules ##
+
+Currently concept methods and operators are injected in front of class
+scope whenever they are mentioned in a where clause. This jars with the
+existing C# notion of scope (these new methods completely hide class
+members, for instance), and is confusing.
+
+### Solution ###
+
+We could disable implicit uses of concept methods, but it is unclear
+what to do for operators. Alternatively, we could move to a more bespoke
+scoping system outside of binders, perhaps taking cues from extension
+method resolution.
