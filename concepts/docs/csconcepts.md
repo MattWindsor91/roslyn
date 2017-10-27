@@ -687,14 +687,21 @@ instance EqArray<A,implicit EqA>       EqA:Eq<A>
 ```
 
 ```csharp 
+(for simplicity, we omit ordinary bounds on type parameters)
 
 Predicates f: Type1 * * TypeN -> Prop
 
 Proposition P := f<Ts>
 
-Evidence   e := a<Ts>                 // axiom
-             |  r<Ts,e1,...,en>       // application
-             |  w                     // evidence variable
+Types       T := 
+              | C<Ts>                 // constructed type (class, struct or interface)
+              | T[]                   // array of T
+              | X                     // type parameter
+
+
+Evidence   e := a<Ts>                  // axiom
+             |  r<Ts,e1,...,en>        // application
+             |  W                      // evidence parameter
 
 concept f<Xs>                          Predicate f<Ts>
 
@@ -710,10 +717,10 @@ instance a<Xs> : P,...
 
                                        ...
 
-instance r<Xs,p1,pN> : P, ...            
- where w1:Q1                           e1 :Q1[Ts/Xs]  ...  en:Qn[Ts/Xs]
+instance r<Xs,W1,...,Wn> : P, ...            
+ where W1:Q1                           e1 :Q1[Ts/Xs]  ...  en:Qn[Ts/Xs]
  ...                                   -------------------------------- Rule
- where wn:Qn                           r<Ts,e1,en> : P[Ts/Xs]  
+ where Wn:Qn                           r<Ts,e1,..,en> : P[Ts/Xs]  
    
                                        ...
 ```
