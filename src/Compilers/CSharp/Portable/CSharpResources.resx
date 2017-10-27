@@ -5036,6 +5036,12 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="ERR_ExcessConceptInstanceMembers" xml:space="preserve">
     <value>Concept instance member '{0}' does not match a member of any implemented concept.</value>
   </data>
+  <data name="ERR_InstanceInterfaceImpl" xml:space="preserve">
+    <value>'{0}': instances cannot implement interfaces</value>
+  </data>
+  <data name="ERR_ConceptInterfaceImpl" xml:space="preserve">
+    <value>'{0}': concepts cannot implement interfaces</value>
+  </data>
   <data name="ERR_DeconstructWrongCardinality" xml:space="preserve">
     <value>Cannot deconstruct a tuple of '{0}' elements into '{1}' variables.</value>
   </data>
@@ -5260,5 +5266,12 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   </data>
   <data name="ERR_NonCEMImplementsCEM" xml:space="preserve">
     <value>The method '{0}' is not a concept extension method, but the concept '{1}' declares it as one.</value>
+  </data>
+  <data name="ERR_InlineInstanceMissingMember" xml:space="preserve">
+    <value>'{0}' claims to implement '{1}', but member '{2}' could not be found.</value>
+  </data>
+  <data name="ERR_InlineInstanceNonMethodMember" xml:space="preserve">
+    <value>(FIXME) Inline instances currently do not support non-method members such as '{0}'.</value>
+    <comment>Temporary</comment>
   </data>
 </root>

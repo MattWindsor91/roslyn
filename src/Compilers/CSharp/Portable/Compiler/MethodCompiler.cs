@@ -1691,21 +1691,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (bodySyntax != null)
                 {
                     var inMethodBinder = factory.GetBinder(bodySyntax);
-
-                    // @t-mawind TODO: MASSIVE HACK.
-                    //   This exists to correct the fact that default
-                    //   struct methods take their syntax from their definition
-                    //   in the _concept_, not their synthesis in the struct.
-                    //   Thus, we have to bring the struct's witnesses (ie the
-                    //   instance using the default struct) into scope.
-                    //
-                    // TODO: make sure this works for expression bodied methods too.
-                    if (method.ContainingType.IsDefaultStruct)
-                    {
-                        inMethodBinder = new WithWitnessesBinder(method.ContainingType, inMethodBinder);
-                        inMethodBinder = new WithClassTypeParametersBinder(method.ContainingType, inMethodBinder);
-                    }
-
                     var binder = new ExecutableCodeBinder(bodySyntax, sourceMethod, inMethodBinder);
                     importChain = binder.ImportChain;
 

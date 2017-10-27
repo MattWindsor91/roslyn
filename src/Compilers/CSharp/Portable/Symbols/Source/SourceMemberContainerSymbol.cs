@@ -1148,16 +1148,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
 
                 // @MattWindsor91 (Concept-C# 2016)
-                //
-                // If this type is a concept, it includes an inner struct
+                // If this type is a concept, it can have an inner struct
                 // that holds its default implementations.
-                //
-                // TODO: Can we skip creating a default struct if there are no
-                //       default implementations?
                 if (IsConcept)
                 {
-                    Debug.Assert(this is SourceNamedTypeSymbol, "got a non-named-type concept somehow");
-
                     // @MattWindsor91 (Concept-C# 2017)
                     // We have to have concept attributes.
                     // Otherwise, creating the symbol will crash and burn!
@@ -1166,8 +1160,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         diagnostics.Add(ErrorCode.ERR_ConceptAttributesMissing, Locations[0]);
                     }
 
-                    var val = new SynthesizedDefaultStructSymbol(DefaultStructName, this as SourceNamedTypeSymbol);
-                    symbols.Add(val);
+                    var defaultStructOpt = MaybeMakeDefaultStruct();
+                    if (defaultStructOpt != null)
+                    {
+                        symbols.Add(defaultStructOpt);
+                    }
+                }
+
+                // @MattWindsor91 (Concept-C# 2017)
+                // If this type has an inline instance, we add that too,
+                var inlineInstanceStructOpt = MaybeMakeInlineInstanceStruct();
+                if (inlineInstanceStructOpt != null)
+                {
+                    symbols.Add(inlineInstanceStructOpt);
                 }
 
                 Debug.Assert(s_emptyTypeMembers.Count == 0);
@@ -1322,10 +1327,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
                 var membersByName = membersAndInitializers.NonTypeNonIndexerMembers.ToDictionary(s => s.Name);
                 AddNestedTypesToDictionary(membersByName, GetTypeMembersDictionary());
-
-                // @t-mawind this is almost certainly wrong
-                if (IsConcept) ImmutableInterlocked.InterlockedInitialize(ref _conceptDefaultMethods, membersAndInitializers.ConceptDefaultBodies);
-
                 Interlocked.CompareExchange(ref _lazyEarlyAttributeDecodingMembersDictionary, membersByName, null);
             }
 
@@ -2242,9 +2243,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // Merge types into the member dictionary
             AddNestedTypesToDictionary(membersByName, GetTypeMembersDictionary());
-
-            // @t-mawind this is almost certainly wrong
-            if (IsConcept) ImmutableInterlocked.InterlockedInitialize(ref _conceptDefaultMethods, membersAndInitializers.ConceptDefaultBodies);
 
             return membersByName;
         }

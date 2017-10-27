@@ -544,5 +544,50 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         {
             return "<p" + StringExtensions.GetNumeral(ordinal) + ">";
         }
+
+        // @MattWindsor91 (Concept-C# 2017)
+
+        /// <summary>
+        /// Generates a synthesised name for a witness type parameter in a
+        /// default struct or inference question.
+        /// </summary>
+        /// <returns>
+        /// A generated name that will not clash with any other type parameter
+        /// (assuming there is only one use of WitnessTypeParameterName in a
+        /// set of type parameters).
+        /// </returns>
+        internal static string WitnessTypeParameterName()
+        {
+            Debug.Assert((char)GeneratedNameKind.WitnessTypeParameter == 'w');
+            return "<>w__witness";
+        }
+
+        /// <summary>
+        /// Generates a synthesised name for a default struct.
+        /// </summary>
+        /// <returns>
+        /// A generated name that will not clash with any other type member
+        /// (assuming there is at most one default struct nested into a
+        /// concept).
+        /// </returns>
+        internal static string DefaultStructName()
+        {
+            Debug.Assert((char)GeneratedNameKind.ConceptHelperStruct == 'v');
+            return "<>v_defaults";
+        }
+
+        /// <summary>
+        /// Generates a synthesised name for an inline instance struct.
+        /// </summary>
+        /// <returns>
+        /// A generated name that will not clash with any other type member
+        /// (assuming there is at most one inline instance struct nested into
+        /// a type).
+        /// </returns>
+        internal static string InlineInstanceStructName()
+        {
+            Debug.Assert((char)GeneratedNameKind.ConceptHelperStruct == 'v');
+            return "<>v_inline_instance";
+        }
     }
 }

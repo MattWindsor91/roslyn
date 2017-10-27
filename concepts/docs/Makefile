@@ -1,9 +1,19 @@
-.SUFFIXES: .md .pdf
+.SUFFIXES: .md .pdf .html
+.PHONY: all pdfs slides
 
-all: linq-slides-2017-10-16.html tour.pdf compare.pdf issues.pdf
+all: pdfs slides
+
+pdfs: \
+	compare.pdf \
+	issues.pdf \
+	features/autofilling.pdf \
+	tour.pdf
+
+slides: \
+	linq-slides-2017-10-16.html
 
 .md.pdf:
 	pandoc -f markdown -t latex -s $< -o $@
 
-linq-slides-2017-10-16.html: linq-slides-2017-10-16.md
-	pandoc -f markdown -t slidy -s linq-slides-2017-10-16.md -o linq-slides-2017-10-16.html
+.md.html:
+	pandoc -f markdown -t slidy -s $< -o $@

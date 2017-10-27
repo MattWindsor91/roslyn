@@ -520,6 +520,7 @@ End Namespace
                     Case WellKnownType.System_Concepts_OverlappableAttribute
                     Case WellKnownType.System_Concepts_OverlappingAttribute
                     Case WellKnownType.System_Concepts_ConceptExtensionAttribute
+                    Case WellKnownType.System_Concepts_ConceptInlineInstanceAttribute
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.
@@ -569,6 +570,7 @@ End Namespace
                     Case WellKnownType.System_Concepts_OverlappableAttribute
                     Case WellKnownType.System_Concepts_OverlappingAttribute
                     Case WellKnownType.System_Concepts_ConceptExtensionAttribute
+                    Case WellKnownType.System_Concepts_ConceptInlineInstanceAttribute
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.
@@ -621,6 +623,8 @@ End Namespace
                     Case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor
                     Case WellKnownMember.System_Concepts_OverlappableAttribute__ctor
                     Case WellKnownMember.System_Concepts_OverlappingAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptInlineInstanceAttribute__ctor
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.
@@ -715,6 +719,8 @@ End Namespace
                     Case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor
                     Case WellKnownMember.System_Concepts_OverlappableAttribute__ctor
                     Case WellKnownMember.System_Concepts_OverlappingAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor
+                    Case WellKnownMember.System_Concepts_ConceptInlineInstanceAttribute__ctor
                         ' @MattWindsor91 (Concept-C# 2017)
                         ' These are part of our experimental concepts
                         ' implementation, thus not in the platform.

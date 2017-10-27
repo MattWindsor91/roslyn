@@ -25,7 +25,6 @@ namespace System.Concepts
     [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
     public class ConceptInstanceAttribute : Attribute { }
 
-
     /// <summary>
     /// Attribute marking structs as concept default structs.
     /// <para>
@@ -36,6 +35,21 @@ namespace System.Concepts
     /// </summary>
     [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
     public class ConceptDefaultAttribute : Attribute { }
+
+
+    /// <summary>
+    /// Attribute marking structs as concept inline instance structs.
+    /// <para>
+    /// Inline implementations of concepts compile to structs with this
+    /// attribute in the emitted code.  Also, structs with this attribute are
+    /// treated as inline instance structs by the compiler.
+    /// </para>
+    /// <para>
+    /// Emitted inline instances must still have the ConceptInstance attribute.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
+    public class ConceptInlineInstanceAttribute : Attribute { }
 
     /// <summary>
     /// Attribute marking type parameters as associated types.

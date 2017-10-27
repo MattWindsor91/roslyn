@@ -1216,5 +1216,42 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         #endregion
+
+        /// <summary>
+        /// If this type needs one, generate a default struct.
+        /// </summary>
+        /// <returns>
+        /// Null if this type doesn't need a default struct.
+        /// Otherwise, the synthesised default struct.
+        /// </returns>
+        protected override NamedTypeSymbol MaybeMakeDefaultStruct()
+        {
+            if (IsConcept)
+            {
+                var defaultSyntax = GetConceptDefaultMethods();
+                if (!defaultSyntax.IsEmpty)
+                {
+                    return new SynthesizedDefaultStructSymbol(GeneratedNames.DefaultStructName(), this);
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// If this type needs one, generate a default struct.
+        /// </summary>
+        /// <returns>
+        /// Null if this type doesn't need a default struct.
+        /// Otherwise, the synthesised default struct.
+        /// </returns>
+        protected override NamedTypeSymbol MaybeMakeInlineInstanceStruct()
+        {
+            var concepts = GetConceptsForInlineInstances(null);
+            if (!concepts.IsDefaultOrEmpty)
+            {
+                return new SynthesizedInlineInstanceSymbol(GeneratedNames.InlineInstanceStructName(), this);
+            }
+            return null;
+        }
     }
 }

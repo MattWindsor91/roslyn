@@ -2981,6 +2981,13 @@ namespace Microsoft.CodeAnalysis
                     0,                                                                                                      // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
                 // End concept extension attributes
+                // System_Concepts_ConceptInlineInstanceAttribute__ctor
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Concepts_ConceptInlineInstanceAttribute - WellKnownType.ExtSentinel), // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    0,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+
             };
 
             string[] allNames = new string[(int)WellKnownMember.Count]
@@ -3365,8 +3372,10 @@ namespace Microsoft.CodeAnalysis
                 // @MattWindsor91 (Concept-C# 2017)
                 // Concept extension attributes
                 //
-                ".ctor"                                     // System_Concepts_ConceptExtensionAttribute__ctor
+                ".ctor",                                    // System_Concepts_ConceptExtensionAttribute__ctor
                 // End concept extension attributes
+                ".ctor"                                     // System_Concepts_ConceptInlineInstanceAttribute__ctor
+
             };
 
             s_descriptors = MemberDescriptor.InitializeFromStream(new System.IO.MemoryStream(initializationBytes, writable: false), allNames);

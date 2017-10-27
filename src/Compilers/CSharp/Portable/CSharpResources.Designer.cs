@@ -2753,6 +2753,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The method &apos;{0}&apos; is a concept extension method, but the concept &apos;{1}&apos; does not declare it as one..
+        /// </summary>
+        internal static string ERR_CEMImplementsNonCEM {
+            get {
+                return ResourceManager.GetString("ERR_CEMImplementsNonCEM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The operation overflows at compile time in checked mode.
         /// </summary>
         internal static string ERR_CheckedOverflow {
@@ -2960,11 +2969,47 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot use concepts because the required attributes cannot be found. Are you missing a reference?.
+        /// </summary>
+        internal static string ERR_ConceptAttributesMissing {
+            get {
+                return ResourceManager.GetString("ERR_ConceptAttributesMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type parameter &apos;{0}&apos; is constrained to concept &apos;{1}&apos; but is not marked &apos;implicit&apos;..
         /// </summary>
         internal static string ERR_ConceptConstraintOnNonImplicitParam {
             get {
                 return ResourceManager.GetString("ERR_ConceptConstraintOnNonImplicitParam", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot infer a unique instance for concept &apos;{0}&apos;. For example, both &apos;{1}&apos; and &apos;{2}&apos; are valid instances..
+        /// </summary>
+        internal static string ERR_ConceptInstanceAmbiguous {
+            get {
+                return ResourceManager.GetString("ERR_ConceptInstanceAmbiguous", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No instances in scope satisfy concept &apos;{0}&apos;..
+        /// </summary>
+        internal static string ERR_ConceptInstanceUnsatisfiable {
+            get {
+                return ResourceManager.GetString("ERR_ConceptInstanceUnsatisfiable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos;: concepts cannot implement interfaces.
+        /// </summary>
+        internal static string ERR_ConceptInterfaceImpl {
+            get {
+                return ResourceManager.GetString("ERR_ConceptInterfaceImpl", resourceCulture);
             }
         }
         
@@ -4099,6 +4144,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_EventPropertyInInterface {
             get {
                 return ResourceManager.GetString("ERR_EventPropertyInInterface", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Concept instance member &apos;{0}&apos; does not match a member of any implemented concept..
+        /// </summary>
+        internal static string ERR_ExcessConceptInstanceMembers {
+            get {
+                return ResourceManager.GetString("ERR_ExcessConceptInstanceMembers", resourceCulture);
             }
         }
         
@@ -5539,6 +5593,33 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_InitializerOnNonAutoProperty {
             get {
                 return ResourceManager.GetString("ERR_InitializerOnNonAutoProperty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos; claims to implement &apos;{1}&apos;, but member &apos;{2}&apos; could not be found..
+        /// </summary>
+        internal static string ERR_InlineInstanceMissingMember {
+            get {
+                return ResourceManager.GetString("ERR_InlineInstanceMissingMember", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to (FIXME) Inline instances currently do not support non-method members such as &apos;{0}&apos;..
+        /// </summary>
+        internal static string ERR_InlineInstanceNonMethodMember {
+            get {
+                return ResourceManager.GetString("ERR_InlineInstanceNonMethodMember", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &apos;{0}&apos;: instances cannot implement interfaces.
+        /// </summary>
+        internal static string ERR_InstanceInterfaceImpl {
+            get {
+                return ResourceManager.GetString("ERR_InstanceInterfaceImpl", resourceCulture);
             }
         }
         
@@ -7109,6 +7190,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The method &apos;{0}&apos; is not a concept extension method, but the concept &apos;{1}&apos; declares it as one..
+        /// </summary>
+        internal static string ERR_NonCEMImplementsCEM {
+            get {
+                return ResourceManager.GetString("ERR_NonCEMImplementsCEM", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type parameter &apos;{0}&apos; is marked &apos;implicit&apos; but has been constrained to &apos;{1}&apos; which is not a concept..
         /// </summary>
         internal static string ERR_NonConceptConstraintOnImplicitParam {
@@ -7116,7 +7206,7 @@ namespace Microsoft.CodeAnalysis.CSharp {
                 return ResourceManager.GetString("ERR_NonConceptConstraintOnImplicitParam", resourceCulture);
             }
         }
-
+        
         /// <summary>
         ///   Looks up a localized string similar to Cannot compile net modules when using /refout or /refonly..
         /// </summary>
@@ -10346,6 +10436,15 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string IDS_FeatureCollectionInitializer {
             get {
                 return ResourceManager.GetString("IDS_FeatureCollectionInitializer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to concepts.
+        /// </summary>
+        internal static string IDS_FeatureConcepts {
+            get {
+                return ResourceManager.GetString("IDS_FeatureConcepts", resourceCulture);
             }
         }
         

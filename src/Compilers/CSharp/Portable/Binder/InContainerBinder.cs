@@ -337,6 +337,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     instances.Add(member);
                 }
+                // We don't usually go into nested instances, but make an
+                // exception for the inline instance struct of a class, if any.
+                // This is because there would be no other way to get to it.
+                else if (!member.IsConcept)
+                {
+                    var inline = member.GetInlineInstanceStruct();
+                    if (inline != null)
+                    {
+                        instances.Add(inline);
+                    }
+                }
             }
         }
 

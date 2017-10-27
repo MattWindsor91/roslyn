@@ -576,6 +576,7 @@ namespace System
                     case WellKnownType.System_Concepts_OverlappableAttribute:
                     case WellKnownType.System_Concepts_OverlappingAttribute:
                     case WellKnownType.System_Concepts_ConceptExtensionAttribute:
+                    case WellKnownType.System_Concepts_ConceptInlineInstanceAttribute:
                         // @MattWindsor91 (Concept-C# 2017)
                         // These are part of our experimental concepts
                         // implementation, thus not in the platform.
@@ -880,6 +881,8 @@ namespace System
                     case WellKnownMember.System_Concepts_ConceptInstanceAttribute__ctor:
                     case WellKnownMember.System_Concepts_OverlappableAttribute__ctor:
                     case WellKnownMember.System_Concepts_OverlappingAttribute__ctor:
+                    case WellKnownMember.System_Concepts_ConceptExtensionAttribute__ctor:
+                    case WellKnownMember.System_Concepts_ConceptInlineInstanceAttribute__ctor:
                         // @MattWindsor91 (Concept-C# 2017)
                         // These are part of our experimental concepts
                         // implementation, thus not in the platform.

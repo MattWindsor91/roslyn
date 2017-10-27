@@ -1516,7 +1516,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             // @MattWindsor91 (Concept-C# 2017)
             // Only allow concepts and instances with the feature turned on.
             if (classOrStructOrInterface.Kind == SyntaxKind.ConceptKeyword
-                || classOrStructOrInterface.Kind == SyntaxKind.InterfaceKeyword)
+                || classOrStructOrInterface.Kind == SyntaxKind.InstanceKeyword)
             {
                 classOrStructOrInterface = CheckFeatureAvailability(classOrStructOrInterface, MessageID.IDS_FeatureConcepts);
             }

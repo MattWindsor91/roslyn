@@ -68,6 +68,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         cancellationToken.ThrowIfCancellationRequested();
                         CheckConceptInstanceMembers(diagnostics);
                     }
+                    // TODO(@MattWindsor91): put this in the correct place
+                    var inline = GetInlineInstanceStruct();
+                    if (inline != null && inline is SynthesizedInlineInstanceSymbol sinline)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        sinline.CheckConceptImplementations(diagnostics, cancellationToken);
+                    }
 
                     if (this.IsInterface)
                     {
@@ -549,12 +556,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         CheckNewModifier(member, isNewField, diagnostics);
                         break;
                     case SymbolKind.NamedType:
-                        // @t-mawind
-                        //   SynthesizedDefaultStructSymbol gets here,
-                        //   because it's a member of a source symbol, but it
-                        //   isn't actually a source symbol itself.
+                        // @MattWindsor91 (Concept-C# 2017)
+                        //   Synthesized concept helpers get here,
+                        //   because they're members of source symbols, but not
+                        //   actually source symbols themselves.
                         //   Quickfix: this is horrible.
-                        if (member is SynthesizedDefaultStructSymbol) break;
+                        if (member is SynthesizedConceptHelperStructSymbol)
+                        {
+                            break;
+                        }
 
                         CheckNewModifier(member, ((SourceMemberContainerTypeSymbol)member).IsNew, diagnostics);
                         break;

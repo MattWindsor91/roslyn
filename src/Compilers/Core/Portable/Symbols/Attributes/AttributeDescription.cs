@@ -422,6 +422,8 @@ namespace Microsoft.CodeAnalysis
         //
         private static readonly byte[][] s_signaturesOfConceptExtensionAttribute = { s_signature_HasThis_Void };
         // End concept extension attributes
+        private static readonly byte[][] s_signaturesOfConceptInlineInstanceAttribute = { s_signature_HasThis_Void };
+
 
 
         // early decoded attributes:
@@ -557,5 +559,7 @@ namespace Microsoft.CodeAnalysis
         // Concept extension attributes
         internal static readonly AttributeDescription ConceptExtensionAttribute = new AttributeDescription("System.Concepts", "ConceptExtensionAttribute", s_signaturesOfConceptExtensionAttribute);
         // End concept extension attributes
+        internal static readonly AttributeDescription ConceptInlineInstanceAttribute = new AttributeDescription("System.Concepts", "ConceptInlineInstanceAttribute", s_signaturesOfConceptInlineInstanceAttribute);
+
     }
 }
