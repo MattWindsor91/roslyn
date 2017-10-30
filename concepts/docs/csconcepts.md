@@ -673,21 +673,22 @@ Concept C# could do this too *or* be more flexible:
 
 ---
 
-## Embedding a Logic
+## Embedding a Logic (by example)
 
 ```csharp
-concept Eq<A>                          Eq: Type -> Prop
+concept Eq<A>                          Predicate Eq: Type -> Prop
 
-instance EqInt : Eq<int>               ------- (EqInt)
-                                       Eq<int>
+instance EqInt : Eq<int>               ------------- (Axiom EqInt)
+                                       EqInt:Eq<int>
   
-instance EqArray<A,implicit EqA>       EqA:Eq<A>
-         where EqA:Eq<A>               --------- (EqArray<A,EqA>)
-         : Eq<A>                       Eq<A[]>
+instance EqArray<A,implicit EqA>       e:Eq<T>
+         where EqA:Eq<A>               --------- (Rule EqArray)
+         : Eq<A>                       EqArray<T,e>:Eq<T[]>
 ```
+## Embedding a Logic (the general case)
 
 ```csharp 
-(for simplicity, we omit ordinary bounds on type parameters)
+// for simplicity, we omit ordinary bounds on type parameters)
 
 Predicates f: Type1 * * TypeN -> Prop
 
@@ -725,7 +726,7 @@ instance r<Xs,W1,...,Wn> : P, ...
                                        ...
 ```
 
-How general should we make this? 
+How general should we make this? Should we go further and take advantage of variance on concept parameters?
 
 # Perf
 
