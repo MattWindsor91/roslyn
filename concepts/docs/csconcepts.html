@@ -688,7 +688,7 @@ Subsumption derives (evidence for) a class from (evidence for) its subclasses.
     memsq nil a = false
     memsq (h:t) a =     equal h (square a) 
                      -- ^^^^ legal coz Num a |= Eq a 
-                     || memsq h t
+                     || memsq t a
 ```
 ---
 
@@ -751,6 +751,53 @@ Concept C# could do this too *or* be more flexible:
   * but allow explicit disambiguation by instantiation (when inference fails)
 
 ---
+
+## Embedding a Logic
+
+```csharp
+concept Eq<A>                          Eq: Type -> Prop
+
+instance EqInt : Eq<int>               ------- (EqInt)
+                                       Eq<int>
+  
+instance EqArray<A,implicit EqA>       EqA:Eq<A>
+         where EqA:Eq<A>               --------- (EqArray<A,EqA>)
+         : Eq<A>                       Eq<A[]>
+```
+
+```csharp 
+
+Predicates f: Type1 * * TypeN -> Prop
+
+Proposition P := f<Ts>
+
+Evidence   e := a<Ts>                 // axiom
+             |  r<Ts,e1,...,en>       // application
+             |  w                     // evidence variable
+
+concept f<Xs>                          Predicate f<Ts>
+
+concept f<Xs> : P                      Subsumption
+                                       e : f<Ts>
+                                       ---------------- Subsumption
+                                       e : P[Ts/Xs]
+
+
+instance a<Xs> : P,...                 
+                                       -------------- Axiom                                
+                                       a<Ts>:P[Ts/Xs]
+
+                                       ...
+
+instance r<Xs,p1,pN> : P, ...            
+ where w1:Q1                           e1 :Q1[Ts/Xs]  ...  en:Qn[Ts/Xs]
+ ...                                   -------------------------------- Rule
+ where wn:Qn                           r<Ts,e1,en> : P[Ts/Xs]  
+   
+                                       ...
+```
+
+How general should we make this? 
 
 # Perf
 
