@@ -41,7 +41,7 @@ But not C# or F#.
 
 
 ---
-##This talk:
+## This talk:
 
 We add type classes to C# using a cheap coding trick that is
 
